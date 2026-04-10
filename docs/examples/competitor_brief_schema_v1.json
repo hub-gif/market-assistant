@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "keyword": "低GI",
+  "batch_label": "20260409 154041",
+  "run_dir": "<本机批次输出目录，示例略>",
+  "scope": {
+    "merged_sku_count": 5,
+    "comment_flat_rows": 112,
+    "structure_source_rows": 117,
+    "uses_pc_search_list_export": true
+  },
+  "meta": {
+    "page_start": 1,
+    "page_to": 2,
+    "merged_csv_mode": "lean"
+  },
+  "pc_search_raw": {
+    "result_count_consensus": 12345,
+    "list_keyword": "低GI",
+    "result_count_uniques": [12340, 12345],
+    "raw_json_files_scanned": 2
+  },
+  "list_visibility_proxy": {
+    "total_rows": 117,
+    "unique_skus": 95
+  },
+  "concentration": {
+    "shops_from_list": {
+      "cr1": 0.12,
+      "cr3": 0.35,
+      "top_label": "某旗舰店",
+      "top_share_pct": "12.0%"
+    },
+    "list_brand_field": null,
+    "detail_brand_among_merged": {
+      "cr1": 0.2,
+      "cr3": 0.6,
+      "top_label": "品牌A",
+      "top_share_pct": "20.0%"
+    }
+  },
+  "category_mix_top": [{ "label": "休闲食品", "count": 40 }],
+  "price_stats": {
+    "min": 14.9,
+    "max": 39.9,
+    "mean": 21.5,
+    "n": 117,
+    "median": 16.9
+  },
+  "price_stats_source": "pc_search_export_all_rows",
+  "price_stats_merged_sample": {
+    "min": 14.9,
+    "max": 34.9,
+    "mean": 22.1,
+    "n": 5,
+    "median": 16.9
+  },
+  "price_stats_list_export": {
+    "min": 14.9,
+    "max": 39.9,
+    "mean": 21.5,
+    "n": 117,
+    "median": 16.9
+  },
+  "comment_focus_keywords": [{ "word": "口感", "count": 48 }],
+  "usage_scenarios": [
+    { "scenario": "控糖/血糖相关", "count": 12, "share_of_text_units": 0.15 }
+  ],
+  "strategy_hints": ["样本内…（待验证）"],
+  "matrix_by_group": [
+    {
+      "group": "饼干",
+      "sku_count": 3,
+      "skus": [
+        {
+          "sku_id": "100065199809",
+          "title": "示例标题",
+          "brand": "示例品牌",
+          "list_price_show": "16.90",
+          "coupon_or_detail_price": "",
+          "detail_price_final": "16.41",
+          "shop": "示例店",
+          "category": "休闲食品 > 饼干 > 粗粮饼干",
+          "selling_point": "",
+          "comment_fuzzy": "20万+"
+        }
+      ]
+    }
+  ],
+  "consumer_feedback_by_matrix_group": [
+    {
+      "group": "饼干",
+      "comment_rows": 40,
+      "focus_keyword_hits": [{ "word": "口感", "count": 10 }],
+      "scenarios_top": [
+        {
+          "scenario": "早餐/代餐",
+          "count": 5,
+          "share_of_text_units": 0.2
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "与在线分析报告统计口径一致；主题词与场景为预设词表，非 NLP 主题模型。",
+    "价格来自展示字段抽取，含促销与规格差异。"
+  ]
+}

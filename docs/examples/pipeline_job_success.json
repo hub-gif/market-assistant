@@ -1,0 +1,27 @@
+{
+  "id": 5,
+  "platform": "jd",
+  "keyword": "低GI",
+  "max_skus": 5,
+  "page_start": 1,
+  "page_to": 2,
+  "pipeline_run_dir": "",
+  "cookie_file_path": "",
+  "inline_cookie_used": false,
+  "pvid": "",
+  "request_delay": "30-60",
+  "list_pages": "1-2",
+  "scenario_filter_enabled": true,
+  "status": "success",
+  "run_dir": "<本机批次输出目录，示例略>",
+  "error_message": "",
+  "analysis_artifacts": {
+    "merged": true,
+    "pc_search": true,
+    "comments": true,
+    "detail_ware": true,
+    "report": true
+  },
+  "created_at": "2026-04-09T12:00:00+08:00",
+  "updated_at": "2026-04-09T12:45:00+08:00"
+}

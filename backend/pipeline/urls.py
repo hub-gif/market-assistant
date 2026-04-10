@@ -1,0 +1,101 @@
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path(
+        "report-config-defaults/",
+        views.ReportConfigDefaultsView.as_view(),
+        name="report-config-defaults",
+    ),
+    path("jobs/", views.JobListCreateView.as_view(), name="job-list-create"),
+    path("jobs/<int:pk>/", views.JobDetailView.as_view(), name="job-detail"),
+    path(
+        "jobs/<int:pk>/cancel/",
+        views.JobCancelView.as_view(),
+        name="job-cancel",
+    ),
+    path("jobs/<int:pk>/download/", views.JobDownloadView.as_view(), name="job-download"),
+    path("jobs/<int:pk>/preview/", views.JobPreviewView.as_view(), name="job-preview"),
+    path(
+        "jobs/<int:pk>/dataset/summary/",
+        views.JobDatasetSummaryView.as_view(),
+        name="job-dataset-summary",
+    ),
+    path(
+        "jobs/<int:pk>/dataset/search/",
+        views.JobDatasetSearchView.as_view(),
+        name="job-dataset-search",
+    ),
+    path(
+        "jobs/<int:pk>/dataset/detail/",
+        views.JobDatasetDetailView.as_view(),
+        name="job-dataset-detail",
+    ),
+    path(
+        "jobs/<int:pk>/dataset/comments/",
+        views.JobDatasetCommentsView.as_view(),
+        name="job-dataset-comments",
+    ),
+    path(
+        "jobs/<int:pk>/dataset/merged/",
+        views.JobDatasetMergedView.as_view(),
+        name="job-dataset-merged",
+    ),
+    path(
+        "jobs/<int:pk>/export/",
+        views.JobDatasetExportView.as_view(),
+        name="job-dataset-export",
+    ),
+    path(
+        "jobs/<int:pk>/regenerate-report/",
+        views.JobRegenerateReportView.as_view(),
+        name="job-regenerate-report",
+    ),
+    path(
+        "jobs/<int:pk>/competitor-brief/",
+        views.JobCompetitorBriefView.as_view(),
+        name="job-competitor-brief",
+    ),
+    path(
+        "jobs/<int:pk>/competitor-brief-pack/",
+        views.JobCompetitorBriefPackView.as_view(),
+        name="job-competitor-brief-pack",
+    ),
+    path(
+        "jobs/<int:pk>/strategy-draft/",
+        views.JobStrategyDraftView.as_view(),
+        name="job-strategy-draft",
+    ),
+    path(
+        "jobs/<int:pk>/export-document/",
+        views.JobExportDocumentView.as_view(),
+        name="job-export-document",
+    ),
+    path(
+        "jobs/<int:pk>/report-asset/",
+        views.JobReportAssetView.as_view(),
+        name="job-report-asset",
+    ),
+    path(
+        "jobs/<int:pk>/ingest-merged/",
+        views.JobImportMergedView.as_view(),
+        name="job-ingest-merged",
+    ),
+    path("jd/products/", views.JdProductListView.as_view(), name="jd-product-list"),
+    path(
+        "jd/products/<str:sku_id>/",
+        views.JdProductDetailView.as_view(),
+        name="jd-product-detail",
+    ),
+    path(
+        "jd/products/<str:sku_id>/snapshots/",
+        views.JdProductSnapshotListView.as_view(),
+        name="jd-product-snapshots",
+    ),
+    path(
+        "jd/snapshots/<int:pk>/",
+        views.JdProductSnapshotDetailView.as_view(),
+        name="jd-snapshot-detail",
+    ),
+]

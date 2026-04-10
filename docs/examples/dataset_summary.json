@@ -1,0 +1,31 @@
+{
+  "job_id": 5,
+  "keyword": "低GI",
+  "status": "success",
+  "search_rows": 117,
+  "detail_rows": 5,
+  "comment_rows": 112,
+  "merged_rows": 5,
+  "search_columns": [
+    { "key": "sku_id", "label": "SKU(skuId)" },
+    { "key": "title", "label": "标题(wareName)" }
+  ],
+  "detail_columns": [
+    { "key": "sku_id", "label": "skuId" },
+    { "key": "detail_brand", "label": "detail_brand" },
+    { "key": "detail_price_final", "label": "detail_price_final" },
+    { "key": "detail_shop_name", "label": "detail_shop_name" },
+    { "key": "detail_category_path", "label": "detail_category_path" },
+    { "key": "detail_product_attributes", "label": "detail_product_attributes" },
+    { "key": "detail_body_ingredients", "label": "detail_body_ingredients" }
+  ],
+  "comment_columns": [
+    { "key": "sku_id", "label": "sku" },
+    { "key": "tag_comment_content", "label": "tagCommentContent" }
+  ],
+  "merged_columns": [
+    { "key": "pipeline_keyword", "label": "pipeline_keyword" },
+    { "key": "sku_id", "label": "SKU(skuId)" },
+    { "key": "detail_brand", "label": "detail_brand" }
+  ]
+}

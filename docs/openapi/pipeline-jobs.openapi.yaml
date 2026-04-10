@@ -1,0 +1,587 @@
+openapi: 3.0.3
+info:
+  title: Market-Assistant — Pipeline & JD 数据集 API（子集）
+  description: |
+    与 `docs/pipeline-job-output-spec.md` 一致的核心路径；完整行为以 `pipeline/views.py` 为准。
+  version: "1.0.0"
+
+servers:
+  - url: http://127.0.0.1:8000
+    description: 本地 Django 默认端口
+
+tags:
+  - name: jobs
+    description: 京东流水线任务
+  - name: dataset
+    description: 任务入库后的分页与导出
+  - name: jd
+    description: 全局 SKU 主档与快照
+
+paths:
+  /api/jobs/:
+    get:
+      tags: [jobs]
+      summary: 任务列表（最近 200 条）
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PipelineJob"
+    post:
+      tags: [jobs]
+      summary: 创建任务并异步执行
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePipelineJob"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineJob"
+        "503":
+          description: LOW_GI_PROJECT_ROOT 未配置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+
+  /api/jobs/{id}/:
+    get:
+      tags: [jobs]
+      summary: 任务详情
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineJob"
+        "404":
+          description: Not found
+    patch:
+      tags: [jobs]
+      summary: 仅更新 report_config（报告关注词/场景/外部市场表等）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchReportConfig"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineJob"
+        "400":
+          description: 校验失败（未知键或体积过大等）
+        "404":
+          description: Not found
+
+  /api/jobs/{id}/cancel/:
+    post:
+      tags: [jobs]
+      summary: 请求终止待执行/执行中的采集任务（协作式，在可停点结束）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: OK（cancellation_requested=true，随后状态变为 cancelled）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineJob"
+        "400":
+          description: 任务已结束，不可再终止
+        "404":
+          description: Not found
+
+  /api/report-config-defaults/:
+    get:
+      tags: [jobs]
+      summary: 报告调参默认模板（与 jd_competitor_report 脚本常量一致）
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportConfig"
+        "503":
+          description: 爬虫副本路径不可用等
+
+  /api/jobs/{id}/download/:
+    get:
+      tags: [jobs]
+      summary: 下载 run_dir 内产物
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [merged, pc_search, comments, detail_ware, report]
+      responses:
+        "200":
+          description: 文件流
+        "404":
+          description: 任务未成功或文件不存在
+
+  /api/jobs/{id}/dataset/summary/:
+    get:
+      tags: [dataset]
+      summary: 库内行数与列说明
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetSummary"
+
+  /api/jobs/{id}/dataset/merged/:
+    get:
+      tags: [dataset]
+      summary: 合并宽表分页
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedMergedRows"
+
+  /api/jobs/{id}/export/:
+    get:
+      tags: [dataset]
+      summary: 导出 JSON / CSV / xlsx
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [search, detail, comments, merged, all]
+        - name: export_fmt
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, xlsx]
+      responses:
+        "200":
+          description: 文件下载
+
+  /api/jobs/{id}/regenerate-report/:
+    post:
+      tags: [jobs]
+      summary: 根据已有 CSV 重写 competitor_analysis.md（不重新爬取）；可选大模型生成（AI_crawler 同网关）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegenerateReportRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineJob"
+        "400":
+          description: 任务状态或路径无效
+        "502":
+          description: 大模型网关 HTTP 错误
+        "503":
+          description: 未配置 OPENAI_* / LLM_* 等（generator=llm 时）
+
+  /api/jobs/{id}/competitor-brief/:
+    get:
+      tags: [jobs]
+      summary: 结构化竞品摘要 JSON（与 Markdown 报告统计口径一致）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: schema_version=1 的规则摘要
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: 任务未成功或缺少 run_dir / 合并表
+
+  /api/jobs/{id}/competitor-brief-pack/:
+    get:
+      tags: [jobs]
+      summary: 一键简报包（ZIP：报告 md + 摘要 json + 要点摘录 md + 说明）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: application/zip 附件
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: 缺少 competitor_analysis.md 等
+        "503":
+          description: LOW_GI_PROJECT_ROOT 未配置
+
+  /api/jobs/{id}/strategy-draft/:
+    post:
+      tags: [jobs]
+      summary: 市场策略 Markdown 草稿（规则或可选大模型润色，网关同 AI_crawler）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyDraftRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyDraftResponse"
+        "400":
+          description: 任务未成功、缺少 run_dir，或 brief 构建失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+        "404":
+          description: Not found
+        "502":
+          description: 大模型网关 HTTP 错误
+        "503":
+          description: LOW_GI_PROJECT_ROOT 未配置，或大模型凭证未配置（generator=llm）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+
+  /api/jobs/{id}/ingest-merged/:
+    post:
+      tags: [dataset]
+      summary: 从 run_dir 将 CSV 全量写入库（幂等：先清空该任务四类行）
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: 统计信息（dataset + merged 块）
+
+  /api/jd/products/:
+    get:
+      tags: [jd]
+      summary: SKU 主档列表
+      responses:
+        "200":
+          description: OK
+
+components:
+  parameters:
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        default: 20
+
+  schemas:
+    ErrorDetail:
+      type: object
+      properties:
+        detail:
+          type: string
+
+    CreatePipelineJob:
+      type: object
+      required: [platform, keyword]
+      properties:
+        platform:
+          type: string
+          example: jd
+        keyword:
+          type: string
+        max_skus:
+          type: integer
+        page_start:
+          type: integer
+        page_to:
+          type: integer
+        pipeline_run_dir:
+          type: string
+        cookie_file_path:
+          type: string
+        cookie_text:
+          type: string
+        pvid:
+          type: string
+        request_delay:
+          type: string
+        list_pages:
+          type: string
+        scenario_filter_enabled:
+          type: boolean
+        report_config:
+          $ref: "#/components/schemas/ReportConfig"
+
+    ReportConfig:
+      type: object
+      description: |
+        允许键仅限下列三项；可全部省略或 `{}` 表示使用脚本内置默认。
+      properties:
+        comment_focus_words:
+          type: array
+          items:
+            type: string
+        comment_scenario_groups:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              triggers:
+                type: array
+                items:
+                  type: string
+        external_market_table_rows:
+          type: array
+          items:
+            type: object
+            properties:
+              indicator:
+                type: string
+              value_and_scope:
+                type: string
+              source:
+                type: string
+              year:
+                type: string
+
+    PatchReportConfig:
+      type: object
+      required: [report_config]
+      properties:
+        report_config:
+          $ref: "#/components/schemas/ReportConfig"
+
+    PipelineJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        platform:
+          type: string
+        keyword:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, success, failed, cancelled]
+        cancellation_requested:
+          type: boolean
+        run_dir:
+          type: string
+        error_message:
+          type: string
+        analysis_artifacts:
+          type: object
+          additionalProperties:
+            type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        report_config:
+          $ref: "#/components/schemas/ReportConfig"
+
+    ColumnMeta:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+
+    DatasetSummary:
+      type: object
+      properties:
+        job_id:
+          type: integer
+        keyword:
+          type: string
+        status:
+          type: string
+        search_rows:
+          type: integer
+        detail_rows:
+          type: integer
+        comment_rows:
+          type: integer
+        merged_rows:
+          type: integer
+        search_columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMeta"
+        detail_columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMeta"
+        comment_columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMeta"
+        merged_columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMeta"
+
+    PaginatedMergedRows:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    RegenerateReportRequest:
+      type: object
+      properties:
+        generator:
+          type: string
+          enum: [rules, llm]
+          default: rules
+          description: rules=jd_competitor_report 规则引擎；llm=结构化摘要 JSON + AI_crawler 文本接口
+
+    StrategyDraftRequest:
+      type: object
+      properties:
+        generator:
+          type: string
+          enum: [rules, llm]
+          default: rules
+          description: llm 时在规则底稿与同任务摘要基础上由大模型润色全文
+        business_notes:
+          type: string
+          maxLength: 20000
+          description: 可选业务约束/假设，写入 §八
+        product_role:
+          type: string
+          maxLength: 500
+        time_horizon:
+          type: string
+          maxLength: 200
+        success_criteria:
+          type: string
+          maxLength: 2000
+        non_goals:
+          type: string
+          maxLength: 1000
+        battlefield_one_line:
+          type: string
+          maxLength: 1000
+        positioning_choice:
+          type: string
+          enum: ['', 'top', 'mid', 'entry', 'different']
+          description: 价格带主定位；空字符串表示文稿中四项均为未勾选
+        competitive_stance:
+          type: string
+          enum: ['', 'flank', 'head_on', 'both', 'undecided']
+        pillar_product:
+          type: string
+          maxLength: 800
+        pillar_price:
+          type: string
+          maxLength: 800
+        pillar_channel:
+          type: string
+          maxLength: 800
+        pillar_comm:
+          type: string
+          maxLength: 800
+        ack_risk_keywords:
+          type: boolean
+          default: false
+        ack_risk_price:
+          type: boolean
+          default: false
+        ack_risk_concentration:
+          type: boolean
+          default: false
+
+    StrategyDraftResponse:
+      type: object
+      required:
+        - schema_version
+        - job_id
+        - keyword
+        - generated_at
+        - source
+        - markdown
+      properties:
+        schema_version:
+          type: integer
+          example: 1
+        job_id:
+          type: integer
+        keyword:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          description: structured_summary_rules_v1 或 llm_text_ai_crawler_v1
+          example: structured_summary_rules_v1
+        markdown:
+          type: string
