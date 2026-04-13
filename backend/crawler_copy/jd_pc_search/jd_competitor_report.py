@@ -281,6 +281,198 @@ def _collect_prices(rows: list[dict[str, str]]) -> list[float]:
     return out
 
 
+_JD_LIST_PRICE_KEY = "标价(jdPrice,jdPriceText,realPrice)"
+_COUPON_SHOW_PRICE_KEY = (
+    "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)"
+)
+_ORIGINAL_LIST_PRICE_KEY = "原价(oriPrice,originalPrice,marketPrice)"
+_SELLING_POINT_KEY = "卖点(sellingPoint)"
+_RANK_TAGLINE_KEY = "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)"
+
+# 列表/合并表中「卖点、腰带」常见活动话术子串（行级命中，非严谨 NLP）
+_PROMO_SUBSTRINGS_IN_COPY: tuple[str, ...] = (
+    "满减",
+    "秒杀",
+    "限时",
+    "优惠券",
+    "领券",
+    "券后",
+    "百亿补贴",
+    "包邮",
+    "赠品",
+    "买赠",
+    "第二件",
+    "第2件",
+    "直降",
+    "特价",
+    "促销",
+    "套装",
+    "任选",
+    "到手价",
+    "补贴",
+    "聚划算",
+    "预售",
+    "定金",
+    "返现",
+    "折扣",
+    "加购",
+    "下单立减",
+)
+
+
+def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
+    """
+    从列表或合并行中归纳「标价 vs 券后/到手」及卖点/腰带中的活动话术信号，
+    供 §6.1 与结构化摘要使用（**页面展示口径**，非结算实付）。
+    """
+    n = len(rows)
+    with_jd = with_cp = with_both = 0
+    coupon_below = 0
+    pct_offs: list[float] = []
+    ori_above_list = 0
+    for row in rows:
+        jd = _float_price(_cell(row, _JD_LIST_PRICE_KEY))
+        cp = _float_price(_cell(row, _COUPON_SHOW_PRICE_KEY))
+        ori = _float_price(_cell(row, _ORIGINAL_LIST_PRICE_KEY))
+        if jd is not None and jd > 0:
+            with_jd += 1
+        if cp is not None and cp > 0:
+            with_cp += 1
+        if jd is not None and cp is not None and jd > 0 and cp > 0:
+            with_both += 1
+            if cp + 1e-6 < jd:
+                coupon_below += 1
+                pct_offs.append((jd - cp) / jd * 100.0)
+        if (
+            ori is not None
+            and jd is not None
+            and ori > 0
+            and jd > 0
+            and ori > jd + 1e-6
+        ):
+            ori_above_list += 1
+
+    selling_nonempty = sum(
+        1 for r in rows if _cell(r, _SELLING_POINT_KEY).strip()
+    )
+    rank_nonempty = sum(1 for r in rows if _cell(r, _RANK_TAGLINE_KEY).strip())
+
+    kw_row_hits: dict[str, int] = {}
+    for kw in _PROMO_SUBSTRINGS_IN_COPY:
+        c = 0
+        for row in rows:
+            blob = (
+                _cell(row, _SELLING_POINT_KEY) + " " + _cell(row, _RANK_TAGLINE_KEY)
+            )
+            if kw in blob:
+                c += 1
+        if c:
+            kw_row_hits[kw] = c
+    top_promos = sorted(kw_row_hits.items(), key=lambda x: -x[1])[:14]
+
+    median_pct = statistics.median(pct_offs) if pct_offs else None
+    mean_pct = statistics.mean(pct_offs) if pct_offs else None
+    share_below = (
+        (coupon_below / with_both) if with_both else None
+    )
+
+    return {
+        "row_count": n,
+        "rows_with_list_price": with_jd,
+        "rows_with_coupon_price": with_cp,
+        "rows_with_both_list_and_coupon": with_both,
+        "rows_coupon_below_list_price": coupon_below,
+        "share_coupon_below_list_when_both": share_below,
+        "median_discount_pct_when_coupon_below": median_pct,
+        "mean_discount_pct_when_coupon_below": mean_pct,
+        "rows_original_price_above_list_price": ori_above_list,
+        "rows_selling_point_nonempty": selling_nonempty,
+        "rows_rank_tagline_nonempty": rank_nonempty,
+        "promo_keyword_row_hits_top": [
+            {"keyword": k, "rows": v} for k, v in top_promos
+        ],
+    }
+
+
+def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
+    """§6.1 优惠活动与价差信号（Markdown 行列表）。"""
+    lines: list[str] = [
+        "### 6.1 优惠活动与价差信号（页面展示摘录）",
+        "",
+        "- **口径**：与上节价量统计**同一批行**；比较的是列表/合并表中的**展示标价**与**展示券后/到手价**（字段见表头），"
+        "反映页面呈现的活动与券信息，**不等于**用户结算实付或历史最低价。",
+        "",
+    ]
+    wb = int(p.get("rows_with_both_list_and_coupon") or 0)
+    if wb <= 0:
+        lines.append(
+            "- **标价与券后价可对齐比较**的有效行不足，本节仅摘录卖点/腰带中的活动话术（若有）。"
+        )
+        lines.append("")
+    else:
+        cb = int(p.get("rows_coupon_below_list_price") or 0)
+        sh = p.get("share_coupon_below_list_when_both")
+        med = p.get("median_discount_pct_when_coupon_below")
+        mean = p.get("mean_discount_pct_when_coupon_below")
+        lines.append(
+            f"- **同时解析到标价与券后/到手价** 的行：**{wb}**；其中展示「到手/券后」**严格低于**「标价」的行：**{cb}**"
+            + (
+                f"（占可对齐行的 **{100.0 * float(sh):.1f}%**）"
+                if isinstance(sh, (int, float))
+                else ""
+            )
+            + "。"
+        )
+        if med is not None:
+            frag_mean = (
+                f"，平均价差约 **{float(mean):.1f}%**" if mean is not None else ""
+            )
+            lines.append(
+                f"- **价差力度（仅「券后低于标价」子集）**：展示价差的中位数约 **{float(med):.1f}%**（相对标价）{frag_mean}；"
+                "通常对应满减、券、限时价等在列表上的叠加呈现。"
+            )
+        elif cb > 0:
+            lines.append(
+                "- **价差**：存在「券后低于标价」样本，但条数较少，未给出稳健分位数；建议结合 §5 单品对照。"
+            )
+        lines.append("")
+        oa = int(p.get("rows_original_price_above_list_price") or 0)
+        if oa > 0:
+            lines.append(
+                f"- **划线原价高于当前标价** 的行约 **{oa}** 条（常见「划线价 + 当前价」促销陈列，具体以页面为准）。"
+            )
+            lines.append("")
+    sn = int(p.get("rows_selling_point_nonempty") or 0)
+    rn = int(p.get("rows_rank_tagline_nonempty") or 0)
+    nr = int(p.get("row_count") or 0)
+    if nr > 0:
+        lines.append(
+            f"- **卖点字段非空**：**{sn}** / **{nr}** 行；**榜单/腰带类文案非空**：**{rn}** / **{nr}** 行（用于观察申报活动与心智标签）。"
+        )
+        lines.append("")
+    top = p.get("promo_keyword_row_hits_top") or []
+    if isinstance(top, list) and top:
+        lines.append("- **活动话术在列表行中的出现面**（卖点+腰带合并扫描预设子串；**同一行可含多词**，为行级命中次数）：")
+        parts = []
+        for it in top[:10]:
+            if isinstance(it, dict):
+                k = it.get("keyword") or ""
+                v = it.get("rows")
+                if k and v is not None:
+                    parts.append(f"「{k}」**{int(v)}** 行")
+        if parts:
+            lines.append("  - " + "；".join(parts) + "。")
+        lines.append(
+            "  - **解读**：高频词反映列表侧**主推活动类型**（如满减、百亿补贴、赠品）；与 §6 分布表结合看「低价来自常态价还是大促价带」。"
+        )
+    else:
+        lines.append(
+            "- **活动话术**：未在卖点/腰带字段中命中预设促销子串（可能字段为空或话术与词表不一致）。"
+        )
+    lines.append("")
+    return lines
+
+
 def _comment_keyword_hits(
     rows: list[dict[str, str]],
     focus_words: tuple[str, ...],
@@ -1275,6 +1467,12 @@ def build_competitor_markdown(
         if list_export and pst_list.get("n", 0) > 0
         else f"已深入抓取的 **{n_sku}** 个 SKU 合并数据中的展示价"
     )
+    promo_rows = (
+        search_export_rows
+        if list_export and pst_list.get("n", 0) > 0
+        else merged_rows
+    )
+    promo_sig = _analyze_price_promotions(promo_rows)
 
     hits = _comment_keyword_hits(comment_rows, focus_words)
     if not hits:
@@ -1341,7 +1539,7 @@ def build_competitor_markdown(
             "",
             "### 1.3 方法说明（指标含义）",
             "",
-            "- **价格**：自页面「标价 / 券后价 / 详情价」等抽取的**展示价**，含促销与规格差异，**不等于**出厂价或成本。**第六章** 在具备可用的搜索列表导出时，优先以**列表全量**统计；否则使用**已深入 SKU** 的合并数据。",
+            "- **价格**：自页面「标价 / 券后价 / 详情价」等抽取的**展示价**，含促销与规格差异，**不等于**出厂价或成本。**第六章** 在具备可用的搜索列表导出时，优先以**列表全量**统计；否则使用**已深入 SKU** 的合并数据；**§6.1** 归纳标价与券后价差及卖点/腰带中的**活动话术信号**。",
             "- **品牌/店铺集中度（第四章）**：有列表全量时按列表行计店铺与品牌占比；无列表导出时按深入 SKU 合并表估算。",
             "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
@@ -1420,6 +1618,13 @@ def build_competitor_markdown(
             f"展示价格{price_src_short}：可解析价格 **{pst['n']}** 个观测，区间约 **{pst['min']:.2f}～{pst['max']:.2f}** 元，"
             f"中位数 **{pst.get('median', pst['mean']):.2f}** 元。"
         )
+        wb = int(promo_sig.get("rows_with_both_list_and_coupon") or 0)
+        sh = promo_sig.get("share_coupon_below_list_when_both")
+        med = promo_sig.get("median_discount_pct_when_coupon_below")
+        if wb >= 3 and isinstance(sh, (int, float)) and sh >= 0.08 and med is not None:
+            exec_bullets.append(
+                f"列表侧约 **{100.0 * float(sh):.0f}%** 可对齐行呈现「券后/到手」**低于**「标价」，展示价差中位数约 **{float(med):.1f}%**（**§6.1** 活动与话术摘录）。"
+            )
     if multi_feedback_cat and (hits or scen_n_texts > 0):
         exec_bullets.append(
             "评价侧写（关注词、用途/场景）已按 **§5 同款细类** 分节，见 **§8.3～8.4**。"
@@ -1736,8 +1941,12 @@ def build_competitor_markdown(
         lines.append(
             "**解读提示**：价差大通常反映规格、组合装、品牌溢价或促销差异；B 端定价策略需结合成本与渠道单独建模。"
         )
+        lines.append("")
+        lines.extend(_markdown_price_promotion_section(promo_sig))
     else:
         lines.append("*当前样本无可用数值价格，本节不展开统计表。*")
+        lines.append("")
+        lines.extend(_markdown_price_promotion_section(promo_sig))
     lines.append("")
 
     attrs: list[str] = []
@@ -2007,6 +2216,12 @@ def build_competitor_brief(
         if list_export and pst_list.get("n", 0) > 0
         else "keyword_pipeline_merged"
     )
+    promo_rows_brief = (
+        search_export_rows
+        if list_export and pst_list.get("n", 0) > 0
+        else merged_rows
+    )
+    price_promotion_signals = _analyze_price_promotions(promo_rows_brief)
 
     hits = _comment_keyword_hits(comment_rows, focus_words)
     if not hits:
@@ -2206,6 +2421,7 @@ def build_competitor_brief(
         "price_stats_source": price_stats_source,
         "price_stats_merged_sample": pst_merged,
         "price_stats_list_export": pst_list if list_export else {},
+        "price_promotion_signals": price_promotion_signals,
         "comment_focus_keywords": [
             {"word": w, "count": n} for w, n in hits.most_common(24)
         ],
@@ -2227,7 +2443,7 @@ def build_competitor_brief(
         "comment_sentiment_lexicon": comment_sentiment_lexicon,
         "notes": [
             "与在线分析报告各章统计口径一致；主题词与场景为预设词表，非 NLP 主题模型。",
-            "价格来自页面展示字段抽取，含促销与规格差异。",
+            "价格来自页面展示字段抽取，含促销与规格差异；price_promotion_signals 为标价/券后对齐与卖点话术的启发式摘录。",
             "comment_sentiment_lexicon 为关键词粗判，非深度学习情感模型。",
         ],
     }
