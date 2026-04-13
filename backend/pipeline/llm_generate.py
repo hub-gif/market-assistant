@@ -49,7 +49,7 @@ REPORT_SYSTEM = """你撰写一段**短小的「速读与策略补充」**，插
 **请输出**（仅输出正文，不要前言后语）：
 - 使用 **Markdown**，控制在约 **800～1500 字**；
 - 建议小节标题（二级）：**执行摘要要点**、**竞争与价盘速读**、**用户声量与关注点**、**策略提示与数据边界**；
-- 若有 `comment_sentiment_lexicon`，概括正/负向粗判与局限（非深度学习）；
+- 若有 `comment_sentiment_lexicon`，概括正/负向粗判与局限（非深度学习）；**负向**须点出用户在抱怨的**具体事由类型**（如口感、价格、物流），避免只复述词频；
 - 语气专业、中文；缺失项写「本摘要未提供该项」而非猜测。"""
 
 REPORT_USER_PREFIX = """请根据以下 JSON 撰写完整竞品分析报告（Markdown 正文）。\n\n"""
@@ -68,19 +68,22 @@ def generate_competitor_report_markdown_llm(brief: dict[str, Any], keyword: str)
 
 SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON 含：
 - ``comment_sentiment_lexicon``：关键词规则下的条数与短语命中（粗判，非深度学习）；
+- ``positive_lexeme_hits_top`` / ``negative_lexeme_hits_top``：短语级命中摘要（与条形图同源）；
 - ``sample_reviews_*``：按同一规则从评价中抽样的短文（已截断），**仅可依据这些原文与 lexicon 数字归纳**。
 
 **硬性要求**：
 - **仅输出 Markdown 正文**（不要用 ``` 围栏包裹全文）；
 - **不要编造**样本中未出现的具体事实、品牌、价格、医学功效；
-- 条数、占比等**定量表述须与** ``comment_sentiment_lexicon`` **一致**，勿与样本矛盾。
+- 条数、占比等**定量表述须与** ``comment_sentiment_lexicon`` **一致**，勿与样本矛盾；
+- **不要**只复述「某词出现 N 次」——词频条形图已在报告正文；你的价值是**语义层归纳**：用户在说什么、不满/满意的具体事由是什么。
 
 **建议结构**（使用四级标题 ``####``）：
-1. ``#### 正向要点归纳``：3～6 条要点，概括满意点（口感、甜度、包装、物流、性价比等）；
-2. ``#### 负向与风险点归纳``：3～6 条要点；
-3. ``#### 使用注意``：1～2 句说明样本量、抽样局限、与关键词规则可能不一致之处。
+1. ``#### 正向体验主题``：3～6 条；每条用一句话概括一类满意点（如口感、甜度、饱腹、性价比、物流），**尽量**在句末用简短「」引用样本中的原话片段佐证（无合适原话则省略引号，勿杜撰）。
+2. ``#### 负向评价主题归因``：**核心段落**。在「偏负向」与「混合」样本中归纳 **4～8 个具体问题维度**（示例维度，按需选用：口味/难吃/怪味、过甜或寡淡、质地口感、价格与促销、包装破损、物流时效、真伪与效期、与宣传不符、健康/功效疑虑等）。每个维度下用 1～2 条列表项写清「用户具体在抱怨什么」，并**尽量**附上来自 ``sample_reviews_negative_biased`` 或 ``sample_reviews_mixed_tone`` 的「」短引文；若某维度在样本中几乎无依据则不要硬写。
+3. ``#### 混合评价中的典型张力``（可选）：若 ``sample_reviews_mixed_tone`` 非空，用 2～4 条说明同一条评价里正负并存时在讨论什么（如「认可低糖但嫌口感」）；否则写一句「本批混合样本较少，从略」。
+4. ``#### 使用注意``：1～3 句说明：关键词分桶的局限、抽样与截断、与医学/功效结论无关等。
 
-总字数约 **400～900 字**，简体中文，语气客观。"""
+总字数约 **700～1600 字**，简体中文，语气客观。"""
 
 
 def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
@@ -88,14 +91,15 @@ def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
     p = dict(payload)
     raw = json.dumps(p, ensure_ascii=False)
     if len(raw) > 88_000:
-        for k in (
-            "sample_reviews_positive_biased",
-            "sample_reviews_negative_biased",
-            "sample_reviews_mixed_tone",
+        # 超长时优先压缩正向与混合，保留更多负向样本以利主题归因
+        for k, cap, maxlen in (
+            ("sample_reviews_positive_biased", 8, 140),
+            ("sample_reviews_mixed_tone", 6, 140),
+            ("sample_reviews_negative_biased", 18, 160),
         ):
             lst = p.get(k)
             if isinstance(lst, list):
-                p[k] = [str(x)[:140] for x in lst[:8]]
+                p[k] = [str(x)[:maxlen] for x in lst[:cap]]
         raw = json.dumps(p, ensure_ascii=False)
     if len(raw) > 88_000:
         raw = raw[:82_000] + "\n\n…（输入过长已截断，请勿编造截断外内容）\n"

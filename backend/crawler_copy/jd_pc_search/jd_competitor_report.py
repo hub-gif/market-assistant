@@ -508,11 +508,15 @@ def _comment_sentiment_lexicon(texts: list[str]) -> dict[str, Any]:
 def build_comment_sentiment_llm_payload(
     texts: list[str],
     *,
-    max_samples_per_tone: int = 14,
-    max_chars_per_review: int = 240,
+    max_samples_positive: int = 16,
+    max_samples_negative: int = 30,
+    max_samples_mixed: int = 10,
+    max_chars_per_review: int = 300,
 ) -> dict[str, Any]:
     """
     供大模型做正/负向语义归纳：附规则统计与**去重后的评价原文抽样**（与 §8.2 词表分桶一致）。
+
+    负向样本默认多于正向，便于大模型做「具体问题是什么」的主题归因，而非只复述词频。
     """
     pos_only_texts: list[str] = []
     neg_only_texts: list[str] = []
@@ -530,7 +534,7 @@ def build_comment_sentiment_llm_payload(
         elif hn:
             neg_only_texts.append(s)
 
-    def _sample(seq: list[str]) -> list[str]:
+    def _sample(seq: list[str], cap: int) -> list[str]:
         out: list[str] = []
         seen: set[str] = set()
         for raw in seq:
@@ -541,16 +545,22 @@ def build_comment_sentiment_llm_payload(
                 out.append(raw[:max_chars_per_review] + "…")
             else:
                 out.append(raw)
-            if len(out) >= max_samples_per_tone:
+            if len(out) >= cap:
                 break
         return out
 
     lex = _comment_sentiment_lexicon(texts)
+    pos_h = lex.get("positive_tone_lexeme_hits") or []
+    neg_h = lex.get("negative_tone_lexeme_hits") or []
+    pos_h_top = [x for x in pos_h[:12] if isinstance(x, dict)]
+    neg_h_top = [x for x in neg_h[:12] if isinstance(x, dict)]
     return {
         "comment_sentiment_lexicon": lex,
-        "sample_reviews_positive_biased": _sample(pos_only_texts),
-        "sample_reviews_negative_biased": _sample(neg_only_texts),
-        "sample_reviews_mixed_tone": _sample(mixed_texts)[:8],
+        "positive_lexeme_hits_top": pos_h_top,
+        "negative_lexeme_hits_top": neg_h_top,
+        "sample_reviews_positive_biased": _sample(pos_only_texts, max_samples_positive),
+        "sample_reviews_negative_biased": _sample(neg_only_texts, max_samples_negative),
+        "sample_reviews_mixed_tone": _sample(mixed_texts, max_samples_mixed),
     }
 
 
@@ -1753,7 +1763,7 @@ def build_competitor_markdown(
             "",
             "- **细类划分**：与 **§5 竞品矩阵** 相同，依据商详类目路径解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
             "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组。",
-            "- **正负面粗判（§8.2）**：先以关键词规则与图表做粗分；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的语义归纳**（与规则统计互补）。",
+            "- **正负面粗判（§8.2）**：先以关键词规则与图表做粗分；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**（尤其负向「用户在抱怨什么」），与词频条形图互补。",
             "- **关注词按细类（§8.3）**：对组内评价正文做子串计数并出条形图；若无逐条正文则用该细类下评价摘要列拼接兜底；与配置关注词及联想扩展同源。",
             "- **用途/场景按细类（§8.4）**：对组内每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景；条形图横轴为**占该细类有效文本比例 %**（多标签下各比例可相加大于 100%）。",
             "",
@@ -1813,9 +1823,9 @@ def build_competitor_markdown(
         lines.extend(
             [
                 "",
-                "#### 大模型解读（正/负向评价要点）",
+                "#### 大模型深入解读（主题归因，与词频统计互补）",
                 "",
-                "> **说明**：基于与上节**同一分桶规则**抽样的评价原文，由大模型做语义归纳，与关键词条数、条形图**互补**；具体措辞以原评论为准。",
+                "> **说明**：基于与上节**同一分桶规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
                 "",
                 _llm_s,
             ]

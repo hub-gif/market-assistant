@@ -268,7 +268,13 @@ def write_competitor_analysis_for_run_dir(
             try:
                 from .llm_generate import generate_comment_sentiment_analysis_llm
 
-                pl = jcr.build_comment_sentiment_llm_payload(comment_units)
+                pl = jcr.build_comment_sentiment_llm_payload(
+                    comment_units,
+                    max_samples_positive=16,
+                    max_samples_negative=30,
+                    max_samples_mixed=10,
+                    max_chars_per_review=300,
+                )
                 pl["keyword"] = kw
                 llm_sentiment_md = generate_comment_sentiment_analysis_llm(pl)
                 sentiment_llm_record["ok"] = True
