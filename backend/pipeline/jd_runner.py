@@ -20,8 +20,8 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     """
     **以规则引擎全文为正文**（含 §5 完整竞品矩阵、各章内嵌统计图与表格）。
 
-    大模型稿仅作为开篇「速读/策略补充」插入在「## 一、」之前，**不得**再用纯 LLM 稿
-    覆盖规则正文（否则会丢失矩阵与章节结构）。
+    大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.4 等具体分析同卷连贯，
+    **不再**插在篇首「## 一、」之前。
     """
     body = (rules_md or "").strip()
     sup = (llm_md or "").strip()
@@ -29,17 +29,39 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
         return body
     if not body:
         return sup
-    block = (
-        "---\n\n"
-        "## 大模型速读与策略要点（补充）\n\n"
-        "> **说明**：以下由大模型依据结构化摘要生成，便于速览；**完整竞品对比矩阵、全部表格、"
-        "统计图与定量口径以正文各章（尤其 §5）为准**，请勿仅依据本段理解 SKU 明细。\n\n"
-        f"{sup}\n"
+    marker = "\n---\n\n## 九、策略与机会提示（假设清单，待验证）"
+    insert = (
+        "\n\n---\n\n"
+        "### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
+        "> **说明**：本段位于**第八章末**；**竞品矩阵、价盘表、统计图与 §8.2～8.4 词频等以正文各节为准**，"
+        "此处为跨小节语义整合，便于衔接第九章。\n\n"
+        f"{sup.strip()}\n"
+        "\n---\n\n## 九、策略与机会提示（假设清单，待验证）"
     )
-    marker = "\n---\n\n## 一、研究范围、数据来源与局限"
     if marker in body:
-        return body.replace(marker, "\n" + block + marker, 1)
-    return block + "\n---\n\n" + body
+        return body.replace(marker, insert, 1)
+    # 旧版报告标题或语言差异时的回退
+    for alt in (
+        "\n## 九、策略与机会提示（假设清单，待验证）",
+        "\n## 九、策略与机会提示",
+    ):
+        if alt in body and marker not in body:
+            return body.replace(
+                alt,
+                "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
+                "> **说明**：位于第八章末；**矩阵与图表以正文为准**。\n\n"
+                f"{sup.strip()}\n"
+                + alt,
+                1,
+            )
+    app = "\n## 附录 A：数据留存说明"
+    if app in body:
+        tail = (
+            "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
+            f"{sup.strip()}\n"
+        )
+        return body.replace(app, tail + app, 1)
+    return body + "\n\n---\n\n### 8.5 大模型深度补充\n\n" + sup.strip() + "\n"
 
 
 def merge_llm_report_with_rules_charts(llm_md: str, rules_md: str) -> str:
