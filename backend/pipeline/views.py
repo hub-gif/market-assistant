@@ -275,11 +275,15 @@ class JobRegenerateReportView(APIView):
         ser.is_valid(raise_exception=True)
         generator = ser.validated_data.get("generator") or "rules"
         rc = job.report_config if isinstance(job.report_config, dict) else None
+        # 规则版报告先落盘；run_dir 校验、缺 CSV 等与是否走 LLM 无关，统一返回 400（勿误用 503）
+        try:
+            regenerate_competitor_report(job.run_dir, job.keyword, report_config=rc)
+        except FileNotFoundError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         if generator == "llm":
             try:
-                regenerate_competitor_report(
-                    job.run_dir, job.keyword, report_config=rc
-                )
                 rules_md = (
                     Path(job.run_dir) / "competitor_analysis.md"
                 ).read_text(encoding="utf-8")
@@ -298,13 +302,6 @@ class JobRegenerateReportView(APIView):
                     {"detail": f"大模型网关错误：{e}"},
                     status=status.HTTP_502_BAD_GATEWAY,
                 )
-        else:
-            try:
-                regenerate_competitor_report(job.run_dir, job.keyword, report_config=rc)
-            except FileNotFoundError as e:
-                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            except ValueError as e:
-                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(PipelineJobSerializer(job).data)
 
 
