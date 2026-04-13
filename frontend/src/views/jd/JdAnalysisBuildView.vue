@@ -31,6 +31,8 @@ const {
   focusWordRows,
   scenarioGroups,
   marketRows,
+  useLlmCommentSentiment,
+  useLlmSectionBridges,
   applyFromApiConfig,
   buildPayload,
   addFocusRow,
@@ -247,8 +249,18 @@ watch(
       <div v-if="selectedId" class="report-config-block">
         <h3 class="report-config-title">报告里的评价统计怎么算</h3>
         <p class="hint-top report-config-hint">
-          下面三项都<strong>可以不改</strong>：留空并保存，表示沿用系统内置规则。请先点「保存以上设置」，再点「重新生成报告」（需要大模型时先勾选页面上方对应选项）。
+          下面几项都<strong>可以不改</strong>：留空并保存，表示沿用系统内置规则。请先点「保存以上设置」，再点「重新生成报告」；需要大模型时勾选下方「评价归纳」或「各章衔接」，页顶「使用大模型生成」仍用于整份报告另一种生成模式。
         </p>
+        <div class="toolbar toolbar-llm-flags">
+          <label class="chk-inline">
+            <input v-model="useLlmCommentSentiment" type="checkbox" />
+            评价章大模型归纳（§8.2 主题解读，需 API 密钥）
+          </label>
+          <label class="chk-inline">
+            <input v-model="useLlmSectionBridges" type="checkbox" />
+            各章大模型衔接分析（第一～九章标题后各一段，一次调用多章，需密钥）
+          </label>
+        </div>
         <div class="report-config-actions">
           <button
             type="button"

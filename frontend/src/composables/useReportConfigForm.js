@@ -20,11 +20,15 @@ export function useReportConfigForm() {
   const marketRows = ref([
     { indicator: '', value_and_scope: '', source: '', year: '' },
   ])
+  const useLlmCommentSentiment = ref(false)
+  const useLlmSectionBridges = ref(false)
 
   function resetToEmpty() {
     focusWordRows.value = [{ text: '' }]
     scenarioGroups.value = [{ label: '', triggersText: '' }]
     marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
+    useLlmCommentSentiment.value = false
+    useLlmSectionBridges.value = false
   }
 
   /**
@@ -94,6 +98,9 @@ export function useReportConfigForm() {
     } else {
       marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
     }
+
+    useLlmCommentSentiment.value = Boolean(cfg.llm_comment_sentiment)
+    useLlmSectionBridges.value = Boolean(cfg.llm_section_bridges)
   }
 
   /** @returns {Record<string, unknown>} 可 PATCH 到后端的 report_config；全空则为 {} */
@@ -132,6 +139,9 @@ export function useReportConfigForm() {
         year: r.year,
       }))
     }
+
+    out.llm_comment_sentiment = useLlmCommentSentiment.value
+    out.llm_section_bridges = useLlmSectionBridges.value
 
     return out
   }
@@ -178,6 +188,8 @@ export function useReportConfigForm() {
     focusWordRows,
     scenarioGroups,
     marketRows,
+    useLlmCommentSentiment,
+    useLlmSectionBridges,
     resetToEmpty,
     applyFromApiConfig,
     buildPayload,

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -108,6 +109,113 @@ def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
         raw = raw[:82_000] + "\n\n…（输入过长已截断，请勿编造截断外内容）\n"
     user = "请根据以下 JSON 按系统说明输出 Markdown：\n\n" + raw
     return _call_llm(SENTIMENT_LLM_SYSTEM, user)
+
+
+def split_competitor_report_for_bridges(
+    md: str, *, max_excerpt: int = 1200
+) -> dict[str, dict[str, str]]:
+    """
+    按「## 一、」…「## 九、」切分规则报告，供大模型按章写衔接分析。
+    每键含完整标题行与正文摘录（过长截断）。
+    """
+    pat = re.compile(r"^## ([一二三四五六七八九])、([^\n]*)$", re.MULTILINE)
+    matches = list(pat.finditer(md))
+    out: dict[str, dict[str, str]] = {}
+    for i, m in enumerate(matches):
+        key = m.group(1)
+        rest = m.group(2)
+        title = f"## {key}、{rest}"
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(md)
+        body = md[start:end].strip()
+        exc = body[:max_excerpt]
+        if len(body) > max_excerpt:
+            exc += "\n\n…（本节摘录已截断）\n"
+        out[key] = {"title": title, "excerpt": exc}
+    return out
+
+
+def _parse_llm_json_object(text: str) -> dict[str, Any]:
+    raw = (text or "").strip()
+    if not raw:
+        return {}
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"\s*```\s*$", "", raw)
+    try:
+        obj = json.loads(raw)
+        return obj if isinstance(obj, dict) else {}
+    except json.JSONDecodeError:
+        pass
+    m = re.search(r"\{[\s\S]*\}", raw)
+    if m:
+        try:
+            obj = json.loads(m.group(0))
+            return obj if isinstance(obj, dict) else {}
+        except json.JSONDecodeError:
+            pass
+    return {}
+
+
+def _normalize_section_bridge_map(d: dict[str, Any]) -> dict[str, str]:
+    allowed = frozenset("一二三四五六七八九")
+    out: dict[str, str] = {}
+    for k, v in d.items():
+        if not isinstance(k, str) or len(k) != 1 or k not in allowed:
+            continue
+        if isinstance(v, str) and v.strip():
+            out[k] = v.strip()
+    return out
+
+
+BRIDGE_SECTIONS_SYSTEM = """你是竞品监测报告的**章节衔接**撰稿助手。
+
+**输入 JSON** 含：
+- ``keyword``：监测词；
+- ``competitor_brief``：与本报告一致的**结构化摘要**（已裁剪体积）；
+- ``sections``：键为汉字「一」～「九」，每项含 ``title``（该章完整二级标题行）与 ``excerpt``（该章正文开头摘录，可能已截断）。
+
+**任务**：为 **sections 中出现的每一键** 各写一段 **衔接性分析**（帮读者从摘要与摘录过渡到读该章表格/图），并与 ``competitor_brief`` 中的数字与结论一致。
+
+**硬性要求**：
+- **仅输出一个 UTF-8 JSON 对象**（不要用 markdown 代码围栏包裹整段输出）；
+- 键必须为「一」「二」…「九」之一，且 **只对输入 sections 里存在的键** 给出字符串值；可省略无材料的键；
+- 每个值为 **Markdown 片段**（约 3～10 句中文），**禁止**使用 ``## `` 开头的行（不要写新的二级章标题）；可使用 ``###`` / ``####`` 或加粗小标题；
+- 所有**定量表述**须能在 ``competitor_brief`` 或对应 ``excerpt`` 中找到依据，**禁止编造** SKU 数、份额、价格；
+- 不要复述整章表格；不要写「详见下文矩阵」以外的空洞套话；可点出该章阅读重点（如价盘带、矩阵细类、评价规则局限等）。"""
+
+
+def generate_section_bridges_llm(
+    *,
+    keyword: str,
+    brief: dict[str, Any],
+    sections: dict[str, dict[str, str]],
+) -> dict[str, str]:
+    """一次 LLM 调用，返回各章衔接 Markdown 片段（键：一～九）。"""
+    if not sections:
+        return {}
+    compact = compact_brief_for_llm(brief, max_chars=100_000)
+    sec: dict[str, dict[str, str]] = {
+        k: {"title": v.get("title", ""), "excerpt": v.get("excerpt", "")}
+        for k, v in sections.items()
+        if isinstance(v, dict)
+    }
+    for max_exc in (1200, 900, 600, 400, 280):
+        for v in sec.values():
+            ex = v.get("excerpt") or ""
+            if len(ex) > max_exc:
+                v["excerpt"] = ex[:max_exc] + "\n…\n"
+        payload = {
+            "keyword": keyword,
+            "competitor_brief": compact,
+            "sections": sec,
+        }
+        raw = json.dumps(payload, ensure_ascii=False)
+        if len(raw) <= 92_000:
+            break
+    user = "请严格按系统说明，**只输出一个 JSON 对象**（键为一～九，值为 Markdown 字符串）：\n\n" + raw
+    text = _call_llm(BRIDGE_SECTIONS_SYSTEM, user)
+    return _normalize_section_bridge_map(_parse_llm_json_object(text))
 
 
 STRATEGY_SYSTEM = """你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」润色为可读的策略 Markdown。
