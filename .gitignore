@@ -21,6 +21,9 @@ backend/crawler_copy/jd_pc_search/common/jd_cookie.txt
 # 流水线 / 京东采集产出（默认在仓库根下 data/JD）
 /data/
 
+# 工作日报（本地记录，不纳入版本库）
+日报/
+
 venv/
 .venv/
 
