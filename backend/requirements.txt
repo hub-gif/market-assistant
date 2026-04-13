@@ -7,3 +7,4 @@ requests>=2.31
 python-docx>=1.1
 reportlab>=4.0
 matplotlib>=3.8
+playwright>=1.40
