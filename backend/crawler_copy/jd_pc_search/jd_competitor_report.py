@@ -1472,21 +1472,6 @@ def _competitor_matrix_md_line(
     )
 
 
-def _competitor_matrix_compact_md_line(
-    row: dict[str, str], *, sku_header: str, title_h: str
-) -> str:
-    """§5 简表：与矩阵条形图同源字段，便于对照；不含配料与长摘要。"""
-    sku = _md_cell(_cell(row, sku_header), 14)
-    title = _md_cell(_cell(row, title_h), 72)
-    brand = _md_cell(_cell(row, "detail_brand"), 16)
-    df = _cell(row, "detail_price_final").strip()
-    pj = _cell(row, "标价(jdPrice,jdPriceText,realPrice)").strip()
-    price_cell = _md_cell(df or pj or "—", 12)
-    cc = _md_cell(_cell(row, "评价量(commentFuzzy)"), 12)
-    shop = _md_cell(_cell(row, "店铺名(shopName)", "detail_shop_name"), 20)
-    return f"| {sku} | {title} | {brand} | {shop} | {price_cell} | {cc} |"
-
-
 def _strategy_hints(
     *,
     cr1: float | None,
@@ -2125,15 +2110,11 @@ def build_competitor_markdown(
             "分组**仅**使用合并表列 ``detail_category_path``（商详类目路径）：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
             "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。**该列为空**或路径段均为内部编码、**无法解析出可读细类**的 SKU **不进入**本矩阵，亦**不参与**第八章按细类的评价统计。",
             "",
-            "**读图方式**：每个细类下优先给出**并列横向条形图**（左：**展示价**（元）；右：**评价量**（搜索列表侧文案，作**声量 proxy**，**非**平台销量/动销）），"
-            "纵轴为**产品标题**（与图文件 ``chart_matrix_prices_reviews__*.png`` 同源）。下方附**精简对照表**（SKU、店铺、价与评价量）；配料、卖点与评价摘要等完整列见合并表 CSV。",
+            "**读图方式**：每个细类下为**并列横向条形图**（左：**展示价**（元）；右：**评价量**（搜索列表侧文案，作**声量 proxy**，**非**平台销量/动销）），"
+            "纵轴为**产品标题**（与 ``report_assets/chart_matrix_prices_reviews__*.png`` 同源）。**SKU、店铺、配料与评价摘要等明细不列入正文**，见本批次 ``keyword_pipeline_merged.csv``。",
             "",
         ]
     )
-    matrix_header_compact = [
-        "| SKU | 产品（标题） | 品牌 | 渠道（店铺） | 展示价（详情优先） | 评价量(搜索) |",
-        "| --- | --- | --- | --- | --- | --- |",
-    ]
     grouped_matrix = _merged_rows_grouped_for_matrix(merged_rows)
     if not grouped_matrix:
         if merged_rows:
@@ -2152,7 +2133,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 mx_chart,
-                f"「{_md_cell(gname, 20)}」· 展示价与评价量（搜索侧声量 proxy）；纵轴为产品标题，与下图简表一致。",
+                f"「{_md_cell(gname, 20)}」· 展示价与评价量（搜索侧声量 proxy）；纵轴为产品标题。",
             )
         )
         if not (run_dir / "report_assets" / mx_chart).is_file():
@@ -2160,17 +2141,6 @@ def build_competitor_markdown(
                 f"*（尚未生成 ``report_assets/{mx_chart}``：请确认已执行报告出图流程，或重新生成报告。）*"
             )
             lines.append("")
-        lines.extend(matrix_header_compact)
-        grows_sorted = sorted(
-            grows,
-            key=lambda r: (_cell(r, title_h) or _cell(r, sku_header) or "").strip(),
-        )
-        for row in grows_sorted:
-            lines.append(
-                _competitor_matrix_compact_md_line(
-                    row, sku_header=sku_header, title_h=title_h
-                )
-            )
         lines.append("")
 
     _llm_mx = (llm_matrix_section_md or "").strip()
@@ -2178,9 +2148,9 @@ def build_competitor_markdown(
         lines.extend(
             [
                 "",
-                "#### 细类要点归纳（大模型，与上文条形图及简表互补）",
+                "#### 细类要点归纳（大模型，与上文条形图互补）",
                 "",
-                "> **说明**：与 §5 相同的细类划分下归纳卖点与配料共性；**具体 SKU、价格与条形图以正文为准**。",
+                "> **说明**：与 §5 相同的细类划分下归纳卖点与配料共性；**具体 SKU、价格与条形图以正文为准**，SKU级明细见合并表 CSV。",
                 "",
                 _llm_mx,
                 "",
