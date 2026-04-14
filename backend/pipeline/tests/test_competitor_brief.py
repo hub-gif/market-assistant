@@ -8,7 +8,6 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from pipeline.csv_schema import infer_total_sales_from_sales_floor
 from pipeline.report_charts import _cn_volume_int
 
 
@@ -178,13 +177,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
             _cn_volume_int("已售50万+ | good:99%好评"), 500_000
         )
         self.assertEqual(_cn_volume_int("2.5亿件"), 250_000_000)
-
-    def test_infer_total_sales_from_sales_floor(self) -> None:
-        self.assertEqual(
-            infer_total_sales_from_sales_floor("good:99%好评 | 已售50万+"),
-            "已售50万+",
-        )
-        self.assertEqual(infer_total_sales_from_sales_floor(""), "")
 
     def test_mix_top_remainder_sums_to_all_rows(self) -> None:
         """饼图与 §4 表同源：mix_top 各 count 之和须等于含名行数。"""

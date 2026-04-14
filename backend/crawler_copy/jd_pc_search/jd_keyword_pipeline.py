@@ -200,6 +200,7 @@ _MERGED_LEAN_FIELDNAMES: tuple[str, ...] = (
     "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
     "评价量(commentFuzzy)",
     "销量楼层(commentSalesFloor)",
+    "销量口径(totalSales)",
     "店铺名(shopName)",
     "商品链接(toUrl,clickUrl,item.m.jd.com)",
     "主图(imageurl,imageUrl)",

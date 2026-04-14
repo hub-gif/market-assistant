@@ -80,11 +80,17 @@ def _float_price_from_cell(s: str) -> float | None:
     return None
 
 
-def _reviews_volume_int(s: str) -> int:
-    """与矩阵「评价量」列同源：从搜索侧模糊文案中抽取整数（含「万」）。"""
+def _cn_volume_int(s: str) -> int:
+    """
+    从搜索侧文案抽取非负整数（评价量/销量等）：支持「亿」「万」及纯数字；
+    如 ``已售50万+ | good:99%好评`` → 500000。
+    """
     t = (s or "").strip().replace(",", "").replace("，", "")
     if not t:
         return 0
+    m = re.search(r"(\d+(?:\.\d+)?)\s*亿", t)
+    if m:
+        return int(round(float(m.group(1)) * 100_000_000))
     m = re.search(r"(\d+(?:\.\d+)?)\s*万", t)
     if m:
         return int(round(float(m.group(1)) * 10_000))
@@ -97,7 +103,7 @@ def _reviews_volume_int(s: str) -> int:
 def _format_xaxis_int_cn(x: float, _pos: int | None) -> str:
     """
     横轴大整数刻度：用「万」「亿」表述，避免 matplotlib 默认 ``1e6`` 科学计数法。
-    用于评价量、条数等非负计数。
+    用于销量、评价量、条数等非负计数。
     """
     if not math.isfinite(x):
         return ""
@@ -589,20 +595,20 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                     p = _float_price_from_cell(str(s.get(k) or ""))
                     if p is not None:
                         break
-                rev = _reviews_volume_int(str(s.get("comment_fuzzy") or ""))
-                rows_data.append((label, p, rev))
+                sales = _cn_volume_int(str(s.get("total_sales") or ""))
+                rows_data.append((label, p, sales))
             rows_data.sort(key=lambda x: x[0])
             if not rows_data:
                 continue
             if not any(
-                (pr is not None and pr > 0) or rv > 0
-                for _, pr, rv in rows_data
+                (pr is not None and pr > 0) or sv > 0
+                for _, pr, sv in rows_data
             ):
                 continue
             n = len(rows_data)
             labels_mx = [x[0] for x in rows_data]
             prices_mx = [x[1] for x in rows_data]
-            reviews_mx = [x[2] for x in rows_data]
+            sales_mx = [x[2] for x in rows_data]
             y_pos = list(range(n))
             fig_h = max(3.4, min(14.0, 0.38 * n + 2.4))
             fig, (ax_l, ax_r) = plt.subplots(
@@ -616,21 +622,21 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             ax_l.invert_yaxis()
             ax_l.set_xlabel("展示价（元）", fontsize=9)
             ax_l.set_title("展示价", fontsize=10, pad=8)
-            ax_r.barh(y_pos, reviews_mx, height=0.62, color="#059669")
-            ax_r.set_xlabel("评价量（搜索侧，单位：条）", fontsize=9)
-            ax_r.set_title("评价量 / 声量", fontsize=10, pad=8)
+            ax_r.barh(y_pos, sales_mx, height=0.62, color="#059669")
+            ax_r.set_xlabel("销量（搜索列表 totalSales 口径，已解析为件数）", fontsize=9)
+            ax_r.set_title("销量", fontsize=10, pad=8)
             ax_r.xaxis.set_major_formatter(
                 FuncFormatter(_format_xaxis_int_cn)
             )
             ax_r.tick_params(axis="y", left=False, labelleft=False)
             ttl = gname[:22] if gname else "细类"
             fig.suptitle(
-                f"「{ttl}」· 竞品矩阵：价格与评价量（与 §5 表同源）",
+                f"「{ttl}」· 竞品矩阵：价格与销量（与 §5 表同源）",
                 fontsize=11,
                 y=1.01,
             )
             fig.tight_layout()
-            out_mx = out_dir / f"chart_matrix_prices_reviews__{slug}.png"
+            out_mx = out_dir / f"chart_matrix_prices_sales__{slug}.png"
             fig.savefig(out_mx, dpi=130, bbox_inches="tight")
             plt.close(fig)
             created.append(out_mx.name)

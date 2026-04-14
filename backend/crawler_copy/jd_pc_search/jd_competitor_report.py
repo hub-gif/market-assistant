@@ -1578,7 +1578,7 @@ def _competitor_matrix_md_line(
     )
     cat = _md_cell(_detail_category_path_cell(row), 24)
     ing = _matrix_ingredients_cell(row)
-    cc = _md_cell(_cell(row, "评价量(commentFuzzy)"), 10)
+    cc = _md_cell(_cell(row, "销量口径(totalSales)", "评价量(commentFuzzy)"), 14)
     prev = _md_cell(_cell(row, "comment_preview"), 72)
     return (
         f"| {sku} | {title} | {brand} | {pj} | {df} | {shop} | {sell} | {rank} | "
@@ -1664,10 +1664,10 @@ def _focus_scenario_combo_bar_filename(group: str, index: int) -> str:
     return f"chart_focus_and_scenarios_bar__{slug}.png"
 
 
-def _matrix_prices_reviews_chart_filename(group: str, index: int) -> str:
-    """与 ``report_charts.generate_report_charts`` 中 ``chart_matrix_prices_reviews__*`` 一致。"""
+def _matrix_prices_sales_chart_filename(group: str, index: int) -> str:
+    """与 ``report_charts.generate_report_charts`` 中 ``chart_matrix_prices_sales__*`` 一致。"""
     slug = _scenario_group_asset_slug(group, index)
-    return f"chart_matrix_prices_reviews__{slug}.png"
+    return f"chart_matrix_prices_sales__{slug}.png"
 
 
 def _lines_4_reading_brand(
@@ -2219,8 +2219,8 @@ def build_competitor_markdown(
             "分组**仅**使用合并表列 ``detail_category_path``（商详类目路径）：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
             "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。**该列为空**或路径段均为内部编码、**无法解析出可读细类**的 SKU **不进入**本矩阵，亦**不参与**第八章按细类的评价统计。",
             "",
-            "**读图方式**：每个细类下为**并列横向条形图**（左：**展示价**（元）；右：**评价量**（搜索列表侧文案，作**声量 proxy**，**非**平台销量/动销）），"
-            "纵轴为**产品标题**（与 ``report_assets/chart_matrix_prices_reviews__*.png`` 同源）。**SKU、店铺、配料与评价摘要等明细不列入正文**，见本批次 ``keyword_pipeline_merged.csv``。",
+            "**读图方式**：每个细类下为**并列横向条形图**（左：**展示价**（元）；右：**销量**（搜索列表 ``totalSales`` 文案解析件数，如「已售50万+」计为 **50 万**）），"
+            "纵轴为**产品标题**（与 ``report_assets/chart_matrix_prices_sales__*.png`` 同源）。**SKU、店铺、配料与评价摘要等明细不列入正文**，见本批次 ``keyword_pipeline_merged.csv``。",
             "",
         ]
     )
@@ -2237,12 +2237,12 @@ def build_competitor_markdown(
     for gi, (gname, grows) in enumerate(grouped_matrix):
         lines.append(f"### {gname}（**{len(grows)}** 款）")
         lines.append("")
-        mx_chart = _matrix_prices_reviews_chart_filename(gname, gi)
+        mx_chart = _matrix_prices_sales_chart_filename(gname, gi)
         lines.extend(
             _embed_chart(
                 run_dir,
                 mx_chart,
-                f"「{_md_cell(gname, 20)}」· 展示价与评价量（搜索侧声量 proxy）；纵轴为产品标题。",
+                f"「{_md_cell(gname, 20)}」· 展示价与销量（totalSales 解析）；纵轴为产品标题。",
             )
         )
         if not (run_dir / "report_assets" / mx_chart).is_file():
@@ -2665,6 +2665,7 @@ def build_competitor_brief(
                     "category": _detail_category_path_cell(row),
                     "selling_point": _cell(row, "卖点(sellingPoint)")[:240],
                     "comment_fuzzy": _cell(row, "评价量(commentFuzzy)"),
+                    "total_sales": _cell(row, "销量口径(totalSales)"),
                 }
             )
         matrix_groups.append(

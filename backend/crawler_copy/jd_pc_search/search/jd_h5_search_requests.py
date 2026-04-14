@@ -339,6 +339,7 @@ JD_ITEM_CSV_FIELDS = (
     "original_price",
     "selling_point",
     "comment_sales_floor",
+    "total_sales",
     "hot_list_rank",
     "comment_count",
     "shop_name",
@@ -369,6 +370,7 @@ JD_EXPORT_COLUMN_HEADERS: dict[str, str] = {
     "original_price": "原价(oriPrice,originalPrice,marketPrice)",
     "selling_point": "卖点(sellingPoint)",
     "comment_sales_floor": "销量楼层(commentSalesFloor)",
+    "total_sales": "销量口径(totalSales)",
     "hot_list_rank": "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
     "comment_count": "评价量(commentFuzzy)",
     "shop_name": "店铺名(shopName)",
@@ -1239,6 +1241,13 @@ def _normalize_jd_api_row(d: dict[str, Any], *, keyword: str, page: int) -> dict
         120,
     )
     comment_sales_floor = _jd_format_comment_sales_floor(d)
+    total_sales = _human_text(
+        _sval_jd(
+            d,
+            ("totalSales", "total_sales", "TotalSales"),
+        ),
+        400,
+    )
 
     tag_strs = _jd_iter_tag_strings(d)
     arr_ind, _arr_groups = _jd_collect_list_string_fragments(
@@ -1301,6 +1310,7 @@ def _normalize_jd_api_row(d: dict[str, Any], *, keyword: str, page: int) -> dict
     out["original_price"] = orig
     out["selling_point"] = selling_point
     out["comment_sales_floor"] = comment_sales_floor
+    out["total_sales"] = total_sales
     out["hot_list_rank"] = hot_list_rank
     out["comment_count"] = comment_count
     out["shop_name"] = shop

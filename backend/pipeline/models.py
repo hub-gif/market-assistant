@@ -277,6 +277,7 @@ class JdJobMergedRow(models.Model):
     hot_list_rank = models.TextField(blank=True, default="")
     comment_fuzzy = models.TextField(blank=True, default="")
     comment_sales_floor = models.TextField(blank=True, default="")
+    total_sales = models.TextField(blank=True, default="")
     shop_name = models.TextField(blank=True, default="")
     detail_url = models.TextField(blank=True, default="")
     image = models.TextField(blank=True, default="")
