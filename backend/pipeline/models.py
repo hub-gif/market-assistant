@@ -159,6 +159,7 @@ class JdJobSearchRow(models.Model):
     original_price = models.TextField(blank=True, default="")
     selling_point = models.TextField(blank=True, default="")
     comment_sales_floor = models.TextField(blank=True, default="")
+    total_sales = models.TextField(blank=True, default="")
     hot_list_rank = models.TextField(blank=True, default="")
     comment_count = models.TextField(blank=True, default="")
     shop_name = models.TextField(blank=True, default="")

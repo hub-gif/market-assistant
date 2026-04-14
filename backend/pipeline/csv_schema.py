@@ -209,3 +209,13 @@ def merged_csv_effective_total_sales(row: dict[str, str]) -> str:
     if direct:
         return direct
     return infer_total_sales_from_sales_floor(str(row.get(h_fl) or ""))
+
+
+def search_csv_effective_total_sales(row: dict[str, str]) -> str:
+    """PC 搜索导出表一行：与 ``merged_csv_effective_total_sales`` 口径一致（中文表头）。"""
+    h_ts = JD_SEARCH_CSV_HEADERS["total_sales"]
+    h_fl = JD_SEARCH_CSV_HEADERS["comment_sales_floor"]
+    direct = str(row.get(h_ts) or "").strip()
+    if direct:
+        return direct
+    return infer_total_sales_from_sales_floor(str(row.get(h_fl) or ""))

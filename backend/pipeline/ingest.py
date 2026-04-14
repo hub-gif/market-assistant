@@ -25,6 +25,7 @@ from .csv_schema import (
     MERGED_FIELD_TO_CSV_HEADER,
     SEARCH_CSV_HEADER_TO_FIELD,
     merged_csv_effective_total_sales,
+    search_csv_effective_total_sales,
 )
 from .models import (
     JdJobCommentRow,
@@ -62,6 +63,11 @@ def _read_csv_rows(path: Path) -> list[dict[str, str]]:
 
 def _payload_as_json(row: dict[str, str]) -> dict[str, str]:
     return {str(k): str(v) if v is not None else "" for k, v in row.items()}
+
+
+def _normalize_search_csv_total_sales(row: dict[str, str]) -> None:
+    h = JD_SEARCH_CSV_HEADERS["total_sales"]
+    row[h] = search_csv_effective_total_sales(row)
 
 
 def _search_row_kwargs(row: dict[str, str]) -> dict[str, str]:
@@ -133,6 +139,7 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
         pass
     s_objs: list[JdJobSearchRow] = []
     for i, row in enumerate(search_rows):
+        _normalize_search_csv_total_sales(row)
         kw = _search_row_kwargs(row)
         s_objs.append(JdJobSearchRow(job=job, row_index=i, **kw))
     _bulk_create_in_chunks(JdJobSearchRow, s_objs)
