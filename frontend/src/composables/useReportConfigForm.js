@@ -20,6 +20,7 @@ const REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS = [
   'llm_matrix_group_summaries',
   'llm_price_group_summaries',
   'llm_comment_group_summaries',
+  'llm_scenario_group_summaries',
 ]
 
 /**

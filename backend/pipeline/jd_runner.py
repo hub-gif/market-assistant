@@ -151,6 +151,7 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_comment_sentiment": True,
         "llm_matrix_group_summaries": True,
         "llm_comment_group_summaries": True,
+        "llm_scenario_group_summaries": True,
         "llm_price_group_summaries": True,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
@@ -390,9 +391,11 @@ def write_competitor_analysis_for_run_dir(
 
     llm_matrix_md = ""
     llm_price_md = ""
+    llm_scenario_gr_md = ""
     llm_comment_gr_md = ""
     matrix_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     price_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    scenario_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     comment_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     sku_h = "SKU(skuId)"
     title_h = "标题(wareName)"
@@ -402,12 +405,16 @@ def write_competitor_analysis_for_run_dir(
 
     skip_mx = _env_on("MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES")
     skip_pr = _env_on("MA_SKIP_LLM_PRICE_GROUP_SUMMARIES")
+    skip_sg = _env_on("MA_SKIP_LLM_SCENARIO_GROUP_SUMMARIES")
     skip_cg = _env_on("MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES")
     want_mx = bool(eff_rc.get("llm_matrix_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_MATRIX_GROUP_SUMMARIES"
     )
     want_pr = bool(eff_rc.get("llm_price_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_PRICE_GROUP_SUMMARIES"
+    )
+    want_sg = bool(eff_rc.get("llm_scenario_group_summaries")) or _env_on(
+        "MA_ENABLE_LLM_SCENARIO_GROUP_SUMMARIES"
     )
     want_cg = bool(eff_rc.get("llm_comment_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_COMMENT_GROUP_SUMMARIES"
@@ -442,6 +449,40 @@ def write_competitor_analysis_for_run_dir(
         price_llm_rec["skipped"] = "MA_SKIP_LLM_PRICE_GROUP_SUMMARIES"
     elif not want_pr:
         price_llm_rec["skipped"] = "not_enabled"
+
+    if want_sg and not skip_sg and merged_rows:
+        _, scenario_tuple, _ = jcr.resolve_report_tuning(eff_rc)
+        fb_sg = jcr._consumer_feedback_by_matrix_group(
+            merged_rows=merged_rows,
+            comment_rows=comment_rows,
+            sku_header=sku_h,
+        )
+        pl_sg = jcr.build_scenario_groups_llm_payload(
+            feedback_groups=fb_sg,
+            scenario_groups=scenario_tuple,
+            merged_rows=merged_rows,
+            sku_header=sku_h,
+            title_h=title_h,
+        )
+        if pl_sg:
+            scenario_gr_llm_rec["attempted"] = True
+            try:
+                from .llm_generate import generate_scenario_group_summaries_llm
+
+                llm_scenario_gr_md = generate_scenario_group_summaries_llm(
+                    pl_sg, keyword=kw
+                )
+                scenario_gr_llm_rec["ok"] = True
+                scenario_gr_llm_rec["chars"] = len(llm_scenario_gr_md)
+            except Exception as e:
+                scenario_gr_llm_rec["ok"] = False
+                scenario_gr_llm_rec["error"] = str(e)
+        else:
+            scenario_gr_llm_rec["skipped"] = "empty_scenario_groups_payload"
+    elif skip_sg:
+        scenario_gr_llm_rec["skipped"] = "MA_SKIP_LLM_SCENARIO_GROUP_SUMMARIES"
+    elif not want_sg:
+        scenario_gr_llm_rec["skipped"] = "not_enabled"
 
     if want_cg and not skip_cg and merged_rows:
         fb_cg = jcr._consumer_feedback_by_matrix_group(
@@ -492,6 +533,10 @@ def write_competitor_analysis_for_run_dir(
         json.dumps(comment_gr_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    (run_dir / "scenario_groups_llm.json").write_text(
+        json.dumps(scenario_gr_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     md = jcr.build_competitor_markdown(
         run_dir=run_dir,
@@ -504,6 +549,7 @@ def write_competitor_analysis_for_run_dir(
         llm_sentiment_section_md=llm_sentiment_md or None,
         llm_matrix_section_md=llm_matrix_md or None,
         llm_price_groups_section_md=llm_price_md or None,
+        llm_scenario_groups_section_md=llm_scenario_gr_md or None,
         llm_comment_groups_section_md=llm_comment_gr_md or None,
     )
 

@@ -462,6 +462,158 @@ def generate_comment_group_summaries_llm(
     return _call_llm(COMMENT_GROUPS_SYSTEM, user)
 
 
+SCENARIO_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：``keyword``、``scenario_lexicon``、``groups``。
+``scenario_lexicon`` 列出各场景标签及示例触发子串（与报告 **§8.4** 统计规则一致）。
+``groups`` 每项含 ``group``（与 §5 矩阵一致的细分类目名）、``effective_text_count``（有效评价文本条数）、
+``scenario_distribution``（各预设场景的 ``mention_rows`` 与 ``share_of_effective_texts``；**一条评价可计入多场景**；与 §8.4 条形图同源）、
+``sample_text_snippets``（摘录行常含细类、SKU、品名、店铺等前缀的短引文，已截断）。
+统计为**子串命中**，不是语义主题模型。
+
+请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
+- 以 ``#### `` + 与该条 ``group`` 字段**完全一致**的细类名作为小节标题；
+- 每段约 **100～220 字**：归纳该细类用户**自述的使用场景/用途**结构（哪些场景标签相对突出、多场景叠加是否常见），可点到与其他细类的差异；**所有条数与占比须与 ``scenario_distribution``、``effective_text_count`` 一致**，禁止编造；
+- 引用原话时须保留或复述摘录中的店铺/SKU/品名信息，勿虚构；
+- **禁止** Markdown 表格、禁止复述全部摘录；若 ``effective_text_count`` 很小，写明「样本较少，归纳供启发」。
+
+总输出约 **600～3200 字**。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+
+SCENARIO_GROUPS_USER_PREFIX = (
+    "请根据以下 JSON 撰写竞品报告 §8.4 用途与使用场景之后的「使用场景要点归纳」正文（Markdown）。\n\n"
+)
+
+
+def generate_scenario_group_summaries_llm(
+    payload: dict[str, Any], *, keyword: str
+) -> str:
+    """与 ``generate_comment_group_summaries_llm`` 类似：细类多时长 JSON 按档压缩。"""
+
+    def _compact_group(
+        g: dict[str, Any],
+        *,
+        dist_n: int,
+        sn_n: int,
+        sn_max: int,
+    ) -> dict[str, Any]:
+        g2: dict[str, Any] = {
+            "group": g.get("group"),
+            "effective_text_count": g.get("effective_text_count"),
+        }
+        dist = g.get("scenario_distribution")
+        if isinstance(dist, list):
+            g2["scenario_distribution"] = []
+            for x in dist[:dist_n]:
+                if not isinstance(x, dict):
+                    continue
+                g2["scenario_distribution"].append(
+                    {
+                        "scenario": x.get("scenario"),
+                        "mention_rows": x.get("mention_rows"),
+                        "share_of_effective_texts": x.get(
+                            "share_of_effective_texts"
+                        ),
+                    }
+                )
+        else:
+            g2["scenario_distribution"] = []
+        sn = g.get("sample_text_snippets")
+        if isinstance(sn, list):
+            g2["sample_text_snippets"] = [
+                str(x)[:sn_max] for x in sn[:sn_n]
+            ]
+        else:
+            g2["sample_text_snippets"] = []
+        return g2
+
+    def _compact_lex(raw: Any, *, max_items: int, trig_n: int) -> list[dict[str, Any]]:
+        if not isinstance(raw, list):
+            return []
+        out: list[dict[str, Any]] = []
+        for item in raw[:max_items]:
+            if not isinstance(item, dict):
+                continue
+            tr = item.get("trigger_examples")
+            te = (
+                [str(x)[:48] for x in tr[:trig_n]]
+                if isinstance(tr, list)
+                else []
+            )
+            out.append({"label": item.get("label"), "trigger_examples": te})
+        return out
+
+    groups_in = [g for g in (payload.get("groups") or []) if isinstance(g, dict)]
+    ctx = _llm_context_window_size()
+    budget = ctx - 512 - 256
+
+    def _input_ok(system: str, user_p: str) -> bool:
+        est = _estimated_chat_input_tokens(system, user_p)
+        return est < 15_500
+
+    levels: list[tuple[int, int, int, int, int]] = [
+        (16, 14, 260, 10, 12),
+        (14, 12, 220, 8, 10),
+        (12, 10, 180, 8, 8),
+        (10, 8, 150, 6, 6),
+        (8, 6, 120, 5, 5),
+        (6, 5, 100, 4, 4),
+        (5, 4, 80, 3, 3),
+    ]
+    user = ""
+    chosen = levels[-1]
+    for level in levels:
+        chosen = level
+        dist_n, sn_n, sn_max, lex_n, trig_n = level
+        trimmed_g = [
+            _compact_group(g, dist_n=dist_n, sn_n=sn_n, sn_max=sn_max)
+            for g in groups_in
+        ]
+        lex_c = _compact_lex(
+            payload.get("scenario_lexicon"),
+            max_items=lex_n,
+            trig_n=trig_n,
+        )
+        body = {
+            "keyword": keyword,
+            "scenario_lexicon": lex_c,
+            "groups": trimmed_g,
+        }
+        raw = json.dumps(body, ensure_ascii=False)
+        if len(raw) > 48_000:
+            raw = raw[:44_000] + "\n…\n"
+        user = SCENARIO_GROUPS_USER_PREFIX + raw
+        if _input_ok(SCENARIO_GROUPS_SYSTEM, user):
+            break
+    else:
+        tail = "\n\n…（JSON 已截断以适配上下文；仅依据可见字段撰写。）\n"
+        dist_n, sn_n, sn_max, lex_n, trig_n = chosen
+        trimmed_g = [
+            _compact_group(g, dist_n=dist_n, sn_n=sn_n, sn_max=sn_max)
+            for g in groups_in
+        ]
+        lex_c = _compact_lex(
+            payload.get("scenario_lexicon"),
+            max_items=lex_n,
+            trig_n=trig_n,
+        )
+        raw = json.dumps(
+            {
+                "keyword": keyword,
+                "scenario_lexicon": lex_c,
+                "groups": trimmed_g,
+            },
+            ensure_ascii=False,
+        )
+        room = max(
+            2000,
+            int((budget - 800) / 0.55)
+            - len(SCENARIO_GROUPS_SYSTEM)
+            - len(SCENARIO_GROUPS_USER_PREFIX)
+            - len(tail),
+        )
+        user = SCENARIO_GROUPS_USER_PREFIX + raw[: max(1500, room)] + tail
+    return _call_llm(SCENARIO_GROUPS_SYSTEM, user)
+
+
 PRICE_GROUPS_SYSTEM = """你是定价与渠道顾问。输入为 JSON：``keyword`` 与 ``groups``。
 每个 group 含 ``group``（细分类目名，与 §5 矩阵、§6「按细类价盘」小节一致）、``sku_count``、``price_stats``（该细类可解析展示价的 min/max/median/mean/n，与 §6 各细类 Markdown 分位数表同源）、
 ``listing_snippets``（若干「标题｜标价｜券后｜详情价」摘录，来自合并表字段，已截断）。

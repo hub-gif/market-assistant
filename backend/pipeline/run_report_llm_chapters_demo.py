@@ -5,6 +5,7 @@
 - §6 后：``generate_price_group_summaries_llm``
 - §8.2：``generate_comment_sentiment_analysis_llm``
 - §8末细类评价：``generate_comment_group_summaries_llm``
+- §8.4 后使用场景：``generate_scenario_group_summaries_llm``
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend
@@ -123,7 +124,7 @@ def main() -> None:
         "--only",
         type=str,
         default="",
-        help="逗号分隔子集：sentiment,matrix,price,comment_groups,report_supplement",
+        help="逗号分隔子集：sentiment,matrix,price,scenario_groups,comment_groups,report_supplement",
     )
     parser.add_argument(
         "--preview-chars",
@@ -142,6 +143,7 @@ def main() -> None:
         "sentiment",
         "matrix",
         "price",
+        "scenario_groups",
         "comment_groups",
         "report_supplement",
     }
@@ -164,6 +166,7 @@ def main() -> None:
         generate_competitor_report_markdown_llm,
         generate_matrix_group_summaries_llm,
         generate_price_group_summaries_llm,
+        generate_scenario_group_summaries_llm,
     )
 
     if "sentiment" in only:
@@ -221,6 +224,34 @@ def main() -> None:
         _run_one("§6 细类价盘归纳（price）", _pr, live=args.live, preview_chars=args.preview_chars)
         if not args.live:
             print(f"  payload groups={len(pl_pr)}", flush=True)
+
+    if "scenario_groups" in only:
+        _, scen_tuple, _ = jcr.resolve_report_tuning(eff_rc)
+        fb_s = jcr._consumer_feedback_by_matrix_group(
+            merged_rows=merged,
+            comment_rows=comment_rows,
+            sku_header=sku_h,
+        )
+        pl_sg = jcr.build_scenario_groups_llm_payload(
+            feedback_groups=fb_s,
+            scenario_groups=scen_tuple,
+            merged_rows=merged,
+            sku_header=sku_h,
+            title_h=title_h,
+        )
+
+        def _sg() -> str:
+            return generate_scenario_group_summaries_llm(pl_sg, keyword=keyword)
+
+        _run_one(
+            "§8.4 使用场景归纳（scenario_groups）",
+            _sg,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            n = len((pl_sg or {}).get("groups") or [])
+            print(f"  payload groups={n}", flush=True)
 
     if "comment_groups" in only:
         fb = jcr._consumer_feedback_by_matrix_group(

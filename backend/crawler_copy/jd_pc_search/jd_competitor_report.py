@@ -869,6 +869,109 @@ def build_comment_groups_llm_payload(
     return out
 
 
+def build_scenario_groups_llm_payload(
+    *,
+    feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
+    scenario_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    merged_rows: list[dict[str, str]],
+    sku_header: str,
+    title_h: str,
+) -> dict[str, Any]:
+    """供 ``generate_scenario_group_summaries_llm``；计数与 §8.4 场景条形图一致。"""
+    if not feedback_groups:
+        return {}
+    sku_meta: dict[str, tuple[str, str, str]] = {}
+    for row in merged_rows:
+        sku = _cell(row, sku_header).strip()
+        if not sku:
+            continue
+        gk = _competitor_matrix_group_key(row)
+        if not gk:
+            continue
+        sku_meta[sku] = (
+            gk,
+            _cell(row, title_h),
+            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+        )
+    lexicon = [
+        {"label": lbl, "trigger_examples": list(trigs[:12])}
+        for lbl, trigs in scenario_groups
+    ]
+    groups_out: list[dict[str, Any]] = []
+    for gname, cr, tu in feedback_groups:
+        if not tu and not cr:
+            continue
+        scen_g, scen_ng = _comment_scenario_counts(tu, scenario_groups)
+        dist: list[dict[str, Any]] = []
+        for lbl, n in scen_g.most_common():
+            if n <= 0:
+                continue
+            dist.append(
+                {
+                    "scenario": lbl,
+                    "mention_rows": int(n),
+                    "share_of_effective_texts": round(
+                        float(n) / float(scen_ng), 4
+                    )
+                    if scen_ng > 0
+                    else 0.0,
+                }
+            )
+        snippets: list[str] = []
+        for row in cr:
+            txt = (row.get("tagCommentContent") or "").strip()
+            if not txt:
+                continue
+            if not _text_hits_scenario_triggers(txt, scenario_groups):
+                continue
+            sku = _cell(row, "sku").strip()
+            meta = sku_meta.get(sku)
+            if meta:
+                sg, tit, shop = meta
+                prefix = (
+                    f"【细类：{sg}\uff5cSKU：{sku}\uff5c品名：{_md_cell(tit, 60)}\uff5c"
+                    f"店铺：{_md_cell(shop, 28)}】"
+                )
+                snippets.append(prefix + txt[:300])
+            else:
+                snippets.append(
+                    f"【细类：{gname}\uff5cSKU：{sku or '—'}】" + txt[:320]
+                )
+            if len(snippets) >= 16:
+                break
+        if len(snippets) < 5:
+            for row in cr:
+                txt = (row.get("tagCommentContent") or "").strip()
+                if not txt:
+                    continue
+                sku = _cell(row, "sku").strip()
+                meta = sku_meta.get(sku)
+                if meta:
+                    sg, tit, shop = meta
+                    prefix = (
+                        f"【细类：{sg}\uff5cSKU：{sku}\uff5c品名：{_md_cell(tit, 60)}\uff5c"
+                        f"店铺：{_md_cell(shop, 28)}】"
+                    )
+                    snippets.append(prefix + txt[:260])
+                else:
+                    snippets.append(
+                        f"【细类：{gname}\uff5cSKU：{sku or '—'}】" + txt[:280]
+                    )
+                if len(snippets) >= 10:
+                    break
+        groups_out.append(
+            {
+                "group": gname,
+                "effective_text_count": int(scen_ng),
+                "scenario_distribution": dist[:18],
+                "sample_text_snippets": snippets,
+            }
+        )
+    if not groups_out:
+        return {}
+    return {"scenario_lexicon": lexicon, "groups": groups_out}
+
+
 def build_comment_sentiment_llm_payload(
     texts: list[str],
     *,
@@ -972,6 +1075,17 @@ def _comment_scenario_counts(
             if any(t in blob for t in triggers):
                 c[label] += 1
     return c, n
+
+
+def _text_hits_scenario_triggers(
+    text: str,
+    scenario_groups: tuple[tuple[str, tuple[str, ...]], ...],
+) -> bool:
+    blob = text or ""
+    for _lbl, triggers in scenario_groups:
+        if any(t in blob for t in triggers):
+            return True
+    return False
 
 
 def _scenario_summary_bullets(counter: Counter[str], n_texts: int, top_k: int = 5) -> list[str]:
@@ -1657,6 +1771,7 @@ def build_competitor_markdown(
     llm_sentiment_section_md: str | None = None,
     llm_matrix_section_md: str | None = None,
     llm_price_groups_section_md: str | None = None,
+    llm_scenario_groups_section_md: str | None = None,
     llm_comment_groups_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
@@ -2373,14 +2488,28 @@ def build_competitor_markdown(
                 lines.append("*未命中预设场景词组。*")
                 lines.append("")
 
+    _llm_sg = (llm_scenario_groups_section_md or "").strip()
+    if _llm_sg:
+        lines.extend(
+            [
+                "",
+                "#### 使用场景要点归纳（大模型，与 §8.4 图表互补）",
+                "",
+                "> **说明**：与 §8.4 **相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文条形图为准**。",
+                "",
+                _llm_sg,
+                "",
+            ]
+        )
+
     _llm_cg = (llm_comment_groups_section_md or "").strip()
     if _llm_cg:
         lines.extend(
             [
                 "",
-                "#### 细类评价与关注词要点归纳（大模型，与 §8.3～8.4 图表互补）",
+                "#### 细类评价与关注词要点归纳（大模型，与 §8.3 图表互补）",
                 "",
-                "> **说明**：归纳各细类反馈主题；**命中次数与条形图以正文为准**。",
+                "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与 §8.3 条形图以正文为准**。",
                 "",
                 _llm_cg,
                 "",
