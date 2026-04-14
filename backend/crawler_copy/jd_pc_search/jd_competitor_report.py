@@ -915,6 +915,78 @@ def build_comment_groups_llm_payload(
     return out
 
 
+def _price_listing_snippet_for_llm(row: dict[str, str], *, title_h: str) -> str:
+    """供价盘大模型：标题与标价/券后/详情价摘录（与 §6 表格同源字段）。"""
+    title = _cell(row, title_h).strip()
+    jd = _cell(row, _JD_LIST_PRICE_KEY).strip()
+    cp = _cell(row, _COUPON_SHOW_PRICE_KEY).strip()
+    df = _cell(row, "detail_price_final").strip()
+    return (
+        f"{title[:80]}｜标价:{jd[:20]}｜券后:{cp[:20]}｜详情价:{df[:20]}"
+    ).strip("｜")
+
+
+def build_price_groups_llm_payload(
+    merged_rows: list[dict[str, str]],
+    *,
+    sku_header: str,
+    title_h: str,
+) -> list[dict[str, Any]]:
+    """按 §5 矩阵细类拆分价盘摘录，供 ``generate_price_group_summaries_llm``。"""
+    out: list[dict[str, Any]] = []
+    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
+        if not grows:
+            continue
+        prices = _collect_prices(grows)
+        pst = _price_stats_extended(prices) if prices else {"n": 0}
+        snippets: list[str] = []
+        for r in grows[:14]:
+            s = _price_listing_snippet_for_llm(r, title_h=title_h)
+            if s.replace("｜", "").replace(":", "").strip():
+                snippets.append(s)
+        out.append(
+            {
+                "group": gname,
+                "sku_count": len(grows),
+                "price_stats": pst,
+                "listing_snippets": snippets,
+            }
+        )
+    return out
+
+
+def build_matrix_groups_llm_payload(
+    merged_rows: list[dict[str, str]],
+    *,
+    sku_header: str,
+    title_h: str,
+) -> list[dict[str, Any]]:
+    """按 §5 矩阵细类拆分卖点/配料摘录与价统计，供 ``generate_matrix_group_summaries_llm``。"""
+    out: list[dict[str, Any]] = []
+    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
+        if not grows:
+            continue
+        prices = _collect_prices(grows)
+        pst = _price_stats_extended(prices) if prices else {"n": 0}
+        lines: list[str] = []
+        for r in grows[:18]:
+            t = _md_cell(_cell(r, title_h), 56)
+            sp = _md_cell(_cell(r, _SELLING_POINT_KEY), 80)
+            ing = _matrix_ingredients_cell(r, max_len=100)
+            part = f"{t}｜卖点:{sp}｜配料:{ing}"
+            if part.replace("｜", "").strip():
+                lines.append(part)
+        out.append(
+            {
+                "group": gname,
+                "sku_count": len(grows),
+                "price_stats": pst,
+                "lines": lines,
+            }
+        )
+    return out
+
+
 def _mermaid_pie_focus_keywords(hits: Counter[str], *, top_k: int = 8) -> str:
     """关注词全局 Top 的 Mermaid pie（便于渲染或导出工具识别）。"""
     top = hits.most_common(top_k)
@@ -1585,6 +1657,9 @@ def build_competitor_markdown(
     meta: dict[str, Any] | None,
     report_config: dict[str, Any] | None = None,
     llm_sentiment_section_md: str | None = None,
+    llm_matrix_section_md: str | None = None,
+    llm_price_groups_section_md: str | None = None,
+    llm_comment_groups_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
     sku_header = "SKU(skuId)"
@@ -1704,6 +1779,7 @@ def build_competitor_markdown(
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
             "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以条形图展示（场景图为**占该细类有效文本比例 %**）；见 §8.3～8.4。",
             "- **各章衔接（可选）**：若任务配置 ``llm_section_bridges``（或部署侧环境变量启用），则在「## 一」至「## 九」各章二级标题后插入大模型撰写的**衔接分析**段落，便于阅读过渡；**定量结论仍以正文表格与摘要 JSON 为准**。",
+            "- **细类大模型归纳（可选）**：若任务配置 ``llm_matrix_group_summaries`` / ``llm_price_group_summaries`` / ``llm_comment_group_summaries``（或对应 ``MA_ENABLE_LLM_*`` 环境变量），则在 **§5.1、§6.2、§8.6** 分别插入卖点/价盘/评论关注词的细类归纳；**仍以同章表格与 CSV 为准**。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
             "",
             "### 1.4 主要局限",
@@ -2054,6 +2130,20 @@ def build_competitor_markdown(
             )
         lines.append("")
 
+    _mx_llm = (llm_matrix_section_md or "").strip()
+    if _mx_llm:
+        lines.extend(
+            [
+                "",
+                "### 5.1 细类要点归纳（大模型）",
+                "",
+                "> **说明**：模型按 §5 同细类拆分，仅基于上表矩阵摘录（标题/卖点/配料等）与每细类 ``price_stats``（与 §6 分位数同源对象）归纳；**不含**医学或功效结论。配料与宣称以页面为准。",
+                "",
+                _mx_llm,
+                "",
+            ]
+        )
+
     ch6_price_title = (
         "## 六、价格分析（PC 搜索列表全量）"
         if list_export and pst_list.get("n", 0) > 0
@@ -2108,6 +2198,21 @@ def build_competitor_markdown(
         lines.append("")
         lines.extend(_markdown_price_promotion_section(promo_sig))
     lines.append("")
+
+    _pr_llm = (llm_price_groups_section_md or "").strip()
+    if _pr_llm:
+        lines.extend(
+            [
+                "",
+                "### 6.2 细类价盘要点归纳（大模型）",
+                "",
+                "> **说明**：以下为模型按 §5 同细类拆分、仅基于上文本节价统计与价字段摘录的归纳（价带与价差）；"
+                "不含配料/宣称/场景关键词分析——见 §5「细类要点归纳（大模型）」。具体数值仍以正文表格及批次 CSV 为准。",
+                "",
+                _pr_llm,
+                "",
+            ]
+        )
 
     attrs: list[str] = []
     for row in merged_rows:
@@ -2269,6 +2374,20 @@ def build_competitor_markdown(
             else:
                 lines.append("*未命中预设场景词组。*")
                 lines.append("")
+
+    _cg_llm = (llm_comment_groups_section_md or "").strip()
+    if _cg_llm:
+        lines.extend(
+            [
+                "",
+                "### 8.6 细类评论与关注词要点归纳（大模型）",
+                "",
+                "> **说明**：按 §5 细类与 §8.3～8.4 同源关注词/场景统计；抽样行含店铺与 SKU 前缀。具体仍以条形图与 CSV 为准。",
+                "",
+                _cg_llm,
+                "",
+            ]
+        )
 
     lines.extend(
         [

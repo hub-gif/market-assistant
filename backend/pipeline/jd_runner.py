@@ -403,6 +403,127 @@ def write_competitor_analysis_for_run_dir(
         encoding="utf-8",
     )
 
+    llm_matrix_md = ""
+    llm_price_md = ""
+    llm_comment_gr_md = ""
+    matrix_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    price_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    comment_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    sku_h = "SKU(skuId)"
+    title_h = "标题(wareName)"
+
+    def _env_on(name: str) -> bool:
+        return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+    skip_mx = _env_on("MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES")
+    skip_pr = _env_on("MA_SKIP_LLM_PRICE_GROUP_SUMMARIES")
+    skip_cg = _env_on("MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES")
+    want_mx = bool(eff_rc.get("llm_matrix_group_summaries")) or _env_on(
+        "MA_ENABLE_LLM_MATRIX_GROUP_SUMMARIES"
+    )
+    want_pr = bool(eff_rc.get("llm_price_group_summaries")) or _env_on(
+        "MA_ENABLE_LLM_PRICE_GROUP_SUMMARIES"
+    )
+    want_cg = bool(eff_rc.get("llm_comment_group_summaries")) or _env_on(
+        "MA_ENABLE_LLM_COMMENT_GROUP_SUMMARIES"
+    )
+
+    if want_mx and not skip_mx and merged_rows:
+        pl_mx = jcr.build_matrix_groups_llm_payload(
+            merged_rows, sku_header=sku_h, title_h=title_h
+        )
+        if pl_mx:
+            matrix_llm_rec["attempted"] = True
+            try:
+                from .llm_generate import generate_matrix_group_summaries_llm
+
+                llm_matrix_md = generate_matrix_group_summaries_llm(
+                    pl_mx, keyword=kw
+                )
+                matrix_llm_rec["ok"] = True
+                matrix_llm_rec["chars"] = len(llm_matrix_md)
+            except Exception as e:
+                matrix_llm_rec["ok"] = False
+                matrix_llm_rec["error"] = str(e)
+        else:
+            matrix_llm_rec["skipped"] = "empty_matrix_payload"
+    elif skip_mx:
+        matrix_llm_rec["skipped"] = "MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES"
+    elif not want_mx:
+        matrix_llm_rec["skipped"] = "not_enabled"
+
+    if want_pr and not skip_pr and merged_rows:
+        pl_pr = jcr.build_price_groups_llm_payload(
+            merged_rows, sku_header=sku_h, title_h=title_h
+        )
+        if pl_pr:
+            price_llm_rec["attempted"] = True
+            try:
+                from .llm_generate import generate_price_group_summaries_llm
+
+                llm_price_md = generate_price_group_summaries_llm(pl_pr, keyword=kw)
+                price_llm_rec["ok"] = True
+                price_llm_rec["chars"] = len(llm_price_md)
+            except Exception as e:
+                price_llm_rec["ok"] = False
+                price_llm_rec["error"] = str(e)
+        else:
+            price_llm_rec["skipped"] = "empty_price_payload"
+    elif skip_pr:
+        price_llm_rec["skipped"] = "MA_SKIP_LLM_PRICE_GROUP_SUMMARIES"
+    elif not want_pr:
+        price_llm_rec["skipped"] = "not_enabled"
+
+    if want_cg and not skip_cg and merged_rows:
+        fb_cg = jcr._consumer_feedback_by_matrix_group(
+            merged_rows=merged_rows,
+            comment_rows=comment_rows,
+            sku_header=sku_h,
+        )
+        fw_src = eff_rc.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
+        fw_tuple = tuple(
+            str(x).strip() for x in fw_src if str(x).strip()
+        ) or jcr.COMMENT_FOCUS_WORDS
+        pl_cg = jcr.build_comment_groups_llm_payload(
+            feedback_groups=fb_cg,
+            focus_words=fw_tuple,
+            merged_rows=merged_rows,
+            sku_header=sku_h,
+            title_h=title_h,
+        )
+        if pl_cg:
+            comment_gr_llm_rec["attempted"] = True
+            try:
+                from .llm_generate import generate_comment_group_summaries_llm
+
+                llm_comment_gr_md = generate_comment_group_summaries_llm(
+                    pl_cg, keyword=kw
+                )
+                comment_gr_llm_rec["ok"] = True
+                comment_gr_llm_rec["chars"] = len(llm_comment_gr_md)
+            except Exception as e:
+                comment_gr_llm_rec["ok"] = False
+                comment_gr_llm_rec["error"] = str(e)
+        else:
+            comment_gr_llm_rec["skipped"] = "empty_comment_groups_payload"
+    elif skip_cg:
+        comment_gr_llm_rec["skipped"] = "MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES"
+    elif not want_cg:
+        comment_gr_llm_rec["skipped"] = "not_enabled"
+
+    (run_dir / "matrix_groups_llm.json").write_text(
+        json.dumps(matrix_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (run_dir / "price_groups_llm.json").write_text(
+        json.dumps(price_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (run_dir / "comment_groups_llm.json").write_text(
+        json.dumps(comment_gr_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
     md = jcr.build_competitor_markdown(
         run_dir=run_dir,
         keyword=kw,
@@ -412,6 +533,9 @@ def write_competitor_analysis_for_run_dir(
         meta=meta,
         report_config=eff_rc,
         llm_sentiment_section_md=llm_sentiment_md or None,
+        llm_matrix_section_md=llm_matrix_md or None,
+        llm_price_groups_section_md=llm_price_md or None,
+        llm_comment_groups_section_md=llm_comment_gr_md or None,
     )
 
     bridge_record: dict[str, Any] = {
