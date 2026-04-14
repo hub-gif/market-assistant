@@ -2169,7 +2169,7 @@ def build_competitor_markdown(
             )
         )
         lines.append(
-            "*更细行数分布见结构化摘要 JSON 的 ``list_brand_mix_top``。*"
+            "*更细的品牌行数分布见本任务「结构化摘要」数据包。*"
         )
     elif list_export:
         lines.append(
@@ -2211,7 +2211,7 @@ def build_competitor_markdown(
             )
         )
         lines.append(
-            "*更细店铺行数分布见结构化摘要 ``list_shop_mix_top``。*"
+            "*更细的店铺行数分布见本任务「结构化摘要」数据包。*"
         )
     else:
         lines.append("*无店铺字段。*")
@@ -2772,8 +2772,8 @@ def build_competitor_brief(
     list_brand_block: dict[str, Any] | None
     if len(brands_s) >= min_brand_rows:
         list_brand_block = {
-            "cr1": cr1_list_brand,
-            "cr3": cr3_list_brand,
+            "first_share": cr1_list_brand,
+            "top_three_combined_share": cr3_list_brand,
             "top_label": top_list_brand,
         }
     else:
@@ -2800,15 +2800,15 @@ def build_competitor_brief(
         "list_visibility_proxy": proxy,
         "concentration": {
             "shops_from_list": {
-                "cr1": cr1_shop,
-                "cr3": cr3_shop,
+                "first_share": cr1_shop,
+                "top_three_combined_share": cr3_shop,
                 "top_label": top_shop_s,
                 "top_share_pct": top_shop_share,
             },
             "list_brand_field": list_brand_block,
             "detail_brand_among_merged": {
-                "cr1": cr1_deep,
-                "cr3": cr3_deep,
+                "first_share": cr1_deep,
+                "top_three_combined_share": cr3_deep,
                 "top_label": top_brand_deep,
                 "top_share_pct": top_brand_deep_share,
             },
@@ -2857,9 +2857,10 @@ def build_competitor_brief(
         "consumer_feedback_by_matrix_group": feedback_by_group,
         "comment_sentiment_lexicon": comment_sentiment_lexicon,
         "notes": [
-            "与在线分析报告各章统计口径一致；关注词与场景以任务 report_config 为底，生成报告时还可经 keyword_suggest_llm 合并延伸（仍为子串命中统计，非深度主题模型）。",
-            "价格来自页面展示字段抽取，含促销与规格差异；price_promotion_signals 为标价/券后对齐与卖点话术的启发式摘录。",
-            "comment_sentiment_lexicon 为关键词粗判，非深度学习情感模型。",
+            "与在线分析报告各章统计口径一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
+            "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
+            "评价语气为关键词粗判，非深度学习情感模型。",
+            "「集中度」中：最大一家占比、前三名合计占比为小数（如 0.12 表示约 12%），对应列表或深入样本中的相关行。",
         ],
     }
     return _sanitize_json_numbers(out)

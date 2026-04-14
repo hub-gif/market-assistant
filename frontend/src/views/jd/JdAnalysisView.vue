@@ -208,9 +208,9 @@ watch(
       <h2>分析报告查看</h2>
       <p class="hint-top">
         选择<strong>已成功</strong>的任务，在线阅读报告或下载。
-        流水线生成报告时会<strong>自动</strong>基于<strong>全部评价正文</strong>分块调用大模型扩展<strong>关注词</strong>，并单次调用归纳<strong>使用场景</strong>（在预设场景组之外追加 label+触发子串），再写入统计图（PNG，见「二点五」章与简报包 <code>report_assets</code>）。
-        <strong>一键下载简报包</strong>含报告稿、统计图、结构化 JSON、要点摘录。
-        需要改规则或重算，请至
+        若开启大模型，系统会在后台根据评价正文补充<strong>关注词</strong>与<strong>使用场景</strong>标签，并生成报告中的统计图（与报告插图章节对应）。
+        <strong>一键下载简报包</strong>内含：报告正文、插图文件夹、机器整理的<strong>数据摘要</strong>、以及便于扫读的<strong>要点摘录</strong>。
+        需要改分析规则或重新出稿，请至
         <RouterLink to="/jd/analysis-build">报告生成</RouterLink>。
       </p>
 
@@ -290,7 +290,7 @@ watch(
 
     <section v-if="briefJson" class="ma-card preview-card">
       <div class="preview-head">
-        <h2>结构化竞品摘要</h2>
+        <h2>竞品数据摘要（机器整理）</h2>
         <div class="tabs">
           <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="copyBriefJson">
             {{ briefCopyOk ? '已复制' : '复制' }}
@@ -298,7 +298,7 @@ watch(
           <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="downloadBriefJson">下载文件</button>
         </div>
       </div>
-      <p class="hint-top brief-hint">与上方报告统计口径一致的数据汇总，可复制或下载给其它工具使用。</p>
+      <p class="hint-top brief-hint">与上方报告统计口径一致，供复制或存档；一般业务阅读以报告正文与要点摘录为主，本块主要用于存档或交给同事继续分析。</p>
       <pre class="raw-md brief-json">{{ briefJson }}</pre>
     </section>
 

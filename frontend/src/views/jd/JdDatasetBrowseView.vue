@@ -73,9 +73,8 @@ watch(selectedId, () => {
         <button type="button" class="ma-btn ma-btn-secondary btn-refresh" @click="load">刷新任务列表</button>
       </div>
       <p class="lead">
-        选择任务后浏览已入库的搜索、商详、评价与<strong>整合宽表</strong>（合并表按列拆分入库，与
-        <code>keyword_pipeline_merged.csv</code> lean 列一致）；各 Tab 下「导出当前表」可导出 JSON / CSV /
-        Excel。竞品报告请在「报告查看」阅读或「报告生成」重新生成。
+        选择任务后可查看本批已入库的<strong>搜索列表</strong>、<strong>商品详情</strong>、<strong>评价</strong>与<strong>整合同步表</strong>（一行对应一个商品在报告里用到的主要字段）。
+        各标签下可**导出**为表格或数据文件。完整文字报告请在「报告查看」阅读，或在「报告生成」中重新出稿。
       </p>
       <p v-if="loadError" class="ma-err">{{ loadError }}</p>
 

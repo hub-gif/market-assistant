@@ -9,6 +9,11 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from pipeline.brief_concentration import (
+    concentration_first_share,
+    concentration_top_three_share,
+)
+
 
 def _esc(s: Any) -> str:
     t = "" if s is None else str(s).strip()
@@ -154,8 +159,18 @@ def build_strategy_draft_markdown(
     shops = conc.get("shops_from_list") or {}
     dbrand = conc.get("detail_brand_among_merged") or {}
     lines.extend(["## 三、竞争格局 → 策略含义", ""])
-    n_shop = _cr_narrative("列表侧店铺集中度", shops.get("cr1"), shops.get("cr3"), shops.get("top_label"))
-    n_brand = _cr_narrative("深入样本内品牌集中度", dbrand.get("cr1"), dbrand.get("cr3"), dbrand.get("top_label"))
+    n_shop = _cr_narrative(
+        "列表侧店铺集中度",
+        concentration_first_share(shops),
+        concentration_top_three_share(shops),
+        shops.get("top_label"),
+    )
+    n_brand = _cr_narrative(
+        "深入样本内品牌集中度",
+        concentration_first_share(dbrand),
+        concentration_top_three_share(dbrand),
+        dbrand.get("top_label"),
+    )
     if n_shop:
         lines.append(n_shop)
     if n_brand:

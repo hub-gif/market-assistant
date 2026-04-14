@@ -7,6 +7,11 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from pipeline.brief_concentration import (
+    concentration_first_share,
+    concentration_top_three_share,
+)
+
 
 def _pct(x: Any) -> str:
     if x is None:
@@ -32,7 +37,7 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
     lines: list[str] = [
         "# 竞品要点摘录（机器整理）",
         "",
-        "> 与同批 **完整报告**、**结构化 JSON** 同源；规则汇总，定稿前请人工核对。",
+        "> 与同批 **完整报告**、**数据汇总**同源；规则汇总，定稿前请人工核对。",
         "",
     ]
     kw = brief.get("keyword") or "—"
@@ -65,33 +70,33 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
     if raw.get("result_count_consensus") is not None:
         lines.extend(
             [
-                "## 列表侧检索规模（接口申报）",
+                "## 列表侧检索规模（平台展示）",
                 "",
-                f"- **resultCount 共识值**：{_num(raw.get('result_count_consensus'))}",
+                f"- **检索结果条数（多份响应取一致值）**：{_num(raw.get('result_count_consensus'))}",
                 "",
             ]
         )
 
     conc = brief.get("concentration") or {}
     shops = conc.get("shops_from_list") or {}
-    if shops.get("cr1") is not None or shops.get("top_label"):
+    if concentration_first_share(shops) is not None or shops.get("top_label"):
         lines.extend(
             [
                 "## 店铺集中度（列表）",
                 "",
-                f"- **第一大店铺份额**：{_pct(shops.get('cr1'))}（第一店铺：{shops.get('top_label') or '—'}）",
-                f"- **前三店铺合计份额**：{_pct(shops.get('cr3'))}",
+                f"- **第一大店铺份额**：{_pct(concentration_first_share(shops))}（第一店铺：{shops.get('top_label') or '—'}）",
+                f"- **前三店铺合计份额**：{_pct(concentration_top_three_share(shops))}",
                 "",
             ]
         )
     dbrand = conc.get("detail_brand_among_merged") or {}
-    if dbrand.get("cr1") is not None or dbrand.get("top_label"):
+    if concentration_first_share(dbrand) is not None or dbrand.get("top_label"):
         lines.extend(
             [
                 "## 品牌（深入样本）",
                 "",
-                f"- **第一大品牌份额（深入样本）**：{_pct(dbrand.get('cr1'))}（头部：{dbrand.get('top_label') or '—'}）",
-                f"- **前三品牌合计份额**：{_pct(dbrand.get('cr3'))}",
+                f"- **第一大品牌份额（深入样本）**：{_pct(concentration_first_share(dbrand))}（头部：{dbrand.get('top_label') or '—'}）",
+                f"- **前三品牌合计份额**：{_pct(concentration_top_three_share(dbrand))}",
                 "",
             ]
         )
@@ -103,7 +108,7 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
             [
                 "## 价格（展示价统计）",
                 "",
-                f"- **样本量 n**：{_num(pst.get('n'))}；**统计口径**：{src}",
+                f"- **样本量（条）**：{_num(pst.get('n'))}；**统计口径**：{src}",
                 f"- **区间**：{_num(pst.get('min'))} ～ {_num(pst.get('max'))}；**中位数**：{_num(pst.get('median'))}",
                 "",
             ]

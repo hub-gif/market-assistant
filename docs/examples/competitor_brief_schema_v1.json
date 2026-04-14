@@ -26,15 +26,15 @@
   },
   "concentration": {
     "shops_from_list": {
-      "cr1": 0.12,
-      "cr3": 0.35,
+      "first_share": 0.12,
+      "top_three_combined_share": 0.35,
       "top_label": "某旗舰店",
       "top_share_pct": "12.0%"
     },
     "list_brand_field": null,
     "detail_brand_among_merged": {
-      "cr1": 0.2,
-      "cr3": 0.6,
+      "first_share": 0.2,
+      "top_three_combined_share": 0.6,
       "top_label": "品牌A",
       "top_share_pct": "20.0%"
     }
