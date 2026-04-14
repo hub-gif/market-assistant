@@ -14,6 +14,8 @@
 
 兼容别名（二选一即可）：``LLM_API_KEY``、``LLM_BASE_URL``、``LLM_MODEL``。
 
+- ``LLM_CONTEXT_WINDOW`` / ``OPENAI_CONTEXT_WINDOW``：模型上下文 token 上限（默认 ``32768``）。``chat_completion_text`` 会按正文长度**保守估算**输入 token，并把 ``max_tokens`` 收紧到不超过「上限 − 估算输入」，避免网关报 ``max_tokens … is too large``（如 LiteLLM ``ContextWindowExceededError``）。
+
 上述变量与 Django 共用 **一份** ``market_assistant/.env``（与本脚本所在 ``backend`` 的上三级目录下的 ``.env``；需 ``pip install python-dotenv``）。
 
 **运行方式**：在下方「运行配置」里改好 ``IMAGE_SOURCE`` 等变量后，直接执行 ``python AI_crawler.py``，无需命令行参数。
@@ -230,6 +232,15 @@ def resolve_text_model_name(model: str | None = None) -> str:
     return DEFAULT_MODEL
 
 
+def _estimate_chat_input_tokens(system_prompt: str, user_prompt: str) -> int:
+    """
+    保守估算 system+user 的 token 数（无 tiktoken 时用于约束 max_tokens）。
+    中文/JSON 往往高于「英文 4 字符/token」；系数偏大宁可少给 max_tokens，避免 400。
+    """
+    total_chars = len(system_prompt or "") + len(user_prompt or "")
+    return int(total_chars * 0.55) + 512
+
+
 def strip_outer_markdown_fence(text: str) -> str:
     """若模型用 ``` / ```markdown 包裹全文，去掉最外层围栏。"""
     t = (text or "").strip()
@@ -272,6 +283,26 @@ def chat_completion_text(
     }
     if extra_json:
         body.update(extra_json)
+    # 避免 max_tokens 大于「上下文 − 输入」时网关 400（如 LiteLLM ContextWindowExceededError）
+    ctx_raw = (
+        os.environ.get("LLM_CONTEXT_WINDOW")
+        or os.environ.get("OPENAI_CONTEXT_WINDOW")
+        or "32768"
+    ).strip()
+    try:
+        context_window = max(4096, int(ctx_raw))
+    except ValueError:
+        context_window = 32768
+    buf = 256
+    input_est = _estimate_chat_input_tokens(system_prompt, user_prompt)
+    if input_est >= context_window - buf - 256:
+        raise ValueError(
+            f"提示词过长（估算输入约 {input_est} tokens，上下文上限 {context_window}），"
+            "请缩小报告/摘要输入或换更大上下文的模型；也可设置环境变量 LLM_CONTEXT_WINDOW。"
+        )
+    avail = context_window - input_est - buf
+    want = int(body.get("max_tokens") or max_tokens)
+    body["max_tokens"] = max(256, min(want, max(avail, 256)))
     r = requests.post(
         f"{b}/chat/completions",
         headers={
