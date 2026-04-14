@@ -17,9 +17,10 @@ const regenErr = ref('')
 const genInFlight = generationInFlightKey()
 const REGEN_PREFIX = 'regenerate-report:'
 const regenPendingJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k || !k.startsWith(REGEN_PREFIX)) return null
-  return k.slice(REGEN_PREFIX.length)
+  for (const k of genInFlight.value) {
+    if (k.startsWith(REGEN_PREFIX)) return k.slice(REGEN_PREFIX.length)
+  }
+  return null
 })
 const regenBusyThisTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value === selectedId.value,

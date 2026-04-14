@@ -47,19 +47,21 @@ const K_PACK = 'brief-pack:'
 function genKeyMatches(prefix) {
   const id = selectedId.value
   if (!id) return false
-  return genInFlight.value === `${prefix}${id}`
+  return genInFlight.value.includes(`${prefix}${id}`)
 }
 const loading = computed(() => genKeyMatches(K_PREVIEW))
 const briefLoading = computed(() => genKeyMatches(K_BRIEF))
 const packLoading = computed(() => genKeyMatches(K_PACK))
 const viewInFlightOtherJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k) return null
-  const i = k.lastIndexOf(':')
-  if (i < 0) return null
-  const jid = k.slice(i + 1)
-  if (jid === selectedId.value) return null
-  return jid
+  const sid = selectedId.value
+  if (!sid) return null
+  for (const k of genInFlight.value) {
+    const i = k.lastIndexOf(':')
+    if (i < 0) continue
+    const jid = k.slice(i + 1)
+    if (jid && jid !== sid) return jid
+  }
+  return null
 })
 
 const successJobs = computed(() =>

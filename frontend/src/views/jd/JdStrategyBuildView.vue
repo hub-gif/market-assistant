@@ -17,10 +17,12 @@ const err = ref('')
 const genInFlight = generationInFlightKey()
 const STRATEGY_PREFIX = 'strategy-draft:'
 const strategyDraftPendingJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k || !k.startsWith(STRATEGY_PREFIX)) return null
-  return k.slice(STRATEGY_PREFIX.length)
+  for (const k of genInFlight.value) {
+    if (k.startsWith(STRATEGY_PREFIX)) return k.slice(STRATEGY_PREFIX.length)
+  }
+  return null
 })
+const strategyGeneratingAny = computed(() => strategyDraftPendingJobId.value != null)
 const strategyGeneratingThisTask = computed(
   () =>
     strategyDraftPendingJobId.value != null &&
@@ -192,7 +194,7 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-primary"
-          :disabled="!selectedId || strategyGeneratingThisTask"
+          :disabled="!selectedId || strategyGeneratingAny"
           @click="generateAndGoPreview"
         >
           {{ strategyGeneratingThisTask ? '生成中…' : '生成并前往预览' }}

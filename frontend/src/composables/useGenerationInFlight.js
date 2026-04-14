@@ -5,29 +5,43 @@ const STORAGE_TS = 'ma_generation_inflight_ts'
 /** 含 LLM 的重新生成可能较久；超时后视为未进行，避免按钮永久禁用 */
 const TTL_MS = 45 * 60 * 1000
 
-function readPersisted() {
-  if (typeof sessionStorage === 'undefined') return null
+/**
+ * @returns {string[]}
+ */
+function readPersistedKeys() {
+  if (typeof sessionStorage === 'undefined') return []
   try {
-    const k = sessionStorage.getItem(STORAGE_KEY)
+    const raw = sessionStorage.getItem(STORAGE_KEY)
     const ts = sessionStorage.getItem(STORAGE_TS)
-    if (!k || ts == null) return null
+    if (!raw || ts == null) return []
     const t = Number(ts)
     if (!Number.isFinite(t) || Date.now() - t > TTL_MS) {
       sessionStorage.removeItem(STORAGE_KEY)
       sessionStorage.removeItem(STORAGE_TS)
-      return null
+      return []
     }
-    return k
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === 'string' && x)
+      if (typeof parsed === 'string') return [parsed]
+      return []
+    } catch {
+      /* 旧版：存的是 JSON 字符串化的单个 key，或非法 JSON 时按原字符串当作一个 key */
+      return raw ? [raw] : []
+    }
   } catch {
-    return null
+    return []
   }
 }
 
-function writePersisted(k) {
+/**
+ * @param {string[]} keys
+ */
+function writePersistedKeys(keys) {
   if (typeof sessionStorage === 'undefined') return
   try {
-    if (k) {
-      sessionStorage.setItem(STORAGE_KEY, k)
+    if (keys.length) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
       sessionStorage.setItem(STORAGE_TS, String(Date.now()))
     } else {
       sessionStorage.removeItem(STORAGE_KEY)
@@ -38,29 +52,38 @@ function writePersisted(k) {
   }
 }
 
-/**
- * 长耗时生成类 POST/GET 的「进行中」标记。
- * 除模块级 ref 外写入 sessionStorage，避免 Vite HMR / 整页刷新后丢失，
- * 从而出现「切换页签后重新生成又可点」的假象。
- *
- * key 示例：`strategy-draft:12`、`regenerate-report:12`、`preview-report:12`
- */
-const inFlightKey = ref(readPersisted())
+/** 多个耗时请求可并行：例如「重新生成报告」未完成时又点了「报告预览」，不得互相覆盖。 */
+const inFlightKeys = ref(readPersistedKeys())
 
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key !== STORAGE_KEY && e.key !== STORAGE_TS) return
-    inFlightKey.value = readPersisted()
+    inFlightKeys.value = readPersistedKeys()
   })
 }
 
+/**
+ * 当前进行中的请求 key 列表（同一 key 不会重复）。
+ * key 示例：`strategy-draft:12`、`regenerate-report:12`、`preview-report:12`
+ */
 export function generationInFlightKey() {
-  return inFlightKey
+  return inFlightKeys
+}
+
+function addInFlightKey(key) {
+  const cur = inFlightKeys.value
+  if (cur.includes(key)) return
+  inFlightKeys.value = [...cur, key]
+  writePersistedKeys(inFlightKeys.value)
+}
+
+function removeInFlightKey(key) {
+  inFlightKeys.value = inFlightKeys.value.filter((k) => k !== key)
+  writePersistedKeys(inFlightKeys.value)
 }
 
 /**
- * 切换页签/隐藏标签时浏览器可能中止 fetch，表现为 TypeError 等；此时服务端可能仍在执行，
- * 不应清除「进行中」标记（否则按钮误恢复可点）。HTTP 4xx/5xx 仍由业务层 return，走正常清除。
+ * 切换页签/隐藏标签时浏览器可能中止 fetch；服务端可能仍在执行，不应移除该 key。
  */
 function isAmbiguousClientFailure(err) {
   if (err == null) return false
@@ -78,19 +101,14 @@ function isAmbiguousClientFailure(err) {
  * @returns {Promise<T>}
  */
 export async function withGenerationInFlight(key, fn) {
-  inFlightKey.value = key
-  writePersisted(key)
+  addInFlightKey(key)
   try {
     const out = await fn()
-    if (inFlightKey.value === key) {
-      inFlightKey.value = null
-      writePersisted(null)
-    }
+    removeInFlightKey(key)
     return out
   } catch (e) {
-    if (inFlightKey.value === key && !isAmbiguousClientFailure(e)) {
-      inFlightKey.value = null
-      writePersisted(null)
+    if (!isAmbiguousClientFailure(e)) {
+      removeInFlightKey(key)
     }
     throw e
   }
