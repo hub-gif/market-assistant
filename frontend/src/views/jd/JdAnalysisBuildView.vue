@@ -24,6 +24,8 @@ const regenPendingJobId = computed(() => {
 const regenBusyThisTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value === selectedId.value,
 )
+/** 任意任务正在重新生成时都应禁用按钮，避免切换页签后 selectedId 被重置导致误判可点 */
+const regenBusyAny = computed(() => regenPendingJobId.value != null)
 const regenBusyOtherTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value !== selectedId.value,
 )
@@ -237,7 +239,7 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-primary"
-          :disabled="!selectedId || regenBusyThisTask"
+          :disabled="!selectedId || regenBusyAny"
           title="不重新爬取，仅根据本批次已有数据更新报告文件"
           @click="regenerateReport"
         >
