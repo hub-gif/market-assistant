@@ -5,7 +5,13 @@ from django.conf import settings
 from rest_framework import serializers
 
 from .cookie_paste import normalize_browser_cookie_paste
-from .models import JdProduct, JdProductSnapshot, JobStatus, PipelineJob
+from .models import (
+    JdProduct,
+    JdProductSnapshot,
+    JobStatus,
+    PipelineJob,
+    PipelineJobCheckpoint,
+)
 
 # 与 views._safe_file_for_job 中 mapping 一致，供前端展示「数据源是否就绪」
 _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
@@ -54,6 +60,7 @@ class PipelineJobSerializer(serializers.ModelSerializer):
 
     inline_cookie_used = serializers.SerializerMethodField()
     analysis_artifacts = serializers.SerializerMethodField()
+    checkpoint = serializers.SerializerMethodField()
 
     class Meta:
         model = PipelineJob
@@ -74,6 +81,8 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "report_config",
             "status",
             "cancellation_requested",
+            "resume_from_checkpoint",
+            "checkpoint",
             "run_dir",
             "error_message",
             "analysis_artifacts",
@@ -84,8 +93,10 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "id",
             "inline_cookie_used",
             "analysis_artifacts",
+            "checkpoint",
             "status",
             "cancellation_requested",
+            "resume_from_checkpoint",
             "run_dir",
             "error_message",
             "created_at",
@@ -96,10 +107,24 @@ class PipelineJobSerializer(serializers.ModelSerializer):
     def get_inline_cookie_used(self, obj: PipelineJob) -> bool:
         return bool((obj.cookie_text or "").strip())
 
+    def get_checkpoint(self, obj: PipelineJob) -> dict | None:
+        try:
+            c = obj.checkpoint_row
+        except PipelineJobCheckpoint.DoesNotExist:
+            return None
+        return {
+            "phase": c.phase,
+            "payload": c.payload,
+            "hint_zh": c.hint_zh,
+            "updated_at": c.updated_at,
+        }
+
     def get_analysis_artifacts(self, obj: PipelineJob) -> dict[str, bool] | None:
-        if obj.status not in (JobStatus.SUCCESS, JobStatus.CANCELLED) or not (
-            obj.run_dir or ""
-        ).strip():
+        if obj.status not in (
+            JobStatus.SUCCESS,
+            JobStatus.CANCELLED,
+            JobStatus.PAUSED,
+        ) or not (obj.run_dir or "").strip():
             return None
         try:
             base = Path(obj.run_dir).expanduser().resolve()
@@ -184,6 +209,17 @@ def _jd_data_root() -> Path:
     if not root:
         raise serializers.ValidationError("服务器未配置 LOW_GI_PROJECT_ROOT")
     return (Path(root) / "data" / "JD").resolve()
+
+
+class JobResumeRequestSerializer(serializers.Serializer):
+    """从断点续跑时可选更新 Cookie。"""
+
+    cookie_text = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=500_000,
+    )
 
 
 class CreatePipelineJobSerializer(serializers.Serializer):

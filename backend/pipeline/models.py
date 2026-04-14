@@ -7,6 +7,7 @@ class JobStatus(models.TextChoices):
     SUCCESS = "success", "成功"
     FAILED = "failed", "失败"
     CANCELLED = "cancelled", "已终止"
+    PAUSED = "paused", "已暂停（待换 Cookie 续跑）"
 
 
 class PipelineJob(models.Model):
@@ -43,6 +44,7 @@ class PipelineJob(models.Model):
         db_index=True,
     )
     cancellation_requested = models.BooleanField(default=False, db_index=True)
+    resume_from_checkpoint = models.BooleanField(default=False, db_index=True)
     run_dir = models.TextField(blank=True, default="")
     error_message = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -53,6 +55,26 @@ class PipelineJob(models.Model):
 
     def __str__(self) -> str:
         return f"[{self.platform}] {self.keyword} ({self.status})"
+
+
+class PipelineJobCheckpoint(models.Model):
+    """Cookie 暂停续跑等场景的断点元数据（与任务一对一）。"""
+
+    job = models.OneToOneField(
+        PipelineJob,
+        on_delete=models.CASCADE,
+        related_name="checkpoint_row",
+    )
+    phase = models.CharField(max_length=32, db_index=True)
+    payload = models.JSONField(default=dict, blank=True)
+    hint_zh = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self) -> str:
+        return f"checkpoint job={self.job_id} phase={self.phase}"
 
 
 class JdProduct(models.Model):

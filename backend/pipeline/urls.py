@@ -15,6 +15,11 @@ urlpatterns = [
         views.JobCancelView.as_view(),
         name="job-cancel",
     ),
+    path(
+        "jobs/<int:pk>/resume/",
+        views.JobResumeView.as_view(),
+        name="job-resume",
+    ),
     path("jobs/<int:pk>/download/", views.JobDownloadView.as_view(), name="job-download"),
     path("jobs/<int:pk>/preview/", views.JobPreviewView.as_view(), name="job-preview"),
     path(
