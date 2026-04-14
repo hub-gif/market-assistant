@@ -1,0 +1,316 @@
+"""
+竞品报告中与大模型相关的块（与 ``jd_runner.write_competitor_analysis_for_run_dir`` 同源）：
+
+- §5 后：``generate_matrix_group_summaries_llm``
+- §6 后：``generate_price_group_summaries_llm``
+- §8.2：``generate_comment_sentiment_analysis_llm``
+- §8末细类评价：``generate_comment_group_summaries_llm``
+- 各章衔接（一～九）：``generate_section_bridges_llm``（基于无 LLM 插入的规则稿切分）
+- §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
+
+ cd backend
+  python pipeline/run_report_llm_chapters_demo.py --run-dir "../data/JD/pipeline_runs/20260413_104252_低GI"
+  python pipeline/run_report_llm_chapters_demo.py --run-dir "..." --live
+  python pipeline/run_report_llm_chapters_demo.py --run-dir "..." --live --only matrix,price
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import traceback
+from pathlib import Path
+from typing import Any, Callable
+
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+import django  # noqa: E402
+
+django.setup()
+
+JCR_ROOT = BACKEND_ROOT / "crawler_copy" / "jd_pc_search"
+if str(JCR_ROOT) not in sys.path:
+    sys.path.insert(0, str(JCR_ROOT))
+
+import jd_competitor_report as jcr  # noqa: E402
+import jd_keyword_pipeline as kpl  # noqa: E402
+
+from pipeline.jd_runner import get_default_report_config  # noqa: E402
+
+
+def _load_run(
+    run_dir: Path,
+) -> tuple[
+    str,
+    list[dict[str, str]],
+    list[dict[str, str]],
+    list[dict[str, str]],
+    dict[str, Any] | None,
+    dict[str, Any],
+]:
+    run_dir = run_dir.resolve()
+    merged_path = run_dir / kpl.FILE_MERGED_CSV
+    if not merged_path.is_file():
+        raise FileNotFoundError(f"缺少合并表: {merged_path}")
+    _, merged_rows = jcr._read_csv_rows(merged_path)
+    _, search_export_rows = jcr._read_csv_rows(run_dir / kpl.FILE_PC_SEARCH_CSV)
+    _, comment_rows = jcr._read_csv_rows(run_dir / kpl.FILE_COMMENTS_FLAT_CSV)
+    meta_path = run_dir / kpl.FILE_RUN_META_JSON
+    meta: dict[str, Any] | None = None
+    if meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            meta = None
+    eff_path = run_dir / "effective_report_config.json"
+    if eff_path.is_file():
+        try:
+            eff_rc = json.loads(eff_path.read_text(encoding="utf-8"))
+            if not isinstance(eff_rc, dict):
+                eff_rc = get_default_report_config()
+        except json.JSONDecodeError:
+            eff_rc = get_default_report_config()
+    else:
+        eff_rc = get_default_report_config()
+    kw = ""
+    if meta and str(meta.get("keyword") or "").strip():
+        kw = str(meta.get("keyword")).strip()
+    return kw, merged_rows, search_export_rows, comment_rows, meta, eff_rc
+
+
+def _run_one(
+    name: str,
+    fn: Callable[[], str],
+    *,
+    live: bool,
+    preview_chars: int,
+) -> None:
+    print(f"\n{'=' * 60}\n## {name}\n{'=' * 60}", flush=True)
+    if not live:
+        print("(dry-run：加 --live 将调用大模型)", flush=True)
+        return
+    try:
+        out = fn()
+        t = (out or "").strip()
+        print(f"ok，长度 {len(t)} 字符", flush=True)
+        if t:
+            head = t[:preview_chars]
+            print(head + ("…\n" if len(t) > preview_chars else "\n"), flush=True)
+    except Exception as e:
+        print(f"FAIL: {e}", flush=True)
+        traceback.print_exc()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="报告各块 LLM 串联试跑")
+    parser.add_argument(
+        "--run-dir",
+        type=str,
+        required=True,
+        help="流水线目录（含 keyword_pipeline_merged.csv）",
+    )
+    parser.add_argument(
+        "--keyword",
+        type=str,
+        default="",
+        help="覆盖监测词（默认读 meta.keyword）",
+    )
+    parser.add_argument("--live", action="store_true", help="真实调用大模型")
+    parser.add_argument(
+        "--only",
+        type=str,
+        default="",
+        help="逗号分隔子集：sentiment,matrix,price,comment_groups,bridges,report_supplement",
+    )
+    parser.add_argument(
+        "--preview-chars",
+        type=int,
+        default=400,
+        help="--live 时每段打印前 N 字",
+    )
+    args = parser.parse_args()
+
+    run_dir = Path(args.run_dir).expanduser()
+    kw, merged, search_rows, comment_rows, meta, eff_rc = _load_run(run_dir)
+    keyword = (args.keyword or kw or "竞品监测").strip()
+
+    only = {x.strip().lower() for x in args.only.split(",") if x.strip()}
+    all_names = {
+        "sentiment",
+        "matrix",
+        "price",
+        "comment_groups",
+        "bridges",
+        "report_supplement",
+    }
+    if not only:
+        only = all_names
+
+    sku_h = "SKU(skuId)"
+    title_h = "标题(wareName)"
+
+    print(
+        f"# run_dir={run_dir}\n# keyword={keyword}\n"
+        f"# merged_rows={len(merged)} comments={len(comment_rows)} "
+        f"list={len(search_rows)}\n# only={only or all_names}",
+        flush=True,
+    )
+
+    from pipeline.llm_generate import (  # noqa: WPS433
+        generate_comment_group_summaries_llm,
+        generate_comment_sentiment_analysis_llm,
+        generate_competitor_report_markdown_llm,
+        generate_matrix_group_summaries_llm,
+        generate_price_group_summaries_llm,
+        generate_section_bridges_llm,
+        split_competitor_report_for_bridges,
+    )
+
+    if "sentiment" in only:
+        comment_units = jcr._iter_comment_text_units(comment_rows, merged)
+        attr_units = jcr._comment_lines_with_product_context(
+            comment_rows,
+            merged,
+            sku_header=sku_h,
+            title_h=title_h,
+        )
+        if len(attr_units) != len(comment_units):
+            attr_units = list(comment_units)
+
+        def _sent() -> str:
+            pl = jcr.build_comment_sentiment_llm_payload(
+                comment_units,
+                attributed_texts=attr_units,
+            )
+            pl["keyword"] = keyword
+            return generate_comment_sentiment_analysis_llm(pl)
+
+        _run_one(
+            "§8.2 评价正负面（llm_comment_sentiment）",
+            _sent,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            print(
+                f"  payload: comment_units={len(comment_units)} "
+                f"(需 >=2 条才会在生产流水线里调用)",
+                flush=True,
+            )
+
+    if "matrix" in only:
+        pl_mx = jcr.build_matrix_groups_llm_payload(
+            merged, sku_header=sku_h, title_h=title_h
+        )
+
+        def _mx() -> str:
+            return generate_matrix_group_summaries_llm(pl_mx, keyword=keyword)
+
+        _run_one("§5 细类要点归纳（matrix）", _mx, live=args.live, preview_chars=args.preview_chars)
+        if not args.live:
+            print(f"  payload groups={len(pl_mx)}", flush=True)
+
+    if "price" in only:
+        pl_pr = jcr.build_price_groups_llm_payload(
+            merged, sku_header=sku_h, title_h=title_h
+        )
+
+        def _pr() -> str:
+            return generate_price_group_summaries_llm(pl_pr, keyword=keyword)
+
+        _run_one("§6 细类价盘归纳（price）", _pr, live=args.live, preview_chars=args.preview_chars)
+        if not args.live:
+            print(f"  payload groups={len(pl_pr)}", flush=True)
+
+    if "comment_groups" in only:
+        fb = jcr._consumer_feedback_by_matrix_group(
+            merged_rows=merged,
+            comment_rows=comment_rows,
+            sku_header=sku_h,
+        )
+        fw_src = eff_rc.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
+        fw_tuple = tuple(
+            str(x).strip() for x in fw_src if str(x).strip()
+        ) or jcr.COMMENT_FOCUS_WORDS
+        pl_cg = jcr.build_comment_groups_llm_payload(
+            feedback_groups=fb,
+            focus_words=fw_tuple,
+            merged_rows=merged,
+            sku_header=sku_h,
+            title_h=title_h,
+        )
+
+        def _cg() -> str:
+            return generate_comment_group_summaries_llm(pl_cg, keyword=keyword)
+
+        _run_one(
+            "§8 细类评价与关注词（comment_groups）",
+            _cg,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            print(f"  payload groups={len(pl_cg)}", flush=True)
+
+    brief = jcr.build_competitor_brief(
+        run_dir=run_dir,
+        keyword=keyword,
+        merged_rows=merged,
+        search_export_rows=search_rows,
+        comment_rows=comment_rows,
+        meta=meta,
+        report_config=eff_rc,
+    )
+
+    if "bridges" in only:
+        md_base = jcr.build_competitor_markdown(
+            run_dir=run_dir,
+            keyword=keyword,
+            merged_rows=merged,
+            search_export_rows=search_rows,
+            comment_rows=comment_rows,
+            meta=meta,
+            report_config=eff_rc,
+            llm_sentiment_section_md=None,
+            llm_matrix_section_md=None,
+            llm_price_groups_section_md=None,
+            llm_comment_groups_section_md=None,
+        )
+        parts = split_competitor_report_for_bridges(md_base)
+
+        def _br() -> str:
+            m = generate_section_bridges_llm(
+                keyword=keyword, brief=brief, sections=parts
+            )
+            return json.dumps(m, ensure_ascii=False, indent=2)
+
+        _run_one(
+            "各章衔接 bridges（JSON 键一～九）",
+            _br,
+            live=args.live,
+            preview_chars=min(args.preview_chars, 1200),
+        )
+        if not args.live:
+            print(f"  sections keys={sorted(parts.keys())}", flush=True)
+
+    if "report_supplement" in only:
+
+        def _rp() -> str:
+            return generate_competitor_report_markdown_llm(brief, keyword)
+
+        _run_one(
+            "§8.5 类报告补充（generate_competitor_report_markdown_llm）",
+            _rp,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            print("  使用 build_competitor_brief 全量摘要作为输入", flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -373,27 +373,92 @@ COMMENT_GROUPS_USER_PREFIX = (
 def generate_comment_group_summaries_llm(
     groups: list[dict[str, Any]], *, keyword: str
 ) -> str:
-    trimmed: list[dict[str, Any]] = []
-    for g in groups:
-        if not isinstance(g, dict):
-            continue
-        g2 = dict(g)
-        sn = g2.get("sample_text_snippets")
-        if isinstance(sn, list) and len(sn) > 16:
-            g2["sample_text_snippets"] = sn[:16]
-        fh = g2.get("focus_hit_lines")
-        if isinstance(fh, list) and len(fh) > 14:
-            g2["focus_hit_lines"] = fh[:14]
-        trimmed.append(g2)
-    payload = {"keyword": keyword, "groups": trimmed}
-    raw = json.dumps(payload, ensure_ascii=False)
-    if len(raw) > 95_000:
-        for g2 in trimmed:
-            sn = g2.get("sample_text_snippets")
-            if isinstance(sn, list) and len(sn) > 10:
-                g2["sample_text_snippets"] = sn[:10]
+    """
+    细类多、评价正文长时 JSON 易超上下文：按档位逐步缩短 ``effective_text_lines`` /
+    ``sample_text_snippets`` 直至估算 tokens 低于窗口（与 ``AI_crawler.chat_completion_text`` 预检一致）。
+    """
+
+    def _compact_one(
+        g: dict[str, Any],
+        *,
+        eff_n: int,
+        eff_max: int,
+        sn_n: int,
+        sn_max: int,
+        fh_n: int,
+    ) -> dict[str, Any]:
+        g2: dict[str, Any] = {
+            "group": g.get("group"),
+            "comment_flat_rows": g.get("comment_flat_rows"),
+        }
+        el = g.get("effective_text_lines")
+        if isinstance(el, list):
+            g2["effective_text_lines"] = [str(x)[:eff_max] for x in el[:eff_n]]
+        else:
+            g2["effective_text_lines"] = []
+        sn = g.get("sample_text_snippets")
+        if isinstance(sn, list):
+            g2["sample_text_snippets"] = [str(x)[:sn_max] for x in sn[:sn_n]]
+        else:
+            g2["sample_text_snippets"] = []
+        fh = g.get("focus_hit_lines")
+        if isinstance(fh, list):
+            g2["focus_hit_lines"] = [str(x) for x in fh[:fh_n]]
+        else:
+            g2["focus_hit_lines"] = []
+        return g2
+
+    ctx = _llm_context_window_size()
+    budget = ctx - 512 - 256
+    # 预留 ``max_tokens=8192`` 的完成空间；网关计输入 tokens 常高于本地粗估
+    def _input_ok(system: str, user_p: str) -> bool:
+        est = _estimated_chat_input_tokens(system, user_p)
+        return est < 15_500
+
+    levels: list[tuple[int, int, int, int, int]] = [
+        (14, 260, 10, 200, 10),
+        (12, 220, 8, 180, 8),
+        (10, 180, 8, 160, 6),
+        (8, 150, 6, 140, 6),
+        (6, 120, 5, 120, 5),
+        (5, 100, 4, 100, 4),
+        (4, 80, 3, 80, 3),
+        (3, 70, 3, 70, 3),
+        (3, 50, 2, 60, 2),
+    ]
+    user = ""
+    chosen = levels[-1]
+    for level in levels:
+        chosen = level
+        eff_n, eff_max, sn_n, sn_max, fh_n = level
+        trimmed = [
+            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max, fh_n=fh_n)
+            for g in groups
+            if isinstance(g, dict)
+        ]
         raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
-    user = COMMENT_GROUPS_USER_PREFIX + raw
+        if len(raw) > 48_000:
+            raw = raw[:44_000] + "\n…\n"
+        user = COMMENT_GROUPS_USER_PREFIX + raw
+        if _input_ok(COMMENT_GROUPS_SYSTEM, user):
+            break
+    else:
+        tail = "\n\n…（JSON 已截断以适配上下文；仅依据可见字段撰写。）\n"
+        eff_n, eff_max, sn_n, sn_max, fh_n = chosen
+        trimmed = [
+            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max, fh_n=fh_n)
+            for g in groups
+            if isinstance(g, dict)
+        ]
+        raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
+        room = max(
+            2000,
+            int((budget - 800) / 0.55)
+            - len(COMMENT_GROUPS_SYSTEM)
+            - len(COMMENT_GROUPS_USER_PREFIX)
+            - len(tail),
+        )
+        user = COMMENT_GROUPS_USER_PREFIX + raw[: max(1500, room)] + tail
     return _call_llm(COMMENT_GROUPS_SYSTEM, user)
 
 
