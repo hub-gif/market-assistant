@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -63,15 +64,50 @@ REPORT_SYSTEM = """你是业务与产品读者顾问。输入 JSON 含 `keyword`
 REPORT_USER_PREFIX = """请根据以下 JSON 撰写上文所述 §8.5 嵌入段落（Markdown 正文，勿加 ### 8.5 标题）。\n\n"""
 
 
+def _estimated_chat_input_tokens(system_prompt: str, user_prompt: str) -> int:
+    """与 ``AI_crawler._estimate_chat_input_tokens`` 一致，用于在调用前预判上下文。"""
+    total_chars = len(system_prompt or "") + len(user_prompt or "")
+    return int(total_chars * 0.55) + 512
+
+
+def _llm_context_window_size() -> int:
+    raw = (
+        os.environ.get("LLM_CONTEXT_WINDOW")
+        or os.environ.get("OPENAI_CONTEXT_WINDOW")
+        or "32768"
+    ).strip()
+    try:
+        return max(4096, int(raw))
+    except ValueError:
+        return 32768
+
+
 def generate_competitor_report_markdown_llm(brief: dict[str, Any], keyword: str) -> str:
-    # 与章节衔接等 LLM 步骤一致控制体积；默认 350k 易触发网关超时/拒收导致 502
-    compact = compact_brief_for_llm(brief, max_chars=100_000)
-    payload = {
-        "keyword": keyword,
-        "competitor_brief": compact,
-        "matrix_overview_for_llm": compact.get("matrix_overview_for_llm") or [],
-    }
-    user = REPORT_USER_PREFIX + json.dumps(payload, ensure_ascii=False)
+    # 与 AI_crawler.chat_completion_text 一致：input_est 须 < ctx - buf - 256，否则拒调
+    ctx = _llm_context_window_size()
+    buf = 256
+    input_budget = ctx - buf - 256
+
+    caps = (88_000, 64_000, 48_000, 34_000, 24_000, 16_000, 11_000, 7_500)
+    user = ""
+    for max_chars in caps:
+        compact = compact_brief_for_llm(brief, max_chars=max_chars)
+        payload = {
+            "keyword": keyword,
+            "competitor_brief": compact,
+            "matrix_overview_for_llm": compact.get("matrix_overview_for_llm") or [],
+        }
+        raw = json.dumps(payload, ensure_ascii=False)
+        user = REPORT_USER_PREFIX + raw
+        if _estimated_chat_input_tokens(REPORT_SYSTEM, user) < input_budget:
+            return _call_llm(REPORT_SYSTEM, user)
+
+    # 仍过大：截断 user JSON（保留 matrix_overview 在 compact 内已尽量精简）
+    tail = "\n\n…（JSON 已截断以适配上下文；仅依据可见字段撰写，勿编造截断外数字。）\n"
+    room = max(0, int((input_budget - 800) / 0.55) - len(REPORT_SYSTEM) - len(REPORT_USER_PREFIX) - len(tail))
+    if room < 2000:
+        room = 2000
+    user = (REPORT_USER_PREFIX + raw[:room] + tail) if raw else (REPORT_USER_PREFIX + "{}" + tail)
     return _call_llm(REPORT_SYSTEM, user)
 
 
