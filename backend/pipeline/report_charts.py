@@ -237,30 +237,44 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         gv: list[float],
         n_texts: int,
     ) -> None:
-        """左：关注词命中次数；右：场景占有效文本 %（与 §8.3 正文同源）。"""
+        """左：关注词命中次数；右：场景占有效文本 %。两侧 **各自独立 Y 轴**（类目互不混用）。"""
         has_l = bool(wl and vl and max(vl) > 0)
         has_r = bool(gl and gv and n_texts > 0 and max(gv) > 0)
         if not has_l and not has_r:
             return
         n_l = len(wl) if has_l else 0
         n_r = len(gl) if has_r else 0
-        n_max = max(n_l, n_r, 1)
-        fig_h = max(3.4, min(14.0, 0.38 * n_max + 2.6))
-        fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(10.8, fig_h))
+        n_ref = max(n_l, n_r, 1)
+        fig_h = max(3.4, min(14.0, 0.38 * n_ref + 2.8))
+        fig = plt.figure(figsize=(10.8, fig_h))
         ttl = (gname or "").strip()[:22] or "细类"
         fig.suptitle(
-            f"「{ttl}」· 关注词与使用场景（与 §8.3 统计同源）",
+            f"「{ttl}」· 关注词与使用场景（与 §8.3 统计同源；左右 Y 轴独立）",
             fontsize=11,
-            y=1.02,
+            y=0.98,
         )
+        # 底对齐、高度按各自类目数比例分配，避免共用一个「拉伸后的」纵轴比例尺
+        base_bottom = 0.10
+        ax_w = 0.36
+        x_gap = 0.06
+        x_l = 0.07
+        x_r = x_l + ax_w + x_gap
+        max_h = 0.72
+        n_den = max(n_ref, 1)
+        h_l = max(0.26, max_h * (max(n_l, 1) / n_den)) if has_l else max(0.26, max_h * 0.35)
+        h_r = max(0.26, max_h * (max(n_r, 1) / n_den)) if has_r else max(0.26, max_h * 0.35)
+        ax_l = fig.add_axes([x_l, base_bottom, ax_w, h_l])
+        ax_r = fig.add_axes([x_r, base_bottom, ax_w, h_r])
         if has_l:
-            y_pos = range(n_l)
-            ax_l.barh(list(y_pos), vl[:n_l], color="#2563eb", height=0.62)
-            ax_l.set_yticks(list(y_pos))
+            y_pos = list(range(n_l))
+            ax_l.barh(y_pos, vl[:n_l], color="#2563eb", height=0.62)
+            ax_l.set_yticks(y_pos)
             ax_l.set_yticklabels(wl[:n_l], fontsize=8)
+            ax_l.set_ylim(-0.5, n_l - 0.5)
             ax_l.invert_yaxis()
             ax_l.set_xlabel("关注词子串命中次数", fontsize=9)
-            ax_l.set_title("关注词", fontsize=10, pad=8)
+            ax_l.set_title("关注词（左轴：词表）", fontsize=10, pad=6)
+            ax_l.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
         else:
             ax_l.text(
                 0.5,
@@ -276,10 +290,11 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         if has_r:
             pcts = [100.0 * c / n_texts for c in gv[: len(gl)]]
             n_b = len(gl)
-            y_pos = range(n_b)
-            bars = ax_r.barh(list(y_pos), pcts, color="#059669", height=0.62)
-            ax_r.set_yticks(list(y_pos))
+            y_pos = list(range(n_b))
+            bars = ax_r.barh(y_pos, pcts, color="#059669", height=0.62)
+            ax_r.set_yticks(y_pos)
             ax_r.set_yticklabels(gl[:n_b], fontsize=8)
+            ax_r.set_ylim(-0.5, n_b - 0.5)
             ax_r.invert_yaxis()
             ax_r.set_xlabel("占有效评价文本比例（%）", fontsize=9)
             if pcts:
@@ -295,7 +310,11 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                     va="center",
                     fontsize=8,
                 )
-            ax_r.set_title("使用场景 / 用途", fontsize=10, pad=8)
+            ax_r.set_title("使用场景（右轴：场景标签）", fontsize=10, pad=6)
+            # 场景类目轴画在右侧，与左侧关注词轴分离，避免中间挤两列标签
+            ax_r.yaxis.tick_right()
+            ax_r.yaxis.set_label_position("right")
+            ax_r.tick_params(axis="y", left=False, right=True, labelleft=False, labelright=True)
         else:
             ax_r.text(
                 0.5,
@@ -308,7 +327,6 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                 color="#64748b",
             )
             ax_r.set_axis_off()
-        fig.tight_layout()
         path = out_dir / f"chart_focus_and_scenarios_bar__{slug}.png"
         fig.savefig(path, dpi=130, bbox_inches="tight")
         plt.close(fig)
