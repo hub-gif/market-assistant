@@ -13,7 +13,7 @@ import {
   jobExportReportDocumentUrl,
 } from '../../composables/useJobs'
 import {
-  generationInFlightKey,
+  generationInFlightKeys,
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
 
@@ -40,26 +40,49 @@ const reportMdForPreview = computed(() =>
   reportMdWithAssetUrls(reportMd.value, selectedId.value),
 )
 
-const genInFlight = generationInFlightKey()
+const inflight = generationInFlightKeys()
 const K_PREVIEW = 'preview-report:'
 const K_BRIEF = 'competitor-brief:'
 const K_PACK = 'brief-pack:'
+const K_REGEN = 'regenerate-report:'
 function genKeyMatches(prefix) {
   const id = selectedId.value
   if (!id) return false
-  return genInFlight.value === `${prefix}${id}`
+  return inflight.value.includes(`${prefix}${id}`)
 }
+/** 与当前选中任务一致（用于文案） */
 const loading = computed(() => genKeyMatches(K_PREVIEW))
 const briefLoading = computed(() => genKeyMatches(K_BRIEF))
 const packLoading = computed(() => genKeyMatches(K_PACK))
+/** 仍有预览/摘要/打包请求在进行（不因换页签后选中 id 被重置而误判为空闲） */
+const previewBusyAny = computed(() => inflight.value.some((x) => x.startsWith(K_PREVIEW)))
+const briefBusyAny = computed(() => inflight.value.some((x) => x.startsWith(K_BRIEF)))
+const packBusyAny = computed(() => inflight.value.some((x) => x.startsWith(K_PACK)))
+const previewBusyJobId = computed(() => {
+  const k = inflight.value.find((x) => x.startsWith(K_PREVIEW))
+  return k ? k.slice(K_PREVIEW.length) : ''
+})
+const briefBusyJobId = computed(() => {
+  const k = inflight.value.find((x) => x.startsWith(K_BRIEF))
+  return k ? k.slice(K_BRIEF.length) : ''
+})
+const packBusyJobId = computed(() => {
+  const k = inflight.value.find((x) => x.startsWith(K_PACK))
+  return k ? k.slice(K_PACK.length) : ''
+})
 const viewInFlightOtherJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k) return null
-  const i = k.lastIndexOf(':')
-  if (i < 0) return null
-  const jid = k.slice(i + 1)
-  if (jid === selectedId.value) return null
-  return jid
+  for (const k of inflight.value) {
+    const i = k.lastIndexOf(':')
+    if (i < 0) continue
+    const jid = k.slice(i + 1)
+    if (jid !== selectedId.value) return jid
+  }
+  return null
+})
+/** 从「报告生成」页发起的重新生成尚未结束（与预览/打包并行跟踪） */
+const reportRegenBusyJobId = computed(() => {
+  const k = inflight.value.find((x) => x.startsWith(K_REGEN))
+  return k ? k.slice(K_REGEN.length) : null
 })
 
 const successJobs = computed(() =>
@@ -206,10 +229,13 @@ watch(
       <h2>分析报告查看</h2>
       <p class="hint-top">
         选择<strong>已成功</strong>的任务，在线阅读报告或下载。
-        流水线生成报告时会<strong>自动</strong>基于<strong>全部评价正文</strong>分块调用大模型扩展关注词，并写入统计图（PNG，见「二点五」章与简报包 <code>report_assets</code>）。
+        流水线生成报告时会<strong>自动</strong>基于<strong>全部评价正文</strong>分块调用大模型扩展<strong>关注词</strong>，并单次调用归纳<strong>使用场景</strong>（在预设场景组之外追加 label+触发子串），再写入统计图（PNG，见「二点五」章与简报包 <code>report_assets</code>）。
         <strong>一键下载简报包</strong>含报告稿、统计图、结构化 JSON、要点摘录。
         需要改规则或重算，请至
         <RouterLink to="/jd/analysis-build">报告生成</RouterLink>。
+      </p>
+      <p class="hint-top hint-distinguish">
+        <strong>状态说明：</strong>「任务列表」里的<strong>待执行 / 执行中</strong>是<strong>流水线采集</strong>；本页按钮若显示<strong>请求处理中</strong>，表示<strong>当前浏览器</strong>正在等待预览/摘要/打包等<strong>读接口</strong>，二者不要混为一谈。
       </p>
 
       <div class="toolbar">
@@ -220,8 +246,19 @@ watch(
             #{{ j.id }} · {{ j.keyword }} · {{ j.run_dir?.split(/[/\\]/).pop() || '' }}
           </option>
         </select>
-        <button type="button" class="ma-btn ma-btn-secondary" :disabled="!selectedId || loading" @click="loadReport">
-          {{ loading ? '加载中…' : '重新加载报告' }}
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!selectedId || previewBusyAny"
+          @click="loadReport"
+        >
+          {{
+            loading
+              ? '请求处理中（加载报告预览）…'
+              : previewBusyAny
+                ? `请求处理中（任务 #${previewBusyJobId} 预览）…`
+                : '重新加载报告'
+          }}
         </button>
         <a
           class="ma-btn ma-btn-secondary dl-link"
@@ -256,24 +293,39 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-secondary"
-          :disabled="!selectedId || briefLoading || loading"
+          :disabled="!selectedId || briefBusyAny || previewBusyAny || packBusyAny"
           title="生成与报告相同统计口径的结构化数据"
           @click="loadCompetitorBrief"
         >
-          {{ briefLoading ? '摘要加载中…' : '加载结构化摘要' }}
+          {{
+            briefLoading
+              ? '请求处理中（结构化摘要）…'
+              : briefBusyAny
+                ? `请求处理中（任务 #${briefBusyJobId} 摘要）…`
+                : '加载结构化摘要'
+          }}
         </button>
         <button
           type="button"
           class="ma-btn ma-btn-primary"
-          :disabled="!selectedId || packLoading || loading || briefLoading"
+          :disabled="!selectedId || packBusyAny || previewBusyAny || briefBusyAny"
           title="ZIP：报告稿、结构化数据、要点摘录、说明"
           @click="downloadBriefPack"
         >
-          {{ packLoading ? '打包中…' : '一键下载简报包' }}
+          {{
+            packLoading
+              ? '请求处理中（简报包）…'
+              : packBusyAny
+                ? `请求处理中（任务 #${packBusyJobId} 简报包）…`
+                : '一键下载简报包'
+          }}
         </button>
       </div>
+      <p v-if="reportRegenBusyJobId" class="ma-warn-banner">
+        任务 #{{ reportRegenBusyJobId }} 的<strong>重新生成报告</strong>仍在进行中（可能从「报告生成」页发起）；预览与下载可能在写入完成后才反映最新稿。
+      </p>
       <p v-if="viewInFlightOtherJobId" class="ma-warn-banner">
-        任务 #{{ viewInFlightOtherJobId }} 仍有请求进行中；当前页切换任务后若按钮已恢复，请等待该任务完成或返回对应任务查看。
+        本浏览器对任务 #{{ viewInFlightOtherJobId }} 的<strong>预览 / 摘要 / 打包</strong>请求尚未结束（仅本页读接口等待，<strong>不是</strong>「任务列表」里的流水线执行中）。请稍候再操作或切回该任务。
       </p>
 
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">

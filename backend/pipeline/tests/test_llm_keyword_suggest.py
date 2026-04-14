@@ -21,7 +21,9 @@ from pipeline.llm_keyword_suggest import (
     MAX_CHUNKS,
     _chunk_comment_texts,
     _parse_phrases_object,
+    _parse_scenarios_object,
     suggest_focus_keywords_from_all_comments,
+    suggest_scenario_groups_llm,
 )
 
 
@@ -67,6 +69,20 @@ class ParsePhrasesObjectTests(SimpleTestCase):
         self.assertEqual(_parse_phrases_object("not json"), [])
 
 
+class ParseScenariosObjectTests(SimpleTestCase):
+    def test_plain_json(self) -> None:
+        raw = '{"scenarios": [{"label": "下午茶", "triggers": ["下午茶", "配咖啡"]}]}'
+        out = _parse_scenarios_object(raw)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["label"], "下午茶")
+        self.assertEqual(out[0]["triggers"], ["下午茶", "配咖啡"])
+
+    def test_fenced(self) -> None:
+        raw = '```\n{"scenarios": [{"label": "A", "triggers": ["x", "y"]}]}\n```'
+        out = _parse_scenarios_object(raw)
+        self.assertEqual(out[0]["label"], "A")
+
+
 class SuggestFocusKeywordsTests(SimpleTestCase):
     def test_no_comments_returns_empty(self) -> None:
         out = suggest_focus_keywords_from_all_comments(
@@ -108,3 +124,31 @@ class SuggestFocusKeywordsLiveLLMTests(SimpleTestCase):
             self.assertGreaterEqual(len(p), 2)
             self.assertLessEqual(len(p), 24)
         self.assertNotIn("甜度", kws)
+
+
+@unittest.skipUnless(
+    _llm_configured(),
+    "需要 OPENAI_* 或 LLM_* 密钥与网关地址。",
+)
+class SuggestScenarioGroupsLiveLLMTests(SimpleTestCase):
+    def test_live_suggests_new_scenario_groups(self) -> None:
+        existing = [
+            {"label": "早餐/代餐", "triggers": ["早餐", "代餐"]},
+        ]
+        comments = [
+            "下午配咖啡当下午茶还不错，办公室同事分着吃。",
+            "周末露营带了一盒，孩子当零食。",
+        ]
+        out = suggest_scenario_groups_llm(
+            keyword="饼干",
+            existing_groups=existing,
+            all_comment_texts=comments,
+        )
+        groups = out.get("suggested_scenario_groups") or []
+        self.assertIsInstance(groups, list)
+        self.assertGreater(len(groups), 0, "应至少返回 1 组新场景")
+        labels = {str(g.get("label", "")).strip().lower() for g in groups if isinstance(g, dict)}
+        self.assertNotIn("早餐/代餐", labels)
+        for g in groups:
+            tr = g.get("triggers") or []
+            self.assertGreaterEqual(len(tr), 1)

@@ -1,4 +1,4 @@
-"""在报告生成前：基于**全量**评价文本分块调用大模型，联想补充关注词（参与后续统计与报告）。"""
+"""在报告生成前：基于评价正文调用大模型，联想补充**关注词**与**使用场景触发组**（写入 effective_report_config）。"""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,8 @@ from django.conf import settings
 
 MAX_CHUNK_CHARS = 24_000
 MAX_CHUNKS = 12
+# 场景联想单次送入模型的评价摘录上限（字符）；过大易顶上下文
+SCENARIO_CORPUS_MAX_CHARS = 18_000
 
 _CHUNK_SYSTEM = """你是电商评价挖掘助手。输入 JSON 含 keyword、excerpt_index、excerpts（一段用户评价正文合集）。
 任务：从 excerpts 中抽取值得纳入「关注词/卖点监测」的**中文短语**（2～12 字为主，可为词组）。
@@ -90,6 +92,127 @@ def _parse_phrases_object(raw: str) -> list[str]:
     return []
 
 
+_SCENARIO_SYSTEM = """你是电商用户研究助手。输入 JSON 含：
+- ``keyword``：监测词；
+- ``existing_scenarios``：数组，每项为 ``{"label": "展示名", "triggers": ["子串1", ...]}``。统计时若评价正文**包含任一 trigger 子串**，则计入该 label（与宿主系统规则一致）。
+- ``excerpts``：多条用户评价正文摘录（已截断拼接）。
+
+任务：在**不重复** ``existing_scenarios`` 中已有 ``label``（逐字比较，勿改写字）的前提下，从 excerpts 归纳 **4～12 条**新的「用途/场景」监测组，覆盖评论里**明显出现但未被现有组覆盖**的消费情境（如「下午茶」「露营」「宿舍」等，须确有文本依据）。
+
+硬性规则：
+- **仅输出**一段 JSON：``{"scenarios": [{"label": "展示名", "triggers": ["子串1", "子串2", ...]}, ...]}``；
+- 每条 ``label`` 2～16 字；每组 ``triggers`` 3～10 条，每条 trigger 为 **2～12 字中文**子串，用于**子串命中**计数；
+- 不要医疗功效、治愈、降血糖承诺；不要与 existing 的 label 同名或仅差空格；
+- 不要输出 JSON 以外的文字。"""
+
+
+def _sample_corpus_for_scenarios(texts: list[str], *, max_chars: int) -> str:
+    """取评价正文前部拼接至 max_chars，供单次场景联想。"""
+    parts: list[str] = []
+    n = 0
+    for t in texts:
+        s = (t or "").strip()
+        if not s:
+            continue
+        extra = len(s) + 1
+        if n + extra > max_chars:
+            remain = max_chars - n - 1
+            if remain > 40:
+                parts.append(s[:remain])
+            break
+        parts.append(s)
+        n += extra
+    return "\n".join(parts)
+
+
+def _parse_scenarios_object(raw: str) -> list[dict[str, Any]]:
+    t = (raw or "").strip()
+    t = re.sub(r"^```(?:json)?\s*", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\s*```$", "", t)
+    try:
+        obj = json.loads(t)
+    except json.JSONDecodeError:
+        obj = None
+    if not isinstance(obj, dict):
+        m = re.search(r"\{[\s\S]*\}", t)
+        if not m:
+            return []
+        try:
+            obj = json.loads(m.group(0))
+        except json.JSONDecodeError:
+            return []
+    arr = obj.get("scenarios")
+    if not isinstance(arr, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in arr:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "").strip()[:80]
+        tr_raw = item.get("triggers")
+        triggers: list[str] = []
+        if isinstance(tr_raw, list):
+            seen_t: set[str] = set()
+            for x in tr_raw[:24]:
+                s = str(x).strip()
+                if len(s) < 2 or len(s) > 24:
+                    continue
+                if s in seen_t:
+                    continue
+                seen_t.add(s)
+                triggers.append(s)
+        if label and len(triggers) >= 1:
+            out.append({"label": label, "triggers": triggers[:12]})
+    return out
+
+
+def suggest_scenario_groups_llm(
+    *,
+    keyword: str,
+    existing_groups: list[dict[str, Any]],
+    all_comment_texts: list[str],
+) -> dict[str, Any]:
+    """
+    单次调用模型，基于评价摘录扩展 ``comment_scenario_groups`` 形态的新组（label + triggers）。
+    """
+    if not all_comment_texts:
+        return {
+            "suggested_scenario_groups": [],
+            "scenario_rationale": "无评价正文可分析。",
+        }
+    existing_compact: list[dict[str, Any]] = []
+    for g in (existing_groups or [])[:36]:
+        if not isinstance(g, dict):
+            continue
+        lab = str(g.get("label") or "").strip()
+        tr = g.get("triggers")
+        ts: list[str] = []
+        if isinstance(tr, list):
+            for x in tr[:16]:
+                s = str(x).strip()
+                if s:
+                    ts.append(s[:48])
+        if lab and ts:
+            existing_compact.append({"label": lab[:80], "triggers": ts})
+    excerpts = _sample_corpus_for_scenarios(
+        all_comment_texts, max_chars=SCENARIO_CORPUS_MAX_CHARS
+    )
+    payload = {
+        "keyword": keyword,
+        "existing_scenarios": existing_compact,
+        "excerpts": excerpts,
+    }
+    raw = _call_llm(_SCENARIO_SYSTEM, json.dumps(payload, ensure_ascii=False))
+    scenarios = _parse_scenarios_object(raw)
+    return {
+        "suggested_scenario_groups": scenarios[:14],
+        "scenario_rationale": (
+            f"基于约 {len(excerpts)} 字评价摘录单次调用模型；"
+            f"在 {len(existing_compact)} 组既有场景之外补充 {len(scenarios[:14])} 组候选。"
+        ),
+    }
+
+
 def suggest_focus_keywords_from_all_comments(
     *,
     keyword: str,
@@ -102,7 +225,6 @@ def suggest_focus_keywords_from_all_comments(
     if not all_comment_texts:
         return {
             "suggested_focus_keywords": [],
-            "suggested_scenario_hints": [],
             "rationale": "无评价正文可分析。",
             "chunks_processed": 0,
             "total_comment_texts": 0,
@@ -140,7 +262,6 @@ def suggest_focus_keywords_from_all_comments(
     out_kw = merged[:22]
     return {
         "suggested_focus_keywords": out_kw,
-        "suggested_scenario_hints": [],
         "rationale": (
             f"基于全量 {len(all_comment_texts)} 条评价文本，分 {len(chunks)} 段调用模型抽取短语并去重；"
             f"已排除与当前关注词统计表完全相同的词。"
