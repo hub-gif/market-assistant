@@ -1322,6 +1322,26 @@ def _brand_cr(cnames: list[str]) -> tuple[float | None, float | None, str, str]:
     return cr1, cr3, top1, f"{100.0 * top1_n / total:.1f}%"
 
 
+def _counter_mix_top_rows_with_remainder(
+    row_names: list[str], *, top_n: int, remainder_label: str
+) -> list[tuple[str, int]]:
+    """
+    与 §4 集中度表、饼图一致：按行计数；``most_common(top_n)`` 未覆盖的长尾合并为
+    ``remainder_label``，保证 ``sum(count) == len(row_names)``（仅统计非空名行）。
+    """
+    c = Counter((x or "").strip() for x in row_names if (x or "").strip())
+    if not c:
+        return []
+    total = sum(c.values())
+    common = c.most_common(top_n)
+    accounted = sum(v for _, v in common)
+    rest = total - accounted
+    out: list[tuple[str, int]] = list(common)
+    if rest > 0:
+        out.append((remainder_label, rest))
+    return out
+
+
 def _price_stats_extended(prices: list[float]) -> dict[str, Any]:
     if not prices:
         return {}
@@ -2136,7 +2156,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_brand_rows_pie.png",
-                "品牌列表曝光占比（扇形图，Top 段合并为「其他」；与上表集中度同源）",
+                "品牌列表曝光占比（扇形图；与上表按行计同源，长尾并入「（其余品牌）」；扇形内再合并为「其他」）",
             )
         )
         lines.extend(
@@ -2178,7 +2198,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_shop_rows_pie.png",
-                "店铺列表曝光占比（扇形图；与上表同源）",
+                "店铺列表曝光占比（扇形图；与上表按行计同源，长尾并入「（其余店铺）」）",
             )
         )
         lines.extend(
@@ -2798,15 +2818,19 @@ def build_competitor_brief(
         ],
         "list_brand_mix_top": [
             {"label": k, "count": v}
-            for k, v in Counter(
-                b for b in brands_s if (b or "").strip()
-            ).most_common(24)
+            for k, v in _counter_mix_top_rows_with_remainder(
+                brands_s,
+                top_n=24,
+                remainder_label="（其余品牌）",
+            )
         ],
         "list_shop_mix_top": [
             {"label": k, "count": v}
-            for k, v in Counter(
-                s for s in shops_s if (s or "").strip()
-            ).most_common(24)
+            for k, v in _counter_mix_top_rows_with_remainder(
+                shops_s,
+                top_n=24,
+                remainder_label="（其余店铺）",
+            )
         ],
         "price_stats": pst,
         "price_stats_source": price_stats_source,
