@@ -94,6 +94,36 @@ def _reviews_volume_int(s: str) -> int:
     return 0
 
 
+def _format_xaxis_int_cn(x: float, _pos: int | None) -> str:
+    """
+    横轴大整数刻度：用「万」「亿」表述，避免 matplotlib 默认 ``1e6`` 科学计数法。
+    用于评价量、条数等非负计数。
+    """
+    if not math.isfinite(x):
+        return ""
+    if abs(x) < 1e-9:
+        return "0"
+    ax = abs(x)
+    sign = "-" if x < 0 else ""
+    if ax < 10_000:
+        return sign + str(int(round(ax)))
+    if ax < 100_000_000:
+        wan = ax / 10_000.0
+        if wan >= 1000:
+            return sign + f"{wan:.0f}万"
+        if wan >= 100:
+            return sign + f"{wan:.0f}万"
+        if abs(wan - round(wan)) < 1e-6:
+            return sign + f"{int(round(wan))}万"
+        s = f"{wan:.1f}".rstrip("0").rstrip(".")
+        return sign + s + "万"
+    yi = ax / 100_000_000.0
+    if abs(yi - round(yi)) < 1e-6:
+        return sign + f"{int(round(yi))}亿"
+    s = f"{yi:.2f}".rstrip("0").rstrip(".")
+    return sign + s + "亿"
+
+
 def _merge_tail_as_other(
     labels: list[str], values: list[float], *, max_slices: int
 ) -> tuple[list[str], list[float]]:
@@ -156,6 +186,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
     """生成扇形/条形 PNG。返回已写入的文件名列表（不含路径）。"""
     _setup_matplotlib_cjk()
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
 
     out_dir = Path(run_dir).resolve() / "report_assets"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -586,8 +617,11 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             ax_l.set_xlabel("展示价（元）", fontsize=9)
             ax_l.set_title("展示价", fontsize=10, pad=8)
             ax_r.barh(y_pos, reviews_mx, height=0.62, color="#059669")
-            ax_r.set_xlabel("评价量（搜索侧）", fontsize=9)
+            ax_r.set_xlabel("评价量（搜索侧，单位：条）", fontsize=9)
             ax_r.set_title("评价量 / 声量", fontsize=10, pad=8)
+            ax_r.xaxis.set_major_formatter(
+                FuncFormatter(_format_xaxis_int_cn)
+            )
             ax_r.tick_params(axis="y", left=False, labelleft=False)
             ttl = gname[:22] if gname else "细类"
             fig.suptitle(
