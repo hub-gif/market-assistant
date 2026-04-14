@@ -18,7 +18,7 @@ from .models import PipelineJob
 
 def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     """
-    **以规则引擎全文为正文**（含 §5 竞品矩阵——默认仅按细类价/声量条形图、无 Markdown 明细表，见 ``matrix_compact_section``；各章内嵌统计图与表格）。
+    **以规则引擎全文为正文**（含 §5 完整竞品矩阵、各章内嵌统计图与表格）。
 
     大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.4 等具体分析同卷连贯，
     **不再**插在篇首「## 一、」之前。
@@ -166,12 +166,8 @@ def get_default_report_config() -> dict[str, Any]:
     """与 ``jd_competitor_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
     return {
-        "llm_comment_sentiment": True,
-        "llm_section_bridges": True,
-        "llm_matrix_group_summaries": True,
-        "llm_comment_group_summaries": True,
-        "llm_price_group_summaries": True,
-        "matrix_compact_section": True,
+        "llm_comment_sentiment": False,
+        "llm_section_bridges": False,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
             {"label": lbl, "triggers": list(trs)}
@@ -215,9 +211,9 @@ def write_competitor_analysis_for_run_dir(
         except json.JSONDecodeError:
             meta = None
 
-    eff_rc: dict[str, Any] = dict(get_default_report_config())
-    if isinstance(report_config, dict) and report_config:
-        eff_rc.update(report_config)
+    eff_rc: dict[str, Any] = (
+        dict(report_config) if isinstance(report_config, dict) else {}
+    )
     all_tx = _flat_comment_texts(comment_rows)
     suggest_path = run_dir / "keyword_suggest_llm.json"
     suggest_record: dict[str, Any] = {
@@ -280,7 +276,14 @@ def write_competitor_analysis_for_run_dir(
         try:
             from .llm_keyword_suggest import suggest_scenario_groups_llm
 
-            scen_base = [x for x in (eff_rc.get("comment_scenario_groups") or []) if isinstance(x, dict)]
+            raw_sg = eff_rc.get("comment_scenario_groups")
+            if isinstance(raw_sg, list) and raw_sg:
+                scen_base = [x for x in raw_sg if isinstance(x, dict)]
+            else:
+                scen_base = [
+                    {"label": lbl, "triggers": list(trs)}
+                    for lbl, trs in jcr.COMMENT_SCENARIO_GROUPS
+                ]
             scen_out = suggest_scenario_groups_llm(
                 keyword=kw,
                 existing_groups=scen_base,
@@ -356,9 +359,7 @@ def write_competitor_analysis_for_run_dir(
     )
     want_sent = bool(eff_rc.get("llm_comment_sentiment")) or env_on
     if want_sent and not skip_sent:
-        comment_units = jcr._comment_lines_with_product_context(
-            comment_rows, merged_rows
-        )
+        comment_units = jcr._iter_comment_text_units(comment_rows, merged_rows)
         if len(comment_units) >= 2:
             sentiment_llm_record["attempted"] = True
             try:
@@ -390,127 +391,6 @@ def write_competitor_analysis_for_run_dir(
         encoding="utf-8",
     )
 
-    matrix_llm_record: dict[str, Any] = {
-        "schema_version": 1,
-        "attempted": False,
-    }
-    llm_matrix_groups_md = ""
-    skip_mat_llm = os.environ.get(
-        "MA_SKIP_LLM_MATRIX_SUMMARIES", ""
-    ).strip().lower() in ("1", "true", "yes")
-    want_mat_llm = bool(eff_rc.get("llm_matrix_group_summaries"))
-    matrix_compact = bool(eff_rc.get("matrix_compact_section", True))
-    if want_mat_llm and matrix_compact and not skip_mat_llm:
-        pl_groups = jcr.build_matrix_groups_llm_payload(merged_rows)
-        if pl_groups:
-            matrix_llm_record["attempted"] = True
-            try:
-                from .llm_generate import generate_matrix_group_summaries_llm
-
-                llm_matrix_groups_md = generate_matrix_group_summaries_llm(
-                    pl_groups, keyword=kw
-                )
-                matrix_llm_record["ok"] = True
-                matrix_llm_record["chars"] = len(llm_matrix_groups_md)
-            except Exception as e:
-                matrix_llm_record["ok"] = False
-                matrix_llm_record["error"] = str(e)
-        else:
-            matrix_llm_record["skipped"] = "no_matrix_groups"
-    elif skip_mat_llm:
-        matrix_llm_record["skipped"] = "MA_SKIP_LLM_MATRIX_SUMMARIES"
-    elif not want_mat_llm:
-        matrix_llm_record["skipped"] = "not_enabled"
-    elif not matrix_compact:
-        matrix_llm_record["skipped"] = "matrix_not_compact"
-
-    (run_dir / "matrix_section_llm.json").write_text(
-        json.dumps(matrix_llm_record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    comment_groups_llm_record: dict[str, Any] = {
-        "schema_version": 1,
-        "attempted": False,
-    }
-    llm_comment_groups_md = ""
-    skip_cg_llm = os.environ.get(
-        "MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES", ""
-    ).strip().lower() in ("1", "true", "yes")
-    want_cg_llm = bool(eff_rc.get("llm_comment_group_summaries", True))
-    if want_cg_llm and not skip_cg_llm:
-        fw_cg, _, _ = jcr.resolve_report_tuning(eff_rc)
-        fb_cg = jcr._consumer_feedback_by_matrix_group(
-            merged_rows=merged_rows,
-            comment_rows=comment_rows,
-            sku_header="SKU(skuId)",
-        )
-        pl_cg = jcr.build_comment_groups_llm_payload(
-            feedback_groups=fb_cg,
-            focus_words=fw_cg,
-            merged_rows=merged_rows,
-        )
-        if pl_cg:
-            comment_groups_llm_record["attempted"] = True
-            try:
-                from .llm_generate import generate_comment_group_summaries_llm
-
-                llm_comment_groups_md = generate_comment_group_summaries_llm(
-                    pl_cg, keyword=kw
-                )
-                comment_groups_llm_record["ok"] = True
-                comment_groups_llm_record["chars"] = len(llm_comment_groups_md)
-            except Exception as e:
-                comment_groups_llm_record["ok"] = False
-                comment_groups_llm_record["error"] = str(e)
-        else:
-            comment_groups_llm_record["skipped"] = "no_feedback_groups"
-    elif skip_cg_llm:
-        comment_groups_llm_record["skipped"] = "MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES"
-    elif not want_cg_llm:
-        comment_groups_llm_record["skipped"] = "not_enabled"
-
-    (run_dir / "comment_groups_llm.json").write_text(
-        json.dumps(comment_groups_llm_record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    price_section_llm_record: dict[str, Any] = {
-        "schema_version": 1,
-        "attempted": False,
-    }
-    llm_price_groups_md = ""
-    skip_pg_llm = os.environ.get(
-        "MA_SKIP_LLM_PRICE_GROUP_SUMMARIES", ""
-    ).strip().lower() in ("1", "true", "yes")
-    want_pg_llm = bool(eff_rc.get("llm_price_group_summaries", True))
-    if want_pg_llm and not skip_pg_llm:
-        pl_pg = jcr.build_price_groups_llm_payload(merged_rows)
-        if pl_pg:
-            price_section_llm_record["attempted"] = True
-            try:
-                from .llm_generate import generate_price_group_summaries_llm
-
-                llm_price_groups_md = generate_price_group_summaries_llm(
-                    pl_pg, keyword=kw
-                )
-                price_section_llm_record["ok"] = True
-                price_section_llm_record["chars"] = len(llm_price_groups_md)
-            except Exception as e:
-                price_section_llm_record["ok"] = False
-                price_section_llm_record["error"] = str(e)
-        else:
-            price_section_llm_record["skipped"] = "no_price_groups"
-    elif skip_pg_llm:
-        price_section_llm_record["skipped"] = "MA_SKIP_LLM_PRICE_GROUP_SUMMARIES"
-    elif not want_pg_llm:
-        price_section_llm_record["skipped"] = "not_enabled"
-
-    (run_dir / "price_section_llm.json").write_text(
-        json.dumps(price_section_llm_record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
     md = jcr.build_competitor_markdown(
         run_dir=run_dir,
         keyword=kw,
@@ -520,9 +400,6 @@ def write_competitor_analysis_for_run_dir(
         meta=meta,
         report_config=eff_rc,
         llm_sentiment_section_md=llm_sentiment_md or None,
-        llm_matrix_groups_md=llm_matrix_groups_md or None,
-        llm_comment_groups_md=llm_comment_groups_md or None,
-        llm_price_groups_md=llm_price_groups_md or None,
     )
 
     bridge_record: dict[str, Any] = {
@@ -650,18 +527,17 @@ def build_competitor_brief_for_job(
         except json.JSONDecodeError:
             meta = None
 
-    eff: dict[str, Any] = dict(get_default_report_config())
+    eff: dict[str, Any] | None = None
+    if isinstance(report_config, dict):
+        eff = dict(report_config)
     eff_path = base / "effective_report_config.json"
     if eff_path.is_file():
         try:
             loaded = json.loads(eff_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict) and loaded:
-                eff.update(loaded)
+                eff = loaded
         except json.JSONDecodeError:
             pass
-    # 任务上显式保存的 report_config 优先于目录内快照（避免旧 effective 覆盖用户 PATCH）。
-    if isinstance(report_config, dict) and report_config:
-        eff.update(report_config)
 
     return jcr.build_competitor_brief(
         run_dir=base,
@@ -689,10 +565,6 @@ def run_jd_keyword_and_report(
     report_config: dict[str, Any] | None = None,
     cancel_check: Any | None = None,
 ) -> Path:
-    """
-    执行京东关键词流水线至 **CSV / run_meta 落盘** 为止；**不写** ``competitor_analysis.md``。
-    ``report_config`` 保留与调用方兼容，采集阶段不使用；报告请用 ``regenerate_competitor_report`` 或 API 生成。
-    """
     _, kpl = _jd_crawler_modules()
 
     kw = (keyword or "").strip()
@@ -744,13 +616,21 @@ def run_jd_keyword_and_report(
             kpl.SCENARIO_FILTER_ENABLED = bool(scenario_filter_enabled)
 
         run_dir = kpl.main(keyword=kw)
-    except kpl.PipelinePausedForCookie:
-        raise
-    except kpl.PipelineCancelled:
+    except kpl.PipelineCancelled as e:
+        run_dir_path = Path(e.run_dir).resolve()
+        merged = run_dir_path / kpl.FILE_MERGED_CSV
+        if merged.is_file():
+            try:
+                write_competitor_analysis_for_run_dir(
+                    run_dir_path, kw, report_config=report_config
+                )
+            except Exception:
+                pass
         raise
     finally:
         for name, val in backup.items():
             setattr(kpl, name, val)
 
-    # 竞品 Markdown 不在采集任务内生成；由前端「重新生成报告」或 ``regenerate_competitor_report`` 触发。
-    return Path(run_dir).resolve()
+    return write_competitor_analysis_for_run_dir(
+        Path(run_dir).resolve(), kw, report_config=report_config
+    )
