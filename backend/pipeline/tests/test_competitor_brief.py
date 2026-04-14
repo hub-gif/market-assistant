@@ -8,6 +8,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
+from pipeline.backfill_merged_total_sales import infer_total_sales_from_sales_floor
 from pipeline.report_charts import _cn_volume_int
 
 
@@ -192,3 +193,10 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(sum(v for _, v in mix), 30)
         self.assertEqual(mix[-1][0], "（其余店铺）")
         self.assertEqual(mix[-1][1], 6)
+
+    def test_infer_total_sales_from_sales_floor(self) -> None:
+        self.assertEqual(
+            infer_total_sales_from_sales_floor("good:99%好评 | 已售50万+"),
+            "已售50万+",
+        )
+        self.assertEqual(infer_total_sales_from_sales_floor(""), "")
