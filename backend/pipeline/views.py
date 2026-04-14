@@ -36,9 +36,14 @@ from .ingest import ingest_job_full
 from .jd_runner import (
     build_competitor_brief_for_job,
     get_default_report_config,
+    merge_llm_supplement_with_rules_report,
     regenerate_competitor_report,
+    write_competitor_analysis_markdown,
 )
-from .llm_generate import generate_strategy_draft_markdown_llm
+from .llm_generate import (
+    generate_competitor_report_markdown_llm,
+    generate_strategy_draft_markdown_llm,
+)
 from .md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 from .models import (
     JdJobCommentRow,
@@ -339,11 +344,48 @@ class JobRegenerateReportView(APIView):
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         if generator == "llm":
-            logger.info(
-                "regenerate-report job_id=%s: generator=llm 已忽略；"
-                "规则正文（矩阵与统计图）为唯一输出，不再并入整篇大模型 §8.5。",
-                pk,
-            )
+            try:
+                rules_md = (
+                    Path(job.run_dir) / "competitor_analysis.md"
+                ).read_text(encoding="utf-8")
+                brief = build_competitor_brief_for_job(
+                    job.run_dir, job.keyword, report_config=rc
+                )
+                md = generate_competitor_report_markdown_llm(brief, job.keyword)
+                md = merge_llm_supplement_with_rules_report(md, rules_md)
+                write_competitor_analysis_markdown(job.run_dir, md)
+            except FileNotFoundError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError as e:
+                msg = str(e)
+                logger.warning(
+                    "regenerate-report LLM ValueError job_id=%s: %s", pk, msg
+                )
+                # AI_crawler：缺密钥/网关、提示词过长；jd_runner：run_dir 越界等
+                if "run_dir 不在京东数据目录下" in msg:
+                    return Response(
+                        {"detail": msg},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if "请设置环境变量" in msg:
+                    return Response(
+                        {"detail": msg + "（运行 Django 的终端需能读取到该环境变量）"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if "提示词过长" in msg or "上下文上限" in msg:
+                    return Response(
+                        {"detail": msg},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                return Response(
+                    {"detail": msg},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            except requests.RequestException as e:
+                return Response(
+                    {"detail": f"大模型网关错误：{e}"},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
         return Response(PipelineJobSerializer(job).data)
 
 
