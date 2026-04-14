@@ -219,6 +219,10 @@ def write_competitor_analysis_for_run_dir(
     eff_rc: dict[str, Any] = (
         dict(report_config) if isinstance(report_config, dict) else {}
     )
+    # 任务仅保存部分调参时，补齐默认项（含各 llm_* 开关）；显式写入的键不被覆盖
+    for _k, _v in get_default_report_config().items():
+        if _k not in eff_rc:
+            eff_rc[_k] = _v
     all_tx = _flat_comment_texts(comment_rows)
     suggest_path = run_dir / "keyword_suggest_llm.json"
     suggest_record: dict[str, Any] = {
