@@ -19,7 +19,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     """
     **以规则引擎全文为正文**（含 §5 完整竞品矩阵、各章内嵌统计图与表格）。
 
-    大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.4 等具体分析同卷连贯，
+    大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.3 等具体分析同卷连贯，
     **不再**插在篇首「## 一、」之前。
 
     注：API「重新生成报告」已不再调用本函数，避免整篇 LLM 与矩阵/图表口径冲突；保留供脚本或将来显式开关复用。
@@ -33,8 +33,8 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     marker = "\n---\n\n## 九、策略与机会提示（假设清单，待验证）"
     insert = (
         "\n\n---\n\n"
-        "### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
-        "> **说明**：本段位于**第八章末**；**竞品矩阵、价盘表、统计图与 §8.2～8.4 词频等以正文各节为准**，"
+        "### 8.5 大模型深度补充（与 §2～§8.3 定量内容互补）\n\n"
+        "> **说明**：本段位于**第八章末**；**竞品矩阵、价盘表、统计图与 §8.2～8.3 等以正文各节为准**，"
         "此处为跨小节语义整合，便于衔接第九章。\n\n"
         f"{sup.strip()}\n"
         "\n---\n\n## 九、策略与机会提示（假设清单，待验证）"
@@ -49,7 +49,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
         if alt in body and marker not in body:
             return body.replace(
                 alt,
-                "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
+                "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.3 定量内容互补）\n\n"
                 "> **说明**：位于第八章末；**矩阵与图表以正文为准**。\n\n"
                 f"{sup.strip()}\n"
                 + alt,
@@ -58,7 +58,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     app = "\n## 附录 A：数据留存说明"
     if app in body:
         tail = (
-            "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.4 定量内容互补）\n\n"
+            "\n\n---\n\n### 8.5 大模型深度补充（与 §2～§8.3 定量内容互补）\n\n"
             f"{sup.strip()}\n"
         )
         return body.replace(app, tail + app, 1)

@@ -141,6 +141,15 @@ def _cleanup_obsolete_report_assets(out_dir: Path) -> None:
             fp.unlink()
         except OSError:
             pass
+    for pat in (
+        "chart_focus_keywords_bar__*.png",
+        "chart_usage_scenarios_bar__*.png",
+    ):
+        for fp in out_dir.glob(pat):
+            try:
+                fp.unlink()
+            except OSError:
+                pass
 
 
 def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
@@ -217,6 +226,93 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         fig.savefig(path, dpi=130, bbox_inches="tight")
         plt.close(fig)
         created.append(fname)
+
+    def save_combo_focus_scenario_bar(
+        *,
+        gname: str,
+        slug: str,
+        wl: list[str],
+        vl: list[float],
+        gl: list[str],
+        gv: list[float],
+        n_texts: int,
+    ) -> None:
+        """左：关注词命中次数；右：场景占有效文本 %（与 §8.3 正文同源）。"""
+        has_l = bool(wl and vl and max(vl) > 0)
+        has_r = bool(gl and gv and n_texts > 0 and max(gv) > 0)
+        if not has_l and not has_r:
+            return
+        n_l = len(wl) if has_l else 0
+        n_r = len(gl) if has_r else 0
+        n_max = max(n_l, n_r, 1)
+        fig_h = max(3.4, min(14.0, 0.38 * n_max + 2.6))
+        fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(10.8, fig_h))
+        ttl = (gname or "").strip()[:22] or "细类"
+        fig.suptitle(
+            f"「{ttl}」· 关注词与使用场景（与 §8.3 统计同源）",
+            fontsize=11,
+            y=1.02,
+        )
+        if has_l:
+            y_pos = range(n_l)
+            ax_l.barh(list(y_pos), vl[:n_l], color="#2563eb", height=0.62)
+            ax_l.set_yticks(list(y_pos))
+            ax_l.set_yticklabels(wl[:n_l], fontsize=8)
+            ax_l.invert_yaxis()
+            ax_l.set_xlabel("关注词子串命中次数", fontsize=9)
+            ax_l.set_title("关注词", fontsize=10, pad=8)
+        else:
+            ax_l.text(
+                0.5,
+                0.5,
+                "本细类无关注词命中\n或无数文本",
+                ha="center",
+                va="center",
+                transform=ax_l.transAxes,
+                fontsize=10,
+                color="#64748b",
+            )
+            ax_l.set_axis_off()
+        if has_r:
+            pcts = [100.0 * c / n_texts for c in gv[: len(gl)]]
+            n_b = len(gl)
+            y_pos = range(n_b)
+            bars = ax_r.barh(list(y_pos), pcts, color="#059669", height=0.62)
+            ax_r.set_yticks(list(y_pos))
+            ax_r.set_yticklabels(gl[:n_b], fontsize=8)
+            ax_r.invert_yaxis()
+            ax_r.set_xlabel("占有效评价文本比例（%）", fontsize=9)
+            if pcts:
+                xmax = max(pcts) * 1.12 + 4.0
+                ax_r.set_xlim(0, max(xmax, max(pcts) + 10.0, 24.0))
+            else:
+                ax_r.set_xlim(0, 24.0)
+            for bar, c, p in zip(bars, gv[:n_b], pcts):
+                ax_r.text(
+                    min(bar.get_width() + 0.6, ax_r.get_xlim()[1] * 0.97),
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{int(c)}条 · {p:.1f}%",
+                    va="center",
+                    fontsize=8,
+                )
+            ax_r.set_title("使用场景 / 用途", fontsize=10, pad=8)
+        else:
+            ax_r.text(
+                0.5,
+                0.5,
+                "本细类无场景词命中\n或无数文本",
+                ha="center",
+                va="center",
+                transform=ax_r.transAxes,
+                fontsize=10,
+                color="#64748b",
+            )
+            ax_r.set_axis_off()
+        fig.tight_layout()
+        path = out_dir / f"chart_focus_and_scenarios_bar__{slug}.png"
+        fig.savefig(path, dpi=130, bbox_inches="tight")
+        plt.close(fig)
+        created.append(path.name)
 
     def save_pie(
         labels: list[str],
@@ -298,6 +394,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             core = "group"
         return f"i{index:02d}_{core}"
 
+    scen_by_slug: dict[str, tuple[list[str], list[float], int]] = {}
     by_grp = brief.get("usage_scenarios_by_matrix_group") or []
     if isinstance(by_grp, list):
         for item in by_grp:
@@ -323,15 +420,10 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                         gpairs.append((lb, float(c)))
             gpairs = _merge_labeled_counts_tail(gpairs, max_items=14)
             if gpairs and n_unit > 0:
-                gl = [p[0] for p in gpairs]
-                gv = [p[1] for p in gpairs]
-                title_base = f"「{gname}」· 场景/用途" if gname else "细类 · 场景/用途"
-                save_bar_h_share_of_text(
-                    gl,
-                    gv,
+                scen_by_slug[slug] = (
+                    [p[0] for p in gpairs],
+                    [p[1] for p in gpairs],
                     n_unit,
-                    f"{title_base}（占有效评价文本比例）",
-                    f"chart_usage_scenarios_bar__{slug}.png",
                 )
 
     fb = brief.get("consumer_feedback_by_matrix_group") or []
@@ -360,10 +452,18 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                         vl.append(float(c))
             wl = wl[:18]
             vl = vl[:18]
-            if not wl:
-                continue
-            tkw = f"「{gname}」· 关注词命中次数" if gname else "细类 · 关注词命中次数"
-            save_bar_h(wl, vl, tkw, f"chart_focus_keywords_bar__{slug}.png", "命中次数")
+            gl, gv, n_scen = scen_by_slug.get(slug, ([], [], 0))
+            n_unit_fb = int(item.get("effective_comment_text_units") or 0)
+            n_texts = n_scen if n_scen > 0 else n_unit_fb
+            save_combo_focus_scenario_bar(
+                gname=gname,
+                slug=slug,
+                wl=wl,
+                vl=vl,
+                gl=gl,
+                gv=gv,
+                n_texts=n_texts,
+            )
 
     sent = brief.get("comment_sentiment_lexicon") or {}
     if isinstance(sent, dict):

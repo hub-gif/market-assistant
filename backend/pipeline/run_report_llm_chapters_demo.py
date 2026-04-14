@@ -5,7 +5,7 @@
 - §6 后：``generate_price_group_summaries_llm``
 - §8.2：``generate_comment_sentiment_analysis_llm``
 - §8末细类评价：``generate_comment_group_summaries_llm``
-- §8.4 后使用场景：``generate_scenario_group_summaries_llm``
+- §8.3 右栏后使用场景：``generate_scenario_group_summaries_llm``
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend
@@ -244,7 +244,7 @@ def main() -> None:
             return generate_scenario_group_summaries_llm(pl_sg, keyword=keyword)
 
         _run_one(
-            "§8.4 使用场景归纳（scenario_groups）",
+            "§8.3 使用场景归纳（scenario_groups）",
             _sg,
             live=args.live,
             preview_chars=args.preview_chars,
