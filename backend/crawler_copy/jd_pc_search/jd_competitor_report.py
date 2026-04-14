@@ -521,6 +521,84 @@ def _iter_comment_text_units(
     return out
 
 
+def _context_tag_escape(s: str) -> str:
+    """避免破坏 ``【细类…】`` 定界符。"""
+    return (s or "").replace("】", "]").replace("｜", "|").replace("\n", " ").strip()
+
+
+def _comment_context_prefix(
+    *,
+    matrix_group: str,
+    sku: str,
+    title: str,
+    shop: str,
+) -> str:
+    g = _context_tag_escape(matrix_group)[:40]
+    sk = _context_tag_escape(sku)[:22]
+    tit = _context_tag_escape(title)[:56]
+    sh = _context_tag_escape(shop)[:36]
+    return f"【细类：{g}｜SKU：{sk}｜品名：{tit}｜店铺：{sh}】"
+
+
+def _merged_by_sku(
+    merged_rows: list[dict[str, str]], sku_header: str
+) -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {}
+    for row in merged_rows:
+        sku = _cell(row, sku_header).strip()
+        if sku and sku not in out:
+            out[sku] = row
+    return out
+
+
+def _comment_lines_with_product_context(
+    comment_rows: list[dict[str, str]],
+    merged_rows: list[dict[str, str]],
+    *,
+    sku_header: str,
+    title_h: str,
+) -> list[str]:
+    """
+    与 :func:`_iter_comment_text_units` **同序、同条数**（逐条评价），仅在正文前加归属头，
+    供 §8.2 等大模型抽样；**情感词表统计**仍须用无头正文 :func:`_iter_comment_text_units`。
+    """
+    if not merged_rows:
+        return list(_iter_comment_text_units(comment_rows, []))
+    sku_map = _sku_to_matrix_group_map(merged_rows, sku_header)
+    by_sku = _merged_by_sku(merged_rows, sku_header)
+    out: list[str] = []
+    for row in comment_rows:
+        t = _cell(row, "tagCommentContent")
+        if not t:
+            continue
+        sku = _cell(row, "sku").strip()
+        g = sku_map.get(sku, "未归类（评价 SKU 无对应深入样本）")
+        m = by_sku.get(sku) or {}
+        prefix = _comment_context_prefix(
+            matrix_group=g,
+            sku=sku,
+            title=_cell(m, title_h),
+            shop=_cell(m, "店铺名(shopName)", "detail_shop_name"),
+        )
+        out.append(prefix + t)
+    if out:
+        return out
+    for row in merged_rows:
+        p = _cell(row, "comment_preview")
+        if not p:
+            continue
+        sku = _cell(row, sku_header).strip()
+        g = _competitor_matrix_group_key(row)
+        prefix = _comment_context_prefix(
+            matrix_group=g,
+            sku=sku,
+            title=_cell(row, title_h),
+            shop=_cell(row, "店铺名(shopName)", "detail_shop_name"),
+        )
+        out.append(prefix + p)
+    return out
+
+
 _POS_LEX = (
     "好",
     "赞",
@@ -700,39 +778,57 @@ def _comment_sentiment_lexicon(texts: list[str]) -> dict[str, Any]:
 def build_comment_sentiment_llm_payload(
     texts: list[str],
     *,
+    attributed_texts: list[str] | None = None,
     max_samples_positive: int = 16,
     max_samples_negative: int = 30,
     max_samples_mixed: int = 10,
-    max_chars_per_review: int = 300,
+    max_chars_per_review: int = 360,
 ) -> dict[str, Any]:
     """
     供大模型做正/负向语义归纳：附规则统计与**去重后的评价原文抽样**（与 §8.2 词表分桶一致）。
 
     负向样本默认多于正向，便于大模型做「具体问题是什么」的主题归因，而非只复述词频。
+
+    ``attributed_texts`` 与 ``texts`` 须一一对齐；前者为带 ``【细类｜SKU｜品名｜店铺】`` 头的展示串，
+    分桶与 ``comment_sentiment_lexicon`` 仍只基于 ``texts``（无头正文），避免品名营销词干扰粗判。
     """
+    attrs: list[str]
+    if attributed_texts is not None and len(attributed_texts) == len(texts):
+        attrs = list(attributed_texts)
+    else:
+        attrs = list(texts)
+
     pos_only_texts: list[str] = []
     neg_only_texts: list[str] = []
     mixed_texts: list[str] = []
-    for t in texts:
-        s = (t or "").strip()
+    pos_attr_pairs: list[tuple[str, str]] = []
+    neg_attr_pairs: list[tuple[str, str]] = []
+    mixed_attr_pairs: list[tuple[str, str]] = []
+    for plain, attr in zip(texts, attrs):
+        s = (plain or "").strip()
         if not s:
             continue
         hp = any(k in s for k in _POS_CLASS)
         hn = any(k in s for k in _NEG_CLASS)
+        a = (attr or plain).strip()
         if hp and hn:
             mixed_texts.append(s)
+            mixed_attr_pairs.append((s, a))
         elif hp:
             pos_only_texts.append(s)
+            pos_attr_pairs.append((s, a))
         elif hn:
             neg_only_texts.append(s)
+            neg_attr_pairs.append((s, a))
 
-    def _sample(seq: list[str], cap: int) -> list[str]:
+    def _sample_pairs(pairs: list[tuple[str, str]], cap: int) -> list[str]:
         out: list[str] = []
-        seen: set[str] = set()
-        for raw in seq:
-            if raw in seen:
+        seen_plain: set[str] = set()
+        for plain, attr in pairs:
+            if plain in seen_plain:
                 continue
-            seen.add(raw)
+            seen_plain.add(plain)
+            raw = (attr or plain).strip()
             if len(raw) > max_chars_per_review:
                 out.append(raw[:max_chars_per_review] + "…")
             else:
@@ -750,10 +846,73 @@ def build_comment_sentiment_llm_payload(
         "comment_sentiment_lexicon": lex,
         "positive_lexeme_hits_top": pos_h_top,
         "negative_lexeme_hits_top": neg_h_top,
-        "sample_reviews_positive_biased": _sample(pos_only_texts, max_samples_positive),
-        "sample_reviews_negative_biased": _sample(neg_only_texts, max_samples_negative),
-        "sample_reviews_mixed_tone": _sample(mixed_texts, max_samples_mixed),
+        "sample_reviews_positive_biased": _sample_pairs(
+            pos_attr_pairs, max_samples_positive
+        ),
+        "sample_reviews_negative_biased": _sample_pairs(
+            neg_attr_pairs, max_samples_negative
+        ),
+        "sample_reviews_mixed_tone": _sample_pairs(
+            mixed_attr_pairs, max_samples_mixed
+        ),
+        "sample_attribution_note": (
+            "每条样本行前【细类｜SKU｜品名｜店铺】来自合并表与矩阵分组；"
+            "写负向体验时须让读者能对应到「哪家店、哪条 SKU/哪款品名」，勿脱离前缀另编店铺或品名。"
+        ),
     }
+
+
+def build_comment_groups_llm_payload(
+    *,
+    feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
+    focus_words: tuple[str, ...],
+    merged_rows: list[dict[str, str]],
+    sku_header: str,
+    title_h: str,
+) -> list[dict[str, Any]]:
+    """
+    按矩阵细类组装「关注词/评价摘录」类 LLM 输入（细类块列表）。
+    ``sample_text_snippets`` 与 §8.2 抽样一致，带 ``【细类｜SKU｜品名｜店铺】`` 前缀。
+    """
+    sku_map = _sku_to_matrix_group_map(merged_rows, sku_header) if merged_rows else {}
+    by_sku = _merged_by_sku(merged_rows, sku_header) if merged_rows else {}
+    out: list[dict[str, Any]] = []
+    for gname, cr, tu in feedback_groups:
+        snippets: list[str] = []
+        for row in cr:
+            t = _cell(row, "tagCommentContent")
+            if not t:
+                continue
+            sku = _cell(row, "sku").strip()
+            g = sku_map.get(sku, gname)
+            m = by_sku.get(sku) or {}
+            prefix = _comment_context_prefix(
+                matrix_group=g,
+                sku=sku,
+                title=_cell(m, title_h),
+                shop=_cell(m, "店铺名(shopName)", "detail_shop_name"),
+            )
+            snippets.append(prefix + t)
+            if len(snippets) >= 8:
+                break
+        fh: list[str] = []
+        blob = "\n".join(tu[:400])
+        for w in focus_words:
+            if len(w) < 2:
+                continue
+            n = blob.count(w)
+            if n:
+                fh.append(f"「{w}」×{n}")
+        out.append(
+            {
+                "group": gname,
+                "comment_flat_rows": len(cr),
+                "effective_text_lines": len(tu),
+                "focus_hit_lines": fh[:14],
+                "sample_text_snippets": snippets,
+            }
+        )
+    return out
 
 
 def _mermaid_pie_focus_keywords(hits: Counter[str], *, top_k: int = 8) -> str:
