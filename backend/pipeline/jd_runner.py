@@ -22,6 +22,8 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
 
     大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.4 等具体分析同卷连贯，
     **不再**插在篇首「## 一、」之前。
+
+    注：API「重新生成报告」已不再调用本函数，避免整篇 LLM 与矩阵/图表口径冲突；保留供脚本或将来显式开关复用。
     """
     body = (rules_md or "").strip()
     sup = (llm_md or "").strip()

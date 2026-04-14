@@ -281,6 +281,27 @@ def _collect_prices(rows: list[dict[str, str]]) -> list[float]:
     return out
 
 
+def _label_count_dicts_top_n_plus_other(
+    labels: list[str], *, top_n: int, other_label: str
+) -> list[dict[str, Any]]:
+    """
+    Top-N 标签计数 + 一条「其他」汇总剩余行数，使 ``count`` 之和等于非空标签行总数
+    （与 §4 集中度表、扇形图分母一致；否则仅 ``most_common(N)`` 会丢掉长尾店铺/品牌行）。
+    """
+    cleaned = [(x or "").strip() for x in labels if (x or "").strip()]
+    if not cleaned:
+        return []
+    cnt = Counter(cleaned)
+    total_rows = len(cleaned)
+    mc = cnt.most_common(top_n)
+    out: list[dict[str, Any]] = [{"label": k, "count": int(v)} for k, v in mc]
+    covered = sum(v for _, v in mc)
+    rest = total_rows - covered
+    if rest > 0:
+        out.append({"label": other_label, "count": int(rest)})
+    return out
+
+
 _JD_LIST_PRICE_KEY = "标价(jdPrice,jdPriceText,realPrice)"
 _COUPON_SHOW_PRICE_KEY = (
     "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)"
@@ -2013,7 +2034,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_brand_rows_pie.png",
-                "品牌列表曝光占比（扇形图，Top 段合并为「其他」；与上表集中度同源）",
+                "品牌列表曝光占比（扇形图；与上表「含品牌字段行数」同源，长尾已并入「其他」尾桶）",
             )
         )
         lines.extend(
@@ -2055,7 +2076,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_shop_rows_pie.png",
-                "店铺列表曝光占比（扇形图；与上表同源）",
+                "店铺列表曝光占比（扇形图；与上表「含店铺名的行数」同源，长尾已并入「其他」尾桶）",
             )
         )
         lines.extend(
@@ -2117,7 +2138,7 @@ def build_competitor_markdown(
     if not grouped_matrix:
         lines.append("*无合并表 SKU。*")
         lines.append("")
-    for gname, grows in grouped_matrix:
+    for gi, (gname, grows) in enumerate(grouped_matrix):
         lines.append(f"### {gname}（**{len(grows)}** 款）")
         lines.append("")
         lines.extend(matrix_header)
@@ -2129,6 +2150,15 @@ def build_competitor_markdown(
                 )
             )
         lines.append("")
+        slug_mx = _scenario_group_asset_slug(gname, gi)
+        lines.extend(
+            _embed_chart(
+                run_dir,
+                f"chart_matrix_prices_reviews__{slug_mx}.png",
+                f"「{_md_cell(gname, 24)}」细类 · **展示价与评价量**（条形图；与上表同源："
+                f"价取 detail_price_final→标价→券后 优先可解析数值；评价量为搜索侧「评价量」字段摘录）",
+            )
+        )
 
     _mx_llm = (llm_matrix_section_md or "").strip()
     if _mx_llm:
@@ -2684,18 +2714,16 @@ def build_competitor_brief(
         "category_mix_top": [
             {"label": lbl, "count": cnt} for lbl, cnt in cm_structure
         ],
-        "list_brand_mix_top": [
-            {"label": k, "count": v}
-            for k, v in Counter(
-                b for b in brands_s if (b or "").strip()
-            ).most_common(24)
-        ],
-        "list_shop_mix_top": [
-            {"label": k, "count": v}
-            for k, v in Counter(
-                s for s in shops_s if (s or "").strip()
-            ).most_common(24)
-        ],
+        "list_brand_mix_top": _label_count_dicts_top_n_plus_other(
+            brands_s,
+            top_n=24,
+            other_label="其他（Top24 以外品牌行数合计）",
+        ),
+        "list_shop_mix_top": _label_count_dicts_top_n_plus_other(
+            shops_s,
+            top_n=24,
+            other_label="其他（Top24 以外店铺行数合计）",
+        ),
         "price_stats": pst,
         "price_stats_source": price_stats_source,
         "price_stats_merged_sample": pst_merged,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from pathlib import Path
@@ -61,6 +62,36 @@ def _merge_labeled_counts_tail(
     if rest > 0:
         head.append(("其他", rest))
     return head
+
+
+def _float_price_from_cell(s: str) -> float | None:
+    t = (s or "").strip().replace(",", "").replace("，", "")
+    if not t:
+        return None
+    m = re.search(r"(\d+(?:\.\d+)?)", t)
+    if not m:
+        return None
+    try:
+        v = float(m.group(1))
+    except ValueError:
+        return None
+    if 0 < v < 1_000_000:
+        return v
+    return None
+
+
+def _reviews_volume_int(s: str) -> int:
+    """与矩阵「评价量」列同源：从搜索侧模糊文案中抽取整数（含「万」）。"""
+    t = (s or "").strip().replace(",", "").replace("，", "")
+    if not t:
+        return 0
+    m = re.search(r"(\d+(?:\.\d+)?)\s*万", t)
+    if m:
+        return int(round(float(m.group(1)) * 10_000))
+    m2 = re.search(r"(\d+)", t)
+    if m2:
+        return int(m2.group(1))
+    return 0
 
 
 def _merge_tail_as_other(
@@ -376,5 +407,79 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             "chart_negative_lexemes_bar.png",
             "条数",
         )
+
+    matrix_groups = brief.get("matrix_by_group") or []
+    if isinstance(matrix_groups, list):
+        for gi, block in enumerate(matrix_groups):
+            if not isinstance(block, dict):
+                continue
+            gname = str(block.get("group") or "").strip()
+            skus = block.get("skus") or []
+            if not isinstance(skus, list) or not skus:
+                continue
+            slug = scenario_group_asset_slug(gname, gi)
+            rows_data: list[tuple[str, float | None, int]] = []
+            for s in skus:
+                if not isinstance(s, dict):
+                    continue
+                sku = str(s.get("sku_id") or "").strip()
+                title = str(s.get("title") or "").strip()
+                if sku:
+                    label = sku if len(sku) <= 20 else sku[:18] + "…"
+                else:
+                    label = title if len(title) <= 16 else title[:14] + "…"
+                if not label:
+                    label = "?"
+                p: float | None = None
+                for k in (
+                    "detail_price_final",
+                    "list_price_show",
+                    "coupon_or_detail_price",
+                ):
+                    p = _float_price_from_cell(str(s.get(k) or ""))
+                    if p is not None:
+                        break
+                rev = _reviews_volume_int(str(s.get("comment_fuzzy") or ""))
+                rows_data.append((label, p, rev))
+            rows_data.sort(key=lambda x: x[0])
+            if not rows_data:
+                continue
+            if not any(
+                (pr is not None and pr > 0) or rv > 0
+                for _, pr, rv in rows_data
+            ):
+                continue
+            n = len(rows_data)
+            labels_mx = [x[0] for x in rows_data]
+            prices_mx = [x[1] for x in rows_data]
+            reviews_mx = [x[2] for x in rows_data]
+            y_pos = list(range(n))
+            fig_h = max(3.4, min(14.0, 0.38 * n + 2.4))
+            fig, (ax_l, ax_r) = plt.subplots(
+                1, 2, figsize=(10.6, fig_h), sharey=True
+            )
+            for yi, pr in enumerate(prices_mx):
+                if pr is not None and pr > 0 and math.isfinite(pr):
+                    ax_l.barh(yi, pr, height=0.62, color="#2563eb")
+            ax_l.set_yticks(y_pos)
+            ax_l.set_yticklabels(labels_mx, fontsize=8)
+            ax_l.invert_yaxis()
+            ax_l.set_xlabel("展示价（元）", fontsize=9)
+            ax_l.set_title("展示价", fontsize=10, pad=8)
+            ax_r.barh(y_pos, reviews_mx, height=0.62, color="#059669")
+            ax_r.set_xlabel("评价量（搜索侧）", fontsize=9)
+            ax_r.set_title("评价量 / 声量", fontsize=10, pad=8)
+            ax_r.tick_params(axis="y", left=False, labelleft=False)
+            ttl = gname[:22] if gname else "细类"
+            fig.suptitle(
+                f"「{ttl}」· 竞品矩阵：价格与评价量（与 §5 表同源）",
+                fontsize=11,
+                y=1.01,
+            )
+            fig.tight_layout()
+            out_mx = out_dir / f"chart_matrix_prices_reviews__{slug}.png"
+            fig.savefig(out_mx, dpi=130, bbox_inches="tight")
+            plt.close(fig)
+            created.append(out_mx.name)
 
     return created
