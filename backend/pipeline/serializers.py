@@ -17,7 +17,6 @@ from .models import (
 _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
     {
         "llm_comment_sentiment",
-        "llm_section_bridges",
         "llm_matrix_group_summaries",
         "llm_price_group_summaries",
         "llm_comment_group_summaries",
@@ -31,6 +30,8 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
 def validate_report_config_body(value: dict) -> dict:
     if not isinstance(value, dict):
         raise serializers.ValidationError("须为 JSON 对象")
+    value = dict(value)
+    value.pop("llm_section_bridges", None)
     extra = set(value.keys()) - _REPORT_CONFIG_ALLOWED_KEYS
     if extra:
         raise serializers.ValidationError(
@@ -39,9 +40,6 @@ def validate_report_config_body(value: dict) -> dict:
     if "llm_comment_sentiment" in value and value["llm_comment_sentiment"] is not None:
         if not isinstance(value["llm_comment_sentiment"], bool):
             raise serializers.ValidationError("llm_comment_sentiment 须为 true 或 false")
-    if "llm_section_bridges" in value and value["llm_section_bridges"] is not None:
-        if not isinstance(value["llm_section_bridges"], bool):
-            raise serializers.ValidationError("llm_section_bridges 须为 true 或 false")
     for k in (
         "llm_matrix_group_summaries",
         "llm_price_group_summaries",
@@ -61,7 +59,6 @@ _ARTIFACT_FILES: tuple[tuple[str, str], ...] = (
     ("comments", "comments_flat.csv"),
     ("detail_ware", "detail_ware_export.csv"),
     ("report", "competitor_analysis.md"),
-    ("section_bridge_llm", "section_bridge_llm.json"),
 )
 
 

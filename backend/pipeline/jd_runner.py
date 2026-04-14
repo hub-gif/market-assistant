@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -69,25 +68,6 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
 def merge_llm_report_with_rules_charts(llm_md: str, rules_md: str) -> str:
     """兼容旧名：等价于 ``merge_llm_supplement_with_rules_report``。"""
     return merge_llm_supplement_with_rules_report(llm_md, rules_md)
-
-
-def inject_section_bridges_into_markdown(md: str, bridges: dict[str, str]) -> str:
-    """
-    在「## 一、」…「## 九、」各章标题行之后插入 ``#### 衔接分析（大模型）`` 段落。
-    自第九章向前替换，避免多次插入导致偏移错位。
-    """
-    out = md
-    for key in "九八七六五四三二一":
-        content = (bridges.get(key) or "").strip()
-        if not content:
-            continue
-        pat = re.compile(rf"^(## {key}、[^\n]*)\n", re.MULTILINE)
-
-        def _repl(m: re.Match[str], _c: str = content) -> str:
-            return m.group(0) + "\n#### 衔接分析（大模型）\n\n" + _c + "\n\n"
-
-        out = pat.sub(_repl, out, count=1)
-    return out
 
 
 def _flat_comment_texts(comment_rows: list[dict[str, str]]) -> list[str]:
@@ -169,7 +149,6 @@ def get_default_report_config() -> dict[str, Any]:
     jcr, _ = _jd_crawler_modules()
     return {
         "llm_comment_sentiment": True,
-        "llm_section_bridges": True,
         "llm_matrix_group_summaries": True,
         "llm_comment_group_summaries": True,
         "llm_price_group_summaries": True,
@@ -526,48 +505,6 @@ def write_competitor_analysis_for_run_dir(
         llm_matrix_section_md=llm_matrix_md or None,
         llm_price_groups_section_md=llm_price_md or None,
         llm_comment_groups_section_md=llm_comment_gr_md or None,
-    )
-
-    bridge_record: dict[str, Any] = {
-        "schema_version": 1,
-        "attempted": False,
-    }
-    skip_bridge = os.environ.get(
-        "MA_SKIP_LLM_SECTION_BRIDGES", ""
-    ).strip().lower() in ("1", "true", "yes")
-    env_bridge = os.environ.get(
-        "MA_ENABLE_LLM_SECTION_BRIDGES", ""
-    ).strip().lower() in ("1", "true", "yes")
-    want_bridge = bool(eff_rc.get("llm_section_bridges")) or env_bridge
-    if want_bridge and not skip_bridge:
-        from .llm_generate import (
-            generate_section_bridges_llm,
-            split_competitor_report_for_bridges,
-        )
-
-        parts = split_competitor_report_for_bridges(md)
-        if parts:
-            bridge_record["attempted"] = True
-            try:
-                bridges = generate_section_bridges_llm(
-                    keyword=kw, brief=brief_final, sections=parts
-                )
-                bridge_record["keys_received"] = sorted(bridges.keys())
-                md = inject_section_bridges_into_markdown(md, bridges)
-                bridge_record["ok"] = True
-            except Exception as e:
-                bridge_record["ok"] = False
-                bridge_record["error"] = str(e)
-        else:
-            bridge_record["skipped"] = "no_h2_sections_matched"
-    elif skip_bridge:
-        bridge_record["skipped"] = "MA_SKIP_LLM_SECTION_BRIDGES"
-    elif not want_bridge:
-        bridge_record["skipped"] = "not_enabled"
-
-    (run_dir / "section_bridge_llm.json").write_text(
-        json.dumps(bridge_record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
 
     out_md = run_dir / "competitor_analysis.md"

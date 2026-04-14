@@ -278,7 +278,7 @@ watch(
         <h3 class="report-config-title">报告里的评价统计怎么算</h3>
         <p class="hint-top report-config-hint">
           关注词、场景词组、外部市场表等<strong>可以不改</strong>：留空并保存即沿用内置规则。大模型相关布尔项（如
-          <code>llm_comment_sentiment</code>、<code>llm_section_bridges</code>）不再单独占勾选框：若任务里已有，会在保存时保留；要改请展开「高级 JSON」。
+          <code>llm_comment_sentiment</code>）不再单独占勾选框：若任务里已有，会在保存时保留；要改请展开「高级 JSON」。
         </p>
         <div class="report-config-actions">
           <button
@@ -315,7 +315,7 @@ watch(
           <summary>高级：用 JSON 编辑（一般不需要）</summary>
           <p class="rc-help">
             打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
-            <code>llm_comment_sentiment</code>、<code>llm_section_bridges</code>、<code>llm_matrix_group_summaries</code>
+            <code>llm_comment_sentiment</code>、<code>llm_matrix_group_summaries</code>
             等布尔字段（须为 <code>true</code>/<code>false</code>）。页顶「重新生成报告」默认已使用
             <code>generator:&quot;llm&quot;</code>；若只要规则稿请勾选「本次仅用规则引擎」。
           </p>

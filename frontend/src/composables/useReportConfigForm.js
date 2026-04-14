@@ -17,7 +17,6 @@ function splitTriggers(text) {
  */
 const REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS = [
   'llm_comment_sentiment',
-  'llm_section_bridges',
   'llm_matrix_group_summaries',
   'llm_price_group_summaries',
   'llm_comment_group_summaries',

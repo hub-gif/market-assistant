@@ -5,7 +5,6 @@
 - §6 后：``generate_price_group_summaries_llm``
 - §8.2：``generate_comment_sentiment_analysis_llm``
 - §8末细类评价：``generate_comment_group_summaries_llm``
-- 各章衔接（一～九）：``generate_section_bridges_llm``（基于无 LLM 插入的规则稿切分）
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend
@@ -124,7 +123,7 @@ def main() -> None:
         "--only",
         type=str,
         default="",
-        help="逗号分隔子集：sentiment,matrix,price,comment_groups,bridges,report_supplement",
+        help="逗号分隔子集：sentiment,matrix,price,comment_groups,report_supplement",
     )
     parser.add_argument(
         "--preview-chars",
@@ -144,7 +143,6 @@ def main() -> None:
         "matrix",
         "price",
         "comment_groups",
-        "bridges",
         "report_supplement",
     }
     if not only:
@@ -166,8 +164,6 @@ def main() -> None:
         generate_competitor_report_markdown_llm,
         generate_matrix_group_summaries_llm,
         generate_price_group_summaries_llm,
-        generate_section_bridges_llm,
-        split_competitor_report_for_bridges,
     )
 
     if "sentiment" in only:
@@ -256,18 +252,8 @@ def main() -> None:
         if not args.live:
             print(f"  payload groups={len(pl_cg)}", flush=True)
 
-    brief = jcr.build_competitor_brief(
-        run_dir=run_dir,
-        keyword=keyword,
-        merged_rows=merged,
-        search_export_rows=search_rows,
-        comment_rows=comment_rows,
-        meta=meta,
-        report_config=eff_rc,
-    )
-
-    if "bridges" in only:
-        md_base = jcr.build_competitor_markdown(
+    if "report_supplement" in only:
+        brief = jcr.build_competitor_brief(
             run_dir=run_dir,
             keyword=keyword,
             merged_rows=merged,
@@ -275,29 +261,7 @@ def main() -> None:
             comment_rows=comment_rows,
             meta=meta,
             report_config=eff_rc,
-            llm_sentiment_section_md=None,
-            llm_matrix_section_md=None,
-            llm_price_groups_section_md=None,
-            llm_comment_groups_section_md=None,
         )
-        parts = split_competitor_report_for_bridges(md_base)
-
-        def _br() -> str:
-            m = generate_section_bridges_llm(
-                keyword=keyword, brief=brief, sections=parts
-            )
-            return json.dumps(m, ensure_ascii=False, indent=2)
-
-        _run_one(
-            "各章衔接 bridges（JSON 键一～九）",
-            _br,
-            live=args.live,
-            preview_chars=min(args.preview_chars, 1200),
-        )
-        if not args.live:
-            print(f"  sections keys={sorted(parts.keys())}", flush=True)
-
-    if "report_supplement" in only:
 
         def _rp() -> str:
             return generate_competitor_report_markdown_llm(brief, keyword)
