@@ -192,12 +192,7 @@ def _cell(row: dict[str, str], *keys: str) -> str:
     return ""
 
 
-# 合并表列名：lean 仅有搜索侧「类目(...)」；full 或历史文件可能含商详「detail_category_path」。勿用内部键 leaf_category（CSV 中不存在）。
-_MERGED_CATEGORY_KEYS: tuple[str, ...] = (
-    "detail_category_path",
-    "leaf_category",
-    "类目(leafCategory,cid3Name,catid)",
-)
+_DETAIL_CATEGORY_PATH_KEY = "detail_category_path"
 _K_CAT_COL = "类目(leafCategory,cid3Name,catid)"
 _K_PROP_COL = "规格属性(propertyList,color,catid,shortName)"
 
@@ -207,17 +202,9 @@ def _shortname_from_prop(prop: str) -> str:
     return m.group(1).strip()[:120] if m else ""
 
 
-def _category_cell(row: dict[str, str]) -> str:
-    c = _cell(row, *_MERGED_CATEGORY_KEYS)
-    if c:
-        return c
-    prop = _cell(row, _K_PROP_COL)
-    sn = _shortname_from_prop(prop)
-    if re.search(r"类目[:：]\s*\d+", prop):
-        if sn:
-            return sn
-        return ""
-    return ""
+def _detail_category_path_cell(row: dict[str, str]) -> str:
+    """细类矩阵与按细类评价统计仅以该列为准；空则视为商详类目不完整。"""
+    return str(row.get(_DETAIL_CATEGORY_PATH_KEY) or "").strip()
 
 
 def _search_export_catid_to_shortname_map(rows: list[dict[str, str]]) -> dict[str, str]:
@@ -710,8 +697,11 @@ def _comment_lines_with_product_context(
         sku = _cell(row, sku_header).strip()
         if not sku:
             continue
+        gk = _competitor_matrix_group_key(row)
+        if not gk:
+            continue
         sku_meta[sku] = (
-            _competitor_matrix_group_key(row),
+            gk,
             _cell(row, title_h),
             _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
         )
@@ -828,8 +818,11 @@ def build_comment_groups_llm_payload(
         sku = _cell(row, sku_header).strip()
         if not sku:
             continue
+        gk = _competitor_matrix_group_key(row)
+        if not gk:
+            continue
         sku_meta[sku] = (
-            _competitor_matrix_group_key(row),
+            gk,
             _cell(row, title_h),
             _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
         )
@@ -1006,8 +999,11 @@ def _sku_to_matrix_group_map(
     m: dict[str, str] = {}
     for row in merged_rows:
         sku = _cell(row, sku_header).strip()
-        if sku:
-            m[sku] = _competitor_matrix_group_key(row)
+        if not sku:
+            continue
+        gk = _competitor_matrix_group_key(row)
+        if gk:
+            m[sku] = gk
     return m
 
 
@@ -1079,11 +1075,22 @@ def _consumer_feedback_by_matrix_group(
         ]
 
     sku_map = _sku_to_matrix_group_map(merged_rows, sku_header)
+    merged_by_sku: dict[str, dict[str, str]] = {}
+    for row in merged_rows:
+        s = _cell(row, sku_header).strip()
+        if s:
+            merged_by_sku[s] = row
     by_g: dict[str, list[dict[str, str]]] = {}
     for row in comment_rows:
         sku = _cell(row, "sku").strip()
-        g = sku_map.get(sku, "未归类（评价 SKU 无对应深入样本）")
-        by_g.setdefault(g, []).append(row)
+        g = sku_map.get(sku)
+        if g:
+            by_g.setdefault(g, []).append(row)
+            continue
+        if sku and sku in merged_by_sku:
+            # 深入样本存在但缺 detail_category_path（或路径无法解析为可读细类）：不参与按细类分析
+            continue
+        by_g.setdefault("未归类（评价 SKU 无对应深入样本）", []).append(row)
 
     out: list[tuple[str, list[dict[str, str]], list[str]]] = []
     used: set[str] = set()
@@ -1258,73 +1265,6 @@ def _search_list_proxies(rows: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
-def _category_mix(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
-    cats: list[str] = []
-    for r in rows:
-        c = _category_cell(r)
-        if c:
-            cats.append(c.split(">")[0].strip() if ">" in c else c[:80])
-    return Counter(cats).most_common(8)
-
-
-def _category_mix_search_export(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
-    """PC 搜索导出：优先可读类目名；纯数字 ID 时用「简称」聚合，避免展示无意义类目码。"""
-    id_names = _search_export_catid_to_shortname_map(rows)
-    labels: list[str] = []
-    for r in rows:
-        c = _cell(r, _K_CAT_COL).strip()
-        p = _cell(r, _K_PROP_COL)
-        if c and not c.isdigit():
-            labels.append(c[:80])
-            continue
-        if c.isdigit():
-            labels.append(
-                id_names.get(c)
-                or _shortname_from_prop(p)
-                or "未解析类目（列表仅有内部编码且无简称）"
-            )
-            continue
-        m = re.search(r"类目[:：]\s*(\d+)", p)
-        if m:
-            cid = m.group(1)
-            labels.append(
-                id_names.get(cid)
-                or _shortname_from_prop(p)
-                or "未解析类目（列表仅有内部编码且无简称）"
-            )
-        else:
-            sn = _shortname_from_prop(p)
-            if sn:
-                labels.append(sn)
-    return Counter(labels).most_common(12)
-
-
-def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
-    if list_export:
-        return [_cell(r, "店铺名(shopName)") for r in rows if _cell(r, "店铺名(shopName)")]
-    out: list[str] = []
-    for r in rows:
-        s = _cell(r, "detail_shop_name") or _cell(r, "店铺名(shopName)")
-        if s:
-            out.append(s)
-    return out
-
-
-def _structure_brands(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
-    if list_export:
-        k = "店铺信息标题(shopInfoTitle,brandName)"
-        return [_cell(r, k) for r in rows if _cell(r, k)]
-    return [_cell(r, "detail_brand") for r in rows if _cell(r, "detail_brand")]
-
-
-def _structure_category_mix(
-    rows: list[dict[str, str]], *, list_export: bool
-) -> list[tuple[str, int]]:
-    if list_export:
-        return _category_mix_search_export(rows)
-    return _category_mix(rows)
-
-
 def _category_token_meaningless(seg: str) -> bool:
     """纯数字类目 ID、空串或疑似内部编码的段，不宜直接作为矩阵分组展示名。"""
     t = (seg or "").strip()
@@ -1369,29 +1309,28 @@ def _matrix_display_segment_from_parts(parts: list[str]) -> str | None:
     return None
 
 
+def _matrix_group_label_from_path(path: str) -> str:
+    """由 ``detail_category_path`` 文本解析细类展示名；空或无可读段则返回空串。"""
+    t = (path or "").strip()
+    if not t:
+        return ""
+    parts = [p.strip() for p in t.replace("＞", ">").split(">") if p.strip()]
+    if not parts:
+        return ""
+    key = _matrix_display_segment_from_parts(parts)
+    return (key[:80] if key else "")
+
+
+def _matrix_group_label_from_detail_path(row: dict[str, str]) -> str:
+    return _matrix_group_label_from_path(_detail_category_path_cell(row))
+
+
 def _competitor_matrix_group_key(row: dict[str, str]) -> str:
     """
-    竞品矩阵分组：使「饼干」「面条」等同细类同表（§5 / §8 / 统计图共用）。
-    优先商详类目路径；路径段仅为内部编码时退化为规格属性「简称」，避免一品一类。
+    竞品矩阵分组：§5 / §8 / 统计图共用。
+    **仅**依据 ``detail_category_path``；列为空或路径段均为无意义编码时不参与矩阵（返回空串）。
     """
-    prop = _cell(row, _K_PROP_COL)
-    sn = _shortname_from_prop(prop)
-    c = _category_cell(row)
-    if not c:
-        if sn:
-            return sn[:80]
-        return "未归类（无类目路径）"
-    parts = [p.strip() for p in c.replace("＞", ">").split(">") if p.strip()]
-    if not parts:
-        if sn:
-            return sn[:80]
-        return "未归类（无类目路径）"
-    key = _matrix_display_segment_from_parts(parts)
-    if key:
-        return key[:80]
-    if sn:
-        return sn[:80]
-    return "未归类（类目仅为内部编码）"
+    return _matrix_group_label_from_detail_path(row)
 
 
 def _merged_rows_grouped_for_matrix(
@@ -1400,6 +1339,8 @@ def _merged_rows_grouped_for_matrix(
     buckets: dict[str, list[dict[str, str]]] = {}
     for row in merged_rows:
         k = _competitor_matrix_group_key(row)
+        if not k:
+            continue
         buckets.setdefault(k, []).append(row)
 
     def sort_key(item: tuple[str, list[dict[str, str]]]) -> tuple[int, int, str]:
@@ -1408,6 +1349,52 @@ def _merged_rows_grouped_for_matrix(
         return (1 if miss else 0, -len(rows), name)
 
     return sorted(buckets.items(), key=sort_key)
+
+
+def _category_mix(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
+    """深入合并表：仅统计具备可读细类标签的 ``detail_category_path``。"""
+    labels: list[str] = []
+    for r in rows:
+        k = _matrix_group_label_from_detail_path(r)
+        if k:
+            labels.append(k)
+    return Counter(labels).most_common(8)
+
+
+def _category_mix_search_export(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
+    """列表导出：仅当行上存在 ``detail_category_path`` 时纳入（与 §5 口径一致）。"""
+    labels: list[str] = []
+    for r in rows:
+        k = _matrix_group_label_from_detail_path(r)
+        if k:
+            labels.append(k)
+    return Counter(labels).most_common(12)
+
+
+def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
+    if list_export:
+        return [_cell(r, "店铺名(shopName)") for r in rows if _cell(r, "店铺名(shopName)")]
+    out: list[str] = []
+    for r in rows:
+        s = _cell(r, "detail_shop_name") or _cell(r, "店铺名(shopName)")
+        if s:
+            out.append(s)
+    return out
+
+
+def _structure_brands(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
+    if list_export:
+        k = "店铺信息标题(shopInfoTitle,brandName)"
+        return [_cell(r, k) for r in rows if _cell(r, k)]
+    return [_cell(r, "detail_brand") for r in rows if _cell(r, "detail_brand")]
+
+
+def _structure_category_mix(
+    rows: list[dict[str, str]], *, list_export: bool
+) -> list[tuple[str, int]]:
+    if list_export:
+        return _category_mix_search_export(rows)
+    return _category_mix(rows)
 
 
 def _is_ingredient_url_blob(s: str) -> bool:
@@ -1475,7 +1462,7 @@ def _competitor_matrix_md_line(
     rank = _md_cell(
         _cell(row, "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)"), 28
     )
-    cat = _md_cell(_category_cell(row), 24)
+    cat = _md_cell(_detail_category_path_cell(row), 24)
     ing = _matrix_ingredients_cell(row)
     cc = _md_cell(_cell(row, "评价量(commentFuzzy)"), 10)
     prev = _md_cell(_cell(row, "comment_preview"), 72)
@@ -1637,11 +1624,11 @@ def _lines_4_reading_category(
         "",
         "**数据解读（规则摘要）**：",
         "",
-        f"- 列表侧可读类目/简称共 **{len(cm_structure)}** 种取值，合计 **{total}** 行；"
+        f"- 具备 ``detail_category_path`` 且可解析为细类标签的结构行共 **{total}** 行，对应 **{len(cm_structure)}** 种细类取值（与 §5 同源）；"
         f"其中「{_md_cell(top_lbl, 40)}」行数最多，约占 **{100 * share:.1f}%**。",
-        "- 若头部类目占比极高，说明当前关键词下货架被少数品类定义；跨品类机会需结合商详矩阵（§5）再核对。",
+        "- 若头部细类占比极高，说明当前关键词下货架被少数品类定义；跨品类机会需结合商详矩阵（§5）再核对。",
         "",
-        "| 类目/简称（Top 5） | 列表行数 | 占本章结构样本 |",
+        "| 细类标签（Top 5） | 结构行数 | 占本章有效行 |",
         "| --- | ---: | ---: |",
     ]
     for lbl, cnt in cm_structure[:5]:
@@ -1672,6 +1659,8 @@ def build_competitor_markdown(
     batch = _run_batch_label(run_dir)
     n_sku = len(merged_rows)
     n_cmt = len(comment_rows)
+    n_sku_pathed = sum(1 for r in merged_rows if _detail_category_path_cell(r))
+    n_sku_matrix = sum(1 for r in merged_rows if _competitor_matrix_group_key(r))
 
     list_export = len(search_export_rows) > 0
     structure_rows = search_export_rows if list_export else merged_rows
@@ -1763,6 +1752,14 @@ def build_competitor_markdown(
         f"- **搜索关键词**：「{keyword}」",
         f"- **分析对象**：流水线拉取的 **{n_sku}** 个 SKU（搜索排序靠前子样本，非全站普查）。",
     ]
+    if n_sku:
+        n_sku_nop = n_sku - n_sku_pathed
+        n_sku_unparsed = n_sku_pathed - n_sku_matrix
+        lines.append(
+            f"- **细类分析口径**：**{n_sku_matrix}** 个 SKU 具备可参与 **§5～§8** 的商详 "
+            f"``detail_category_path``（且路径可解析为可读细类）；另有 **{n_sku_nop}** 个缺该字段、"
+            f"**{n_sku_unparsed}** 个有路径但无可读细类段，**未纳入**细类矩阵与按细类评价统计。"
+        )
     if meta:
         lines.append(
             f"- **搜索列表页**：逻辑第 **{meta.get('page_start')}** 页至第 **{meta.get('page_to')}** 页；"
@@ -1783,6 +1780,7 @@ def build_competitor_markdown(
             "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
             "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以条形图展示（场景图为**占该细类有效文本比例 %**）；见 §8.3～8.4。",
+            "- **细类划分（§5～§8）**：**仅**依据合并表 ``detail_category_path``；该列为空或无法解析出可读细类段的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **各章衔接（可选）**：若任务配置 ``llm_section_bridges``（或部署侧环境变量启用），则在「## 一」至「## 九」各章二级标题后插入大模型撰写的**衔接分析**段落，便于阅读过渡；**定量结论仍以正文表格与摘要 JSON 为准**。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
             "",
@@ -2084,7 +2082,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_category_mix_pie.png",
-                "类目/可读名称分布（扇形图；已用列表「简称」替代裸类目码）",
+                "细类标签分布（扇形图；自 ``detail_category_path`` 解析，与 §5 口径一致）",
             )
         )
         lines.extend(_lines_4_reading_category(cm_structure))
@@ -2092,7 +2090,9 @@ def build_competitor_markdown(
             "*完整类目行数见结构化摘要 ``category_mix_top``。*"
         )
     else:
-        lines.append("*无类目列或无法解析。*")
+        lines.append(
+            "*结构样本中无带 ``detail_category_path`` 的可解析细类行，本小节不展示扇形图；细类分布以 §5 为准。*"
+        )
     lines.append("")
 
     lines.extend(
@@ -2101,11 +2101,11 @@ def build_competitor_markdown(
             "",
             "## 五、竞品对比矩阵（按细分类目分组）",
             "",
-            "优先按商详**类目路径**列分组：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
-            "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。若该列为空，退化为搜索列表中的类目或规格属性；仍无则「未归类」。全量合并模式下另有更多商详字段可供核对。",
+            "分组**仅**使用合并表列 ``detail_category_path``（商详类目路径）：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
+            "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。**该列为空**或路径段均为内部编码、**无法解析出可读细类**的 SKU **不进入**本矩阵，亦**不参与**第八章按细类的评价统计。",
             "",
             "维度说明：**产品**（标题/规格）、**价格**（列表展示）、**渠道**（京东店铺）、**推广**（卖点/榜单文案）、"
-            "**类目**、**配料表**（见下）、**声量**（评价量与摘要）。",
+            "**类目路径**（``detail_category_path``）、**配料表**（见下）、**声量**（评价量与摘要）。",
             "",
             "**配料表**：优先使用配料正文列（开启配料视觉解析时为识别出的文字）；"
             "仅有详情长图链接时列内会提示；若商详参数含「配料/配料表：」则摘录该段。"
@@ -2114,12 +2114,18 @@ def build_competitor_markdown(
         ]
     )
     matrix_header = [
-        "| SKU | 产品（标题） | 品牌 | 标价 | 详情价 | 渠道（店铺） | 推广（卖点） | 榜单/标签 | 类目 | 配料表 | 评价量(搜索) | 消费者反馈摘要 |",
+        "| SKU | 产品（标题） | 品牌 | 标价 | 详情价 | 渠道（店铺） | 推广（卖点） | 榜单/标签 | 类目路径(商详) | 配料表 | 评价量(搜索) | 消费者反馈摘要 |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     grouped_matrix = _merged_rows_grouped_for_matrix(merged_rows)
     if not grouped_matrix:
-        lines.append("*无合并表 SKU。*")
+        if merged_rows:
+            lines.append(
+                "*深入合并表有条目，但均无可用 ``detail_category_path``（或路径无法解析为可读细类），故无法生成细类矩阵；"
+                "§5～§8 中依赖矩阵的按细类统计相应为空。请核对商详抓取与合并字段。*"
+            )
+        else:
+            lines.append("*无合并表 SKU。*")
         lines.append("")
     for gname, grows in grouped_matrix:
         lines.append(f"### {gname}（**{len(grows)}** 款）")
@@ -2238,8 +2244,8 @@ def build_competitor_markdown(
             "",
             "### 8.1 方法",
             "",
-            "- **细类划分**：与 **§5 竞品矩阵** 相同，依据商详类目路径解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
-            "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组。",
+            "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
+            "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 排除口径一致）。",
             "- **正负面粗判（§8.2）**：先以关键词规则与图表做粗分；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**（尤其负向「用户在抱怨什么」），与词频条形图互补。",
             "- **关注词按细类（§8.3）**：对组内评价正文做子串计数并出条形图；若无逐条正文则用该细类下评价摘要列拼接兜底；与配置关注词及联想扩展同源。",
             "- **用途/场景按细类（§8.4）**：对组内每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景；条形图横轴为**占该细类有效文本比例 %**（多标签下各比例可相加大于 100%）。",
@@ -2560,7 +2566,7 @@ def build_competitor_brief(
                     "shop": _cell(
                         row, "店铺名(shopName)", "detail_shop_name"
                     ),
-                    "category": _category_cell(row),
+                    "category": _detail_category_path_cell(row),
                     "selling_point": _cell(row, "卖点(sellingPoint)")[:240],
                     "comment_fuzzy": _cell(row, "评价量(commentFuzzy)"),
                 }
