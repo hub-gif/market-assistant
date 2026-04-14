@@ -37,7 +37,12 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+
 import jd_keyword_pipeline as kpl  # noqa: E402
+from pipeline.csv_schema import merged_csv_effective_total_sales  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # 运行配置（按需改这里）
@@ -1578,7 +1583,8 @@ def _competitor_matrix_md_line(
     )
     cat = _md_cell(_detail_category_path_cell(row), 24)
     ing = _matrix_ingredients_cell(row)
-    cc = _md_cell(_cell(row, "销量口径(totalSales)", "评价量(commentFuzzy)"), 14)
+    ts_eff = merged_csv_effective_total_sales(row)
+    cc = _md_cell(ts_eff or _cell(row, "评价量(commentFuzzy)"), 14)
     prev = _md_cell(_cell(row, "comment_preview"), 72)
     return (
         f"| {sku} | {title} | {brand} | {pj} | {df} | {shop} | {sell} | {rank} | "
@@ -2665,7 +2671,7 @@ def build_competitor_brief(
                     "category": _detail_category_path_cell(row),
                     "selling_point": _cell(row, "卖点(sellingPoint)")[:240],
                     "comment_fuzzy": _cell(row, "评价量(commentFuzzy)"),
-                    "total_sales": _cell(row, "销量口径(totalSales)"),
+                    "total_sales": merged_csv_effective_total_sales(row),
                 }
             )
         matrix_groups.append(

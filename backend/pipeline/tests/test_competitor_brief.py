@@ -8,7 +8,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from pipeline.backfill_merged_total_sales import infer_total_sales_from_sales_floor
+from pipeline.csv_schema import infer_total_sales_from_sales_floor
 from pipeline.report_charts import _cn_volume_int
 
 

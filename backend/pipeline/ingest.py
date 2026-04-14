@@ -22,7 +22,9 @@ from .csv_schema import (
     JD_SEARCH_INTERNAL_KEYS,
     MERGED_CSV_COLUMNS,
     MERGED_CSV_TO_FIELD,
+    MERGED_FIELD_TO_CSV_HEADER,
     SEARCH_CSV_HEADER_TO_FIELD,
+    merged_csv_effective_total_sales,
 )
 from .models import (
     JdJobCommentRow,
@@ -82,6 +84,12 @@ def _comment_row_kwargs(row: dict[str, str]) -> dict[str, str]:
     return {
         COMMENT_CSV_TO_FIELD[col]: str(row.get(col) or "").strip() for col in COMMENT_CSV_COLUMNS
     }
+
+
+def _normalize_merged_csv_total_sales(row: dict[str, str]) -> None:
+    """列表未写 totalSales 列时，用销量楼层推断，保证入库与快照与报告口径一致。"""
+    h = MERGED_FIELD_TO_CSV_HEADER["total_sales"]
+    row[h] = merged_csv_effective_total_sales(row)
 
 
 def _merged_row_kwargs(row: dict[str, str]) -> dict[str, str]:
@@ -152,6 +160,7 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     merged_rows = _read_csv_rows(merged_path) if merged_path.is_file() else []
     m_objs: list[JdJobMergedRow] = []
     for i, row in enumerate(merged_rows):
+        _normalize_merged_csv_total_sales(row)
         kw = _merged_row_kwargs(row)
         m_objs.append(JdJobMergedRow(job=job, row_index=i, **kw))
     _bulk_create_in_chunks(JdJobMergedRow, m_objs)
@@ -185,6 +194,7 @@ def ingest_job_merged_csv(job: PipelineJob) -> dict[str, Any]:
         sku = (row.get(SKU_FIELD_MERGED) or "").strip()
         if not sku:
             continue
+        _normalize_merged_csv_total_sales(row)
         payload = _payload_as_json(row)
         title = (row.get(TITLE_FIELD) or "")[:2000]
         ware = (row.get(WARE_FIELD) or "").strip()[:64]

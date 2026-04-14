@@ -4,6 +4,8 @@
 """
 from __future__ import annotations
 
+import re
+
 # --- 搜索导出 pc_search_export.csv（列名为中文，与 jd_h5_search_requests.JD_EXPORT_COLUMN_HEADERS 一致）---
 JD_SEARCH_INTERNAL_KEYS: tuple[str, ...] = (
     "item_id",
@@ -183,3 +185,27 @@ MERGED_CSV_TO_FIELD: dict[str, str] = dict(zip(MERGED_CSV_COLUMNS, MERGED_INTERN
 MERGED_FIELD_TO_CSV_HEADER: dict[str, str] = {
     internal: csv_h for csv_h, internal in MERGED_CSV_TO_FIELD.items()
 }
+
+
+def infer_total_sales_from_sales_floor(cell: str) -> str:
+    """
+    从「销量楼层(commentSalesFloor)」列文案截取可作 ``销量口径(totalSales)`` 的片段（与列表接口未单独落 totalSales 列时的兜底一致）。
+    """
+    t = (cell or "").strip()
+    if not t:
+        return ""
+    m = re.search(r"已售\s*[\d,，.+]*\s*[万亿]?\s*\+?", t)
+    if m:
+        return m.group(0).strip()
+    m2 = re.search(r"已售\s*[\d,，.+\s万千亿]+", t)
+    return m2.group(0).strip() if m2 else ""
+
+
+def merged_csv_effective_total_sales(row: dict[str, str]) -> str:
+    """合并表一行：优先已有 ``销量口径(totalSales)``，否则从销量楼层推断。"""
+    h_ts = MERGED_FIELD_TO_CSV_HEADER["total_sales"]
+    h_fl = MERGED_FIELD_TO_CSV_HEADER["comment_sales_floor"]
+    direct = str(row.get(h_ts) or "").strip()
+    if direct:
+        return direct
+    return infer_total_sales_from_sales_floor(str(row.get(h_fl) or ""))
