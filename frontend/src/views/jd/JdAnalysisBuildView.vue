@@ -12,7 +12,7 @@ import { useReportConfigForm } from '../../composables/useReportConfigForm'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
-/** 勾选则本次重新生成不走整篇大模型合并（仍先跑规则引擎落盘） */
+/** 勾选则本次只出规则统计稿（仍先跑规则落盘，不做全文智能润色） */
 const useRulesOnly = ref(false)
 const regenErr = ref('')
 const genInFlight = generationInFlightKey()
@@ -223,8 +223,7 @@ watch(
     <section class="ma-card">
       <h2>分析报告生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。默认<strong>先规则引擎</strong>写出统计稿，再<strong>合并大模型补充</strong>（需网关与密钥）；不重新爬取。各章评价解读等开关由「填入推荐示例」或「高级 JSON」中的
-        <code>llm_*</code> 字段控制。
+        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。默认会<strong>先按系统规则生成统计稿</strong>，再<strong>用全文智能润色与补充</strong>（需本系统已配置可用的智能服务）；不会重新爬取数据。各章是否做评价智能解读等，可用「填入推荐示例」带上，或在下方「高级选项」里微调（多数情况不必动）。
         阅读与下载请至
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
       </p>
@@ -232,7 +231,7 @@ watch(
       <div class="toolbar">
         <label class="chk-inline chk-rules-only">
           <input v-model="useRulesOnly" type="checkbox" />
-          本次仅用规则引擎（跳过整篇大模型合并，更快、不调 LLM 全文接口）
+          本次只生成规则统计稿（不做全文智能润色，更快、不调用智能服务）
         </label>
       </div>
       <div class="toolbar">
@@ -266,9 +265,7 @@ watch(
         当前没有<strong>已成功</strong>的任务，无法生成报告；请先在任务列表确认流水线成功。
       </p>
       <p v-else-if="regenBusyAny" class="hint-top">
-        按钮因本页记录的「生成中」状态而禁用。若你已重启后端或确定没有在生成，可点「清除误锁（本地）」。
-        （亦可在控制台执行：
-        <code>sessionStorage.removeItem('ma_generation_inflight');sessionStorage.removeItem('ma_generation_inflight_ts');location.reload()</code>）
+        按钮因本页记录的「生成中」状态而暂时不可用。若你已重启服务或确定没有在生成，可先点「清除误锁（本地）」再试。
       </p>
       <p v-if="regenBusyOtherTask" class="ma-warn-banner">
         任务 #{{ regenPendingJobId }} 的报告正在重新生成中，请稍候再切换任务或重复提交。
@@ -312,7 +309,7 @@ watch(
         />
 
         <details class="rc-advanced" @toggle="onAdvancedJsonToggle">
-          <summary>高级：用 JSON 编辑（一般不需要）</summary>
+          <summary>高级选项（编辑底层配置，一般不需要）</summary>
           <p class="rc-help">
             打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
             <code>llm_comment_sentiment</code>、<code>llm_matrix_group_summaries</code>
@@ -320,14 +317,14 @@ watch(
             <code>generator:&quot;llm&quot;</code>；若只要规则稿请勾选「本次仅用规则引擎」。
           </p>
           <textarea v-model="advancedJsonText" class="report-config-editor" rows="10" spellcheck="false" />
-          <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将 JSON 写回表单</button>
+          <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将配置写回表单</button>
         </details>
 
         <p v-if="reportConfigErr" class="ma-err">{{ reportConfigErr }}</p>
       </div>
 
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        本任务输出目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
+        本任务在本机的数据目录（排查问题时可用）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
 
       <p v-if="regenErr" class="ma-err">{{ regenErr }}</p>

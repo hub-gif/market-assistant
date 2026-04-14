@@ -135,7 +135,38 @@ def _pdf_font_candidates() -> list[Path]:
             Path(windir) / "Fonts" / "msyh.ttf",
         ]
     )
+    # Linux / 容器常见中文字体（路径不存在则跳过）
+    out.extend(
+        [
+            Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+            Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
+            Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+            Path("/usr/share/fonts/truetype/noto/NotoSansCJKsc-Regular.otf"),
+            Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        ]
+    )
     return out
+
+
+def _pdf_flowable_image(img_path: Path, *, max_w: float, max_h: float) -> Any:
+    """将插图缩放到不超过 max_w×max_h（ReportLab 单位，与 cm 一致），保持宽高比，避免矩阵长图撑爆版面。"""
+    from reportlab.lib.utils import ImageReader
+    from reportlab.platypus import Image as RLImage
+
+    p = str(img_path)
+    try:
+        ir = ImageReader(p)
+        iw, ih = ir.getSize()
+    except Exception:
+        return RLImage(p, width=max_w * 0.9, height=max_h * 0.9)
+    if iw <= 0 or ih <= 0:
+        return RLImage(p, width=max_w * 0.9, height=max_h * 0.9)
+    w = float(max_w)
+    h = w * (float(ih) / float(iw))
+    if h > float(max_h):
+        h = float(max_h)
+        w = h * (float(iw) / float(ih))
+    return RLImage(p, width=w, height=h)
 
 
 def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
@@ -145,7 +176,6 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
     from reportlab.lib.units import cm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import Image as RLImage
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
     font_name = "MaExportCJK"
@@ -221,7 +251,12 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
                 except ValueError:
                     continue
                 if img_path.is_file():
-                    story.append(RLImage(str(img_path), width=13 * cm))
+                    # 版面可用高度需小于正文框（A4 减边距后约 24.6cm），否则 ReportLab 报 LayoutError
+                    story.append(
+                        _pdf_flowable_image(
+                            img_path, max_w=13 * cm, max_h=24 * cm
+                        )
+                    )
                     story.append(Spacer(1, 0.2 * cm))
             continue
         plain = _strip_inline_md(s)

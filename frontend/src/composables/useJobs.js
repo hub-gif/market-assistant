@@ -82,24 +82,71 @@ export function jobExportReportDocumentUrl(jobId, fmt = 'docx') {
   return `/api/jobs/${jobId}/export-document/?kind=report&fmt=${encodeURIComponent(fmt)}`
 }
 
+/** 竞品报告 GET 导出 Word/PDF（blob 下载，失败时解析服务端 JSON 提示） */
+export async function exportReportDocument(jobId, fmt = 'docx') {
+  const url = jobExportReportDocumentUrl(jobId, fmt)
+  const r = await fetch(url)
+  const ct = r.headers.get('Content-Type') || ''
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`
+    try {
+      if (ct.includes('application/json')) {
+        const j = await r.json()
+        msg = typeof j?.detail === 'string' ? j.detail : JSON.stringify(j)
+      } else {
+        const t = await r.text()
+        if (t) msg = t.length > 500 ? `${t.slice(0, 500)}…` : t
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
+  }
+  const blob = await r.blob()
+  const filename =
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) ||
+    `job_${jobId}_competitor_report.${fmt}`
+  const u = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = u
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(u)
+}
+
 /** 策略稿正文（浏览器 sessionStorage）→ Word/PDF */
 export async function exportStrategyDocument(jobId, markdown, fmt = 'docx') {
   const r = await api(`/api/jobs/${jobId}/export-document/`, {
     method: 'POST',
     body: JSON.stringify({ kind: 'strategy', fmt, markdown }),
   })
+  const ct = r.headers.get('Content-Type') || ''
   if (!r.ok) {
-    const t = await r.text()
-    throw new Error(t || `HTTP ${r.status}`)
+    let msg = `HTTP ${r.status}`
+    try {
+      if (ct.includes('application/json')) {
+        const j = await r.json()
+        msg = typeof j?.detail === 'string' ? j.detail : JSON.stringify(j)
+      } else {
+        const t = await r.text()
+        if (t) msg = t.length > 500 ? `${t.slice(0, 500)}…` : t
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
   }
   const blob = await r.blob()
-  const dispo = r.headers.get('Content-Disposition') || ''
-  const m = dispo.match(/filename="([^"]+)"/)
-  const name = m ? m[1] : `job_${jobId}_strategy_draft.${fmt}`
+  const filename =
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) ||
+    `job_${jobId}_strategy_draft.${fmt}`
   const u = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = u
-  a.download = name
+  a.download = filename
   a.rel = 'noopener'
   document.body.appendChild(a)
   a.click()

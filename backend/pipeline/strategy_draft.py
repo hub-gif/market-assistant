@@ -49,7 +49,7 @@ def _num(x: Any) -> str:
 
 
 def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
-    """从集中度生成一句策略向描述，无数据则返回 None。"""
+    """从集中度生成一句策略向描述，无数据则返回 None（正文避免英文缩写）。"""
     try:
         c1 = float(cr1) if cr1 is not None else None
     except (TypeError, ValueError):
@@ -57,6 +57,12 @@ def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
     if c1 is None and not (top or "").strip():
         return None
     top_s = _esc(top) or "—"
+    if "店铺" in label:
+        w1, w3 = "第一大店铺约占列表行的", "前三大店铺合计约占"
+    elif "品牌" in label:
+        w1, w3 = "第一大品牌约占", "前三大品牌合计约占"
+    else:
+        w1, w3 = "第一大主体约占", "前三大合计约占"
     if c1 is not None:
         if c1 >= 0.4:
             tone = "偏高，头部资源集中"
@@ -64,8 +70,11 @@ def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
             tone = "中等，存在可争夺空间"
         else:
             tone = "相对分散，差异化切入点可能更多"
-        return f"- **{label}**：第一大品牌/店份额 ≈ {_pct(cr1)}，前三合计份额 ≈ {_pct(cr3)}；头部为「{top_s}」。*粗判：{tone}。*"
-    return f"- **{label}**：头部标签「{top_s}」（缺少份额指标时可结合列表/商详数据补全）。"
+        return (
+            f"- **{label}**：{w1} **{_pct(cr1)}**，{w3} **{_pct(cr3)}**；"
+            f"当前头部为「{top_s}」。*粗判：{tone}。*"
+        )
+    return f"- **{label}**：头部为「{top_s}」（缺少占比时可结合列表与商详数据补全）。"
 
 
 def _goal_bullet(label: str, user_val: str, placeholder: str) -> str:

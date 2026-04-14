@@ -421,8 +421,24 @@ def write_competitor_analysis_for_run_dir(
     )
 
     if want_mx and not skip_mx and merged_rows:
-        # §5 正文已取消细类矩阵表，不再向报告嵌入矩阵要点 LLM 段落。
-        matrix_llm_rec["skipped"] = "matrix_table_removed_from_report"
+        pl_mx = jcr.build_matrix_groups_llm_payload(
+            merged_rows, sku_header=sku_h, title_h=title_h
+        )
+        if pl_mx:
+            matrix_llm_rec["attempted"] = True
+            try:
+                from .llm_generate import generate_matrix_group_summaries_llm
+
+                llm_matrix_md = generate_matrix_group_summaries_llm(
+                    pl_mx, keyword=kw
+                )
+                matrix_llm_rec["ok"] = True
+                matrix_llm_rec["chars"] = len(llm_matrix_md)
+            except Exception as e:
+                matrix_llm_rec["ok"] = False
+                matrix_llm_rec["error"] = str(e)
+        else:
+            matrix_llm_rec["skipped"] = "empty_matrix_groups_payload"
     elif skip_mx:
         matrix_llm_rec["skipped"] = "MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES"
     elif not want_mx:

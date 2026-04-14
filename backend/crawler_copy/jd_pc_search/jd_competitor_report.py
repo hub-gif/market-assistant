@@ -2228,7 +2228,7 @@ def build_competitor_markdown(
         )
         lines.extend(_lines_4_reading_category(cm_structure))
         lines.append(
-            "*完整类目行数见结构化摘要 ``category_mix_top``。*"
+            "*完整类目分布见界面「数据摘要」或简报包中的数据文件。*"
         )
     else:
         lines.append(
