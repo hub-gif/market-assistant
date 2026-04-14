@@ -3,7 +3,7 @@
 关键词 → 调用 ``jd_keyword_pipeline`` 全链路采集 → 生成 **标准化竞品分析报告**（Markdown）。
 
 报告结构对齐常见竞品分析框架：研究范围与方法、执行摘要、**整体市场观察（列表可见度 proxy）**、
-市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析、产品与宣称、**按细分类目的消费者反馈与用户画像**、策略提示与附录；并明确数据边界。
+市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析、**按细分类目的消费者反馈与用户画像**、策略提示与附录；并明确数据边界。
 若运行配置中提供了外部市场规模摘录（``EXTERNAL_MARKET_TABLE_ROWS``），则追加对应表格小节；否则不输出占位行。
 
 依赖：全量抓取时与 ``jd_keyword_pipeline.py`` 相同（Node、h5st、Playwright、``common/jd_cookie.txt``）。
@@ -2224,19 +2224,6 @@ def build_competitor_markdown(
                 "",
             ]
         )
-
-    attrs: list[str] = []
-    for row in merged_rows:
-        a = _cell(row, "detail_product_attributes")
-        if a and a not in attrs:
-            attrs.append(a)
-    lines.extend(["---", "", "## 七、产品与宣称（商详参数摘要）", ""])
-    if attrs:
-        for i, a in enumerate(attrs[:12], 1):
-            lines.append(f"{i}. {_md_cell(a, 600)}")
-    else:
-        lines.append("*无可用商详参数摘要。*")
-    lines.append("")
 
     lines.extend(
         [
