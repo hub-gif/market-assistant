@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import mimetypes
 import threading
 from pathlib import Path
@@ -61,11 +62,14 @@ from .serializers import (
     JdProductSnapshotBriefSerializer,
     JdProductSnapshotDetailSerializer,
     JobReportConfigPatchSerializer,
+    JobResumeRequestSerializer,
     PipelineJobSerializer,
     RegenerateReportRequestSerializer,
     StrategyDraftRequestSerializer,
 )
 from .tasks import execute_job
+
+logger = logging.getLogger(__name__)
 
 # 在线预览最大字节（超出则截断并提示下载）
 _PREVIEW_MAX_BYTES = 2 * 1024 * 1024
@@ -113,17 +117,22 @@ def _safe_file_for_job(run_dir_str: str, name: str) -> Path:
 
 
 def _job_run_dir_usable(job: PipelineJob) -> bool:
-    """成功或已终止但已写入 run_dir 时，可预览/下载批次文件。"""
+    """成功、已终止或已暂停（断点产物）且已写入 run_dir 时，可预览/下载批次文件。"""
     return bool((job.run_dir or "").strip()) and job.status in (
         JobStatus.SUCCESS,
         JobStatus.CANCELLED,
+        JobStatus.PAUSED,
     )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class JobListCreateView(APIView):
     def get(self, request):
-        qs = PipelineJob.objects.all()[:200]
+        qs = (
+            PipelineJob.objects.select_related("checkpoint_row")
+            .all()
+            .order_by("-created_at")[:200]
+        )
         return Response(PipelineJobSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -162,7 +171,11 @@ class JobListCreateView(APIView):
 @method_decorator(csrf_exempt, name="dispatch")
 class JobDetailView(APIView):
     def get(self, request, pk: int):
-        job = PipelineJob.objects.filter(pk=pk).first()
+        job = (
+            PipelineJob.objects.filter(pk=pk)
+            .select_related("checkpoint_row")
+            .first()
+        )
         if not job:
             raise Http404()
         return Response(PipelineJobSerializer(job).data)
@@ -189,14 +202,62 @@ class JobCancelView(APIView):
         job = PipelineJob.objects.filter(pk=pk).first()
         if not job:
             raise Http404()
-        if job.status not in (JobStatus.PENDING, JobStatus.RUNNING):
+        if job.status not in (
+            JobStatus.PENDING,
+            JobStatus.RUNNING,
+            JobStatus.PAUSED,
+        ):
             return Response(
-                {"detail": "仅待执行或执行中的任务可终止"},
+                {"detail": "仅待执行、执行中或已暂停的任务可终止"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         job.cancellation_requested = True
         job.save(update_fields=["cancellation_requested", "updated_at"])
         return Response(PipelineJobSerializer(job).data)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class JobResumeView(APIView):
+    """
+    从 Cookie 暂停断点继续：可选请求体 ``{ "cookie_text": "..." }`` 更新 Cookie；
+    置位 ``resume_from_checkpoint`` 并拉起与新建任务相同的采集子进程（环境变量 ``PIPELINE_RESUME=1``）。
+    """
+
+    def post(self, request, pk: int):
+        if not (settings.LOW_GI_PROJECT_ROOT or "").strip():
+            return Response(
+                {"detail": "请先在 market_assistant/.env 中配置 LOW_GI_PROJECT_ROOT"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        job = PipelineJob.objects.filter(pk=pk).first()
+        if not job:
+            raise Http404()
+        if job.status != JobStatus.PAUSED:
+            return Response(
+                {"detail": "仅「已暂停（待换 Cookie 续跑）」的任务可继续执行"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ser = JobResumeRequestSerializer(data=request.data or {})
+        ser.is_valid(raise_exception=True)
+        raw_cookie = ser.validated_data.get("cookie_text") or ""
+        from .cookie_paste import normalize_browser_cookie_paste
+
+        norm = normalize_browser_cookie_paste(raw_cookie)
+        update_fields = ["resume_from_checkpoint", "error_message", "updated_at"]
+        job.resume_from_checkpoint = True
+        job.error_message = ""
+        if norm:
+            job.cookie_text = norm
+            update_fields.insert(0, "cookie_text")
+        job.save(update_fields=update_fields)
+        t = threading.Thread(target=execute_job, args=(job.id,), daemon=True)
+        t.start()
+        job = (
+            PipelineJob.objects.filter(pk=pk)
+            .select_related("checkpoint_row")
+            .first()
+        )
+        return Response(PipelineJobSerializer(job).data, status=status.HTTP_200_OK)
 
 
 class ReportConfigDefaultsView(APIView):
@@ -296,7 +357,30 @@ class JobRegenerateReportView(APIView):
             except FileNotFoundError as e:
                 return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
             except ValueError as e:
-                return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                msg = str(e)
+                logger.warning(
+                    "regenerate-report LLM ValueError job_id=%s: %s", pk, msg
+                )
+                # AI_crawler：缺密钥/网关、提示词过长；jd_runner：run_dir 越界等
+                if "run_dir 不在京东数据目录下" in msg:
+                    return Response(
+                        {"detail": msg},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if "请设置环境变量" in msg:
+                    return Response(
+                        {"detail": msg + "（运行 Django 的终端需能读取到该环境变量）"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if "提示词过长" in msg or "上下文上限" in msg:
+                    return Response(
+                        {"detail": msg},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                return Response(
+                    {"detail": msg},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             except requests.RequestException as e:
                 return Response(
                     {"detail": f"大模型网关错误：{e}"},
@@ -473,7 +557,8 @@ class JobStrategyDraftView(APIView):
 class JobExportDocumentView(APIView):
     """
     将 Markdown 导出为 Word（.docx）或简易 PDF。
-    - GET：``kind=report``，读取 ``run_dir/competitor_analysis.md``。
+    - GET：``kind=report``，读取 ``run_dir/competitor_analysis.md``；若文件缺失但已有合并表，
+      则先按任务配置调用 ``regenerate_competitor_report`` 再导出（与「报告生成」规则版一致）。
     - POST：``kind=strategy``，请求体 JSON 字段 ``markdown`` 为策略稿正文（与前端 sessionStorage 一致）。
     PDF 依赖本机中文字体或环境变量 ``MA_PDF_FONT`` 指向 .ttf。
     """
@@ -506,10 +591,24 @@ class JobExportDocumentView(APIView):
             )
         path = Path(job.run_dir) / "competitor_analysis.md"
         if not path.is_file():
-            return Response(
-                {"detail": "报告文件不存在，请先在「报告生成」重新生成"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            rc = job.report_config if isinstance(job.report_config, dict) else None
+            try:
+                regenerate_competitor_report(job.run_dir, job.keyword, report_config=rc)
+            except FileNotFoundError as e:
+                return Response(
+                    {"detail": str(e)},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except ValueError as e:
+                return Response(
+                    {"detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not path.is_file():
+                return Response(
+                    {"detail": "报告文件不存在且未能从合并表生成，请先在「报告生成」重新生成"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
         md = path.read_text(encoding="utf-8")
         asset_root = Path(job.run_dir).resolve()
         try:
