@@ -11,7 +11,6 @@ import { useReportConfigForm } from '../../composables/useReportConfigForm'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
-const useLlm = ref(false)
 const regenErr = ref('')
 const genInFlight = generationInFlightKey()
 const REGEN_PREFIX = 'regenerate-report:'
@@ -31,8 +30,6 @@ const {
   focusWordRows,
   scenarioGroups,
   marketRows,
-  useLlmCommentSentiment,
-  useLlmSectionBridges,
   applyFromApiConfig,
   buildPayload,
   addFocusRow,
@@ -159,7 +156,7 @@ async function regenerateReport() {
     try {
       const r = await api(`/api/jobs/${id}/regenerate-report/`, {
         method: 'POST',
-        body: JSON.stringify({ generator: useLlm.value ? 'llm' : 'rules' }),
+        body: JSON.stringify({ generator: 'rules' }),
       })
       const text = await r.text()
       if (!r.ok) {
@@ -213,17 +210,12 @@ watch(
     <section class="ma-card">
       <h2>分析报告生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，调整报告统计规则后保存。<strong>未勾选</strong>下方选项时，按固定统计规则生成报告；<strong>勾选「使用大模型生成」</strong>后，由大模型根据本批次摘要撰写全文（通常更慢且可能计费）。均不重新爬取。
+        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。本页<strong>始终按规则引擎</strong>更新
+        <code>competitor_analysis.md</code>（统计图与表格），不重新爬取。若需大模型整篇稿或 §8.2 等开关，请用「高级 JSON」写入对应字段后保存，或通过 API 调用。
         阅读与下载请至
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
       </p>
 
-      <div class="toolbar">
-        <label class="chk-inline">
-          <input v-model="useLlm" type="checkbox" />
-          使用大模型生成（服务端需已配置并可用）
-        </label>
-      </div>
       <div class="toolbar">
         <label class="sel-label">任务</label>
         <select v-model="selectedId" class="job-select">
@@ -249,18 +241,9 @@ watch(
       <div v-if="selectedId" class="report-config-block">
         <h3 class="report-config-title">报告里的评价统计怎么算</h3>
         <p class="hint-top report-config-hint">
-          下面几项都<strong>可以不改</strong>：留空并保存，表示沿用系统内置规则。请先点「保存以上设置」，再点「重新生成报告」；需要大模型时勾选下方「评价归纳」或「各章衔接」，页顶「使用大模型生成」仍用于整份报告另一种生成模式。
+          关注词、场景词组、外部市场表等<strong>可以不改</strong>：留空并保存即沿用内置规则。大模型相关布尔项（如
+          <code>llm_comment_sentiment</code>、<code>llm_section_bridges</code>）不再单独占勾选框：若任务里已有，会在保存时保留；要改请展开「高级 JSON」。
         </p>
-        <div class="toolbar toolbar-llm-flags">
-          <label class="chk-inline">
-            <input v-model="useLlmCommentSentiment" type="checkbox" />
-            评价章大模型归纳（§8.2 主题解读，需 API 密钥）
-          </label>
-          <label class="chk-inline">
-            <input v-model="useLlmSectionBridges" type="checkbox" />
-            各章大模型衔接分析（第一～九章标题后各一段，一次调用多章，需密钥）
-          </label>
-        </div>
         <div class="report-config-actions">
           <button
             type="button"
@@ -294,7 +277,12 @@ watch(
 
         <details class="rc-advanced" @toggle="onAdvancedJsonToggle">
           <summary>高级：用 JSON 编辑（一般不需要）</summary>
-          <p class="rc-help">打开时会根据上面表单生成内容；改完后点「写回表单」再保存。</p>
+          <p class="rc-help">
+            打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
+            <code>llm_comment_sentiment</code>、<code>llm_section_bridges</code>、<code>llm_matrix_group_summaries</code>
+            等布尔字段（须为 <code>true</code>/<code>false</code>）。重新生成整篇大模型稿需调接口
+            <code>POST …/regenerate-report/</code> 且 body 含 <code>"generator":"llm"</code>。
+          </p>
           <textarea v-model="advancedJsonText" class="report-config-editor" rows="10" spellcheck="false" />
           <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将 JSON 写回表单</button>
         </details>
