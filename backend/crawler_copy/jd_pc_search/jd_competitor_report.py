@@ -2723,7 +2723,7 @@ def build_competitor_brief(
         "consumer_feedback_by_matrix_group": feedback_by_group,
         "comment_sentiment_lexicon": comment_sentiment_lexicon,
         "notes": [
-            "与在线分析报告各章统计口径一致；主题词与场景为预设词表，非 NLP 主题模型。",
+            "与在线分析报告各章统计口径一致；关注词与场景以任务 report_config 为底，报告生成时还可经 keyword_suggest_llm 合并延伸（仍为非深度学习的子串命中统计）。",
             "价格来自页面展示字段抽取，含促销与规格差异；price_promotion_signals 为标价/券后对齐与卖点话术的启发式摘录。",
             "comment_sentiment_lexicon 为关键词粗判，非深度学习情感模型。",
         ],
