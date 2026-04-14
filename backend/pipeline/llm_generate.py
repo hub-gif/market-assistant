@@ -54,6 +54,10 @@ REPORT_SYSTEM = """你是业务与产品读者顾问。输入 JSON 含 `keyword`
 - **Markdown**，约 **800～1500 字**；
 - 建议用 ``####`` 组织：**执行摘要级要点**、**竞争与价盘**、**用户声量与负向事由**（须归纳用户在抱怨什么类型的问题，而非只堆关键词）、**与第九章衔接的策略边界**；
 - 若有 `comment_sentiment_lexicon`，概括正/负向粗判局限；**负向**写清事由类型（口感、价格、物流等）；
+- **归因与引语（硬性）**：`consumer_feedback_by_matrix_group` 与 `comment_sentiment_lexicon` 等均为**跨 SKU/跨店铺的关键词子串或条数统计**，**不能**据此推断「某一店铺某一单品」的结论。  
+  - **禁止**写「部分用户反馈“口感偏硬”“发粘”……」等**带引号的具体体验原话**，除非输入 JSON 中**同一段可引用的原文**已出现该措辞（本段输入通常不含评价全文，故默认**不要**使用引号式举例）。  
+  - 若写口感、包装、物流、价格等维度，须用**维度级、聚合级**表述，并点明口径（如「在已合并的评价文本中，『物流』『价格』类关键词命中较多，为全样本子串计数、不区分具体 SKU」）；可结合 `matrix_overview_for_llm` 的细类名谈**结构分布**，勿把词频偷换成「用户点名某款商品」的叙事。  
+  - 若正文前节（§8.2）已有带归属的抽样解读，本段**只可概括其结论层级**，**不要**重复杜撰新的「」短引文。  
 - 语气专业、中文；缺失项写「本段未提供该项」而非猜测。"""
 
 REPORT_USER_PREFIX = """请根据以下 JSON 撰写上文所述 §8.5 嵌入段落（Markdown 正文，勿加 ### 8.5 标题）。\n\n"""
@@ -75,16 +79,18 @@ SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON
 - ``comment_sentiment_lexicon``：关键词规则下的条数与短语命中（粗判，非深度学习）；
 - ``positive_lexeme_hits_top`` / ``negative_lexeme_hits_top``：短语级命中摘要（与条形图同源）；
 - ``sample_reviews_*``：按同一规则从评价中抽样的短文（已截断），**仅可依据这些原文与 lexicon 数字归纳**。
+  每条样本通常以 ``【细类：…｜SKU：…｜品名：…】`` 开头，表示该句评价对应的 **§5 矩阵细类**与**具体 SKU/商品标题**；写归纳与引用「」短引文时**须保留或复述该归属**（例如先点明「饼干类某 SKU」再引口感原话），**禁止**把多条样本混成「用户普遍」却不交代是哪类产品。
 
 **硬性要求**：
 - **仅输出 Markdown 正文**（不要用 ``` 围栏包裹全文）；
 - **不要编造**样本中未出现的具体事实、品牌、价格、医学功效；
 - 条数、占比等**定量表述须与** ``comment_sentiment_lexicon`` **一致**，勿与样本矛盾；
+- 若某具体措辞（如「口感偏硬」）**未**出现在任一 ``sample_reviews_*`` 字符串中，**禁止**用引号写出该句或暗示为直接引语；仅可写「口感相关抱怨在样本/词表中较集中」等聚合表述。
 - **不要**只复述「某词出现 N 次」——词频条形图已在报告正文；你的价值是**语义层归纳**：用户在说什么、不满/满意的具体事由是什么。
 
 **建议结构**（使用四级标题 ``####``）：
 1. ``#### 正向体验主题``：3～6 条；每条用一句话概括一类满意点（如口感、甜度、饱腹、性价比、物流），**尽量**在句末用简短「」引用样本中的原话片段佐证（无合适原话则省略引号，勿杜撰）。
-2. ``#### 负向评价主题归因``：**核心段落**。在「偏负向」与「混合」样本中归纳 **4～8 个具体问题维度**（示例维度，按需选用：口味/难吃/怪味、过甜或寡淡、质地口感、价格与促销、包装破损、物流时效、真伪与效期、与宣传不符、健康/功效疑虑等）。每个维度下用 1～2 条列表项写清「用户具体在抱怨什么」，并**尽量**附上来自 ``sample_reviews_negative_biased`` 或 ``sample_reviews_mixed_tone`` 的「」短引文；若某维度在样本中几乎无依据则不要硬写。
+2. ``#### 负向评价主题归因``：**核心段落**。在「偏负向」与「混合」样本中归纳 **4～8 个具体问题维度**（示例维度，按需选用：口味/难吃/怪味、过甜或寡淡、质地口感、价格与促销、包装破损、物流时效、真伪与效期、与宣传不符、健康/功效疑虑等）。每个维度下用 1～2 条列表项写清「用户具体在抱怨什么」，并**尽量**附上来自 ``sample_reviews_negative_biased`` 或 ``sample_reviews_mixed_tone`` 的「」短引文（引文内**尽量含** ``【细类…】`` 前缀或在同句中点明细类/SKU/品名）；若某维度在样本中几乎无依据则不要硬写。
 3. ``#### 混合评价中的典型张力``（可选）：若 ``sample_reviews_mixed_tone`` 非空，用 2～4 条说明同一条评价里正负并存时在讨论什么（如「认可低糖但嫌口感」）；否则写一句「本批混合样本较少，从略」。
 4. ``#### 使用注意``：1～3 句说明：关键词分桶的局限、抽样与截断、与医学/功效结论无关等。
 
@@ -264,3 +270,136 @@ def generate_strategy_draft_markdown_llm(
         raw = json.dumps(payload, ensure_ascii=False)
     user = STRATEGY_USER_PREFIX + raw
     return _call_llm(STRATEGY_SYSTEM, user)
+
+
+MATRIX_GROUPS_SYSTEM = """你是竞品分析顾问。输入为 JSON：``keyword`` 与 ``groups`` 数组。
+每个 group 含 ``group``（细分类目名）、``sku_count``、``price_stats``（该细类深入合并行可解析展示价的 min/max/median/mean/n，与 **§6「按细类价盘」** 分位数表同源；无则 n=0 或缺字段）、
+``lines``（该细类下若干 SKU 的标题/卖点/配料**摘录**，均来自页面抓取拼接，可能截断）。
+
+请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
+- 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题（不要使用 ``##`` 一级标题）；
+- 每段约 **100～200 字**中文：**主体**归纳该细类下**卖点表述共性**、**配料类型/宣称共性**（摘录中无配料则写「配料摘录较少」）；**品牌格局**可一句概括（仅依据摘录中可见品牌/系列，勿编造销量排名）；
+- **价带/价位**：若 ``price_stats.n`` 为大于 0 的整数，**仅允许**用该对象里的数值写价带（如 min～max、中位数），且须与 ``price_stats`` **完全一致**，**禁止**写「价格带未明确」「未体现具体价位」「多为中端」等**与上述数值相矛盾**的表述；若 n=0 或无可信数值，**不要猜测价位**，可写一句「深入样本可解析数值价不足，价盘以 **§6** 表格为准」；
+- **禁止**输出 Markdown 表格、禁止逐条复述 SKU 明细表；勿编造功效、认证；
+- 若 ``lines`` 很少，明确写「样本较少，归纳供启发」。
+
+总输出约 **800～3500 字**（细类多则偏长）。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+
+MATRIX_GROUPS_USER_PREFIX = (
+    "请根据以下 JSON 撰写竞品报告第五章末「细类要点归纳」正文（Markdown）。\n\n"
+)
+
+
+def generate_matrix_group_summaries_llm(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    trimmed: list[dict[str, Any]] = []
+    for g in groups:
+        if not isinstance(g, dict):
+            continue
+        g2 = dict(g)
+        ln = g2.get("lines")
+        if isinstance(ln, list) and len(ln) > 22:
+            g2["lines"] = ln[:22]
+        trimmed.append(g2)
+    payload = {"keyword": keyword, "groups": trimmed}
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 95_000:
+        for g2 in trimmed:
+            ln = g2.get("lines")
+            if isinstance(ln, list) and len(ln) > 12:
+                g2["lines"] = ln[:12]
+        raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
+    user = MATRIX_GROUPS_USER_PREFIX + raw
+    return _call_llm(MATRIX_GROUPS_SYSTEM, user)
+
+
+COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：``keyword`` 与 ``groups``。
+每个 group 含 ``group``（与 §5 矩阵一致的细分类目名）、``comment_flat_rows``、``effective_text_lines``、
+``focus_hit_lines``（关注词子串命中摘要，与 §8.3 同源）、``sample_text_snippets``（评价短摘录，已截断）。
+摘录行通常以 ``【细类：…｜SKU：…｜品名：…】`` 开头：细类可与本 group 名对照，**品名/SKU 表示该句具体出自哪条链接**；归纳时若引用原话，**须交代是「哪条 SKU / 哪款品名」上的反馈**，勿只写「有用户说口感差」而不指代产品。
+
+请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
+- 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题（不要使用 ``##`` 一级标题）；
+- 每段约 **100～220 字**中文：归纳该细类下**消费者在讨论什么**（口感、价格、物流、功效疑虑等）、**关注词命中反映的诉求**；勿编造摘录中未出现的品牌、医学结论；
+- **禁止**输出 Markdown 表格、禁止逐条复述全部评价；
+- 若 ``effective_text_lines`` 很少，明确写「样本较少，归纳供启发」。
+
+总输出约 **600～3200 字**。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+
+COMMENT_GROUPS_USER_PREFIX = (
+    "请根据以下 JSON 撰写竞品报告第八章末「细类评论与关注词要点归纳」正文（Markdown）。\n\n"
+)
+
+
+def generate_comment_group_summaries_llm(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    trimmed: list[dict[str, Any]] = []
+    for g in groups:
+        if not isinstance(g, dict):
+            continue
+        g2 = dict(g)
+        sn = g2.get("sample_text_snippets")
+        if isinstance(sn, list) and len(sn) > 16:
+            g2["sample_text_snippets"] = sn[:16]
+        fh = g2.get("focus_hit_lines")
+        if isinstance(fh, list) and len(fh) > 14:
+            g2["focus_hit_lines"] = fh[:14]
+        trimmed.append(g2)
+    payload = {"keyword": keyword, "groups": trimmed}
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 95_000:
+        for g2 in trimmed:
+            sn = g2.get("sample_text_snippets")
+            if isinstance(sn, list) and len(sn) > 10:
+                g2["sample_text_snippets"] = sn[:10]
+        raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
+    user = COMMENT_GROUPS_USER_PREFIX + raw
+    return _call_llm(COMMENT_GROUPS_SYSTEM, user)
+
+
+PRICE_GROUPS_SYSTEM = """你是定价与渠道顾问。输入为 JSON：``keyword`` 与 ``groups``。
+每个 group 含 ``group``（细分类目名，与 §5 矩阵、§6「按细类价盘」小节一致）、``sku_count``、``price_stats``（该细类可解析展示价的 min/max/median/mean/n，与 §6 各细类 Markdown 分位数表同源）、
+``listing_snippets``（若干「标题｜标价｜券后｜详情价」摘录，来自合并表字段，已截断）。
+
+请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
+- 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题；
+- 每段约 **80～200 字**中文，**只写价盘与价差**：用 ``price_stats`` 概括价带/离散度（如 min～max、中位数、相对集中或拉得开）；用 ``listing_snippets`` 归纳**标价 vs 券后 vs 详情价**是否常一致、是否常见券后低于标价、价差幅度的大致印象；**可一句**联系标题里**显式出现的规格数字**（如克重、件数）解释**价高/价差大是否可能来自大规格或组合装**——仅当摘录里确有数字时写，勿展开成宣称解读；
+- **硬性禁止**（本章不是卖点章）：不要列举或归纳「0 蔗糖 / 低 GI / 全麦 / 代餐 / 孕妇 / 控糖」等**营销宣称或场景关键词**；不要写配料、功效、品牌叙事、用户画像；这些若出现应留给报告 **§5 细类要点归纳** 或 **§7**；
+- **禁止** Markdown 表格、禁止罗列全部 SKU；勿编造未出现的到手价、销量排名；
+- 若 ``price_stats`` 中 n=0 或缺失，写「该细类无可解析数值价，从略」。
+
+总输出约 **500～2800 字**。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+
+PRICE_GROUPS_USER_PREFIX = (
+    "请根据以下 JSON 撰写竞品报告第六章末「细类价盘要点归纳」正文（Markdown）。"
+    "本章只写**数值价带与标价/券后/详情价关系**，勿写卖点宣称关键词归纳。\n\n"
+)
+
+
+def generate_price_group_summaries_llm(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    trimmed: list[dict[str, Any]] = []
+    for g in groups:
+        if not isinstance(g, dict):
+            continue
+        g2 = dict(g)
+        sn = g2.get("listing_snippets")
+        if isinstance(sn, list) and len(sn) > 14:
+            g2["listing_snippets"] = sn[:14]
+        trimmed.append(g2)
+    payload = {"keyword": keyword, "groups": trimmed}
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 95_000:
+        for g2 in trimmed:
+            sn = g2.get("listing_snippets")
+            if isinstance(sn, list) and len(sn) > 8:
+                g2["listing_snippets"] = sn[:8]
+        raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
+    user = PRICE_GROUPS_USER_PREFIX + raw
+    return _call_llm(PRICE_GROUPS_SYSTEM, user)
