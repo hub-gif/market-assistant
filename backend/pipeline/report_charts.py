@@ -422,13 +422,14 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             for s in skus:
                 if not isinstance(s, dict):
                     continue
-                sku = str(s.get("sku_id") or "").strip()
                 title = str(s.get("title") or "").strip()
-                if sku:
-                    label = sku if len(sku) <= 20 else sku[:18] + "…"
+                sku = str(s.get("sku_id") or "").strip()
+                # 与 §5 矩阵「产品」列一致：纵轴优先品名，无标题时再退化为 SKU
+                if title:
+                    label = title if len(title) <= 30 else title[:28] + "…"
+                elif sku:
+                    label = sku if len(sku) <= 22 else sku[:20] + "…"
                 else:
-                    label = title if len(title) <= 16 else title[:14] + "…"
-                if not label:
                     label = "?"
                 p: float | None = None
                 for k in (

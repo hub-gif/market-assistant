@@ -697,9 +697,189 @@ def _comment_sentiment_lexicon(texts: list[str]) -> dict[str, Any]:
     }
 
 
+def _comment_lines_with_product_context(
+    comment_rows: list[dict[str, str]],
+    merged_rows: list[dict[str, str]],
+    *,
+    sku_header: str,
+    title_h: str,
+) -> list[str]:
+    """与 ``comment_rows`` 顺序对齐：带细类/SKU/品名/店铺前缀，供 §8.2 大模型抽样。"""
+    sku_meta: dict[str, tuple[str, str, str]] = {}
+    for row in merged_rows:
+        sku = _cell(row, sku_header).strip()
+        if not sku:
+            continue
+        sku_meta[sku] = (
+            _competitor_matrix_group_key(row),
+            _cell(row, title_h),
+            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+        )
+    out: list[str] = []
+    for cr in comment_rows:
+        txt = (cr.get("tagCommentContent") or "").strip()
+        if not txt:
+            continue
+        sku = _cell(cr, "sku").strip()
+        meta = sku_meta.get(sku)
+        if meta:
+            gname, tit, shop = meta
+            prefix = (
+                f"【细类：{gname}｜SKU：{sku}｜品名：{_md_cell(tit, 80)}｜"
+                f"店铺：{_md_cell(shop, 40)}】"
+            )
+            out.append(prefix + txt)
+        else:
+            out.append(txt)
+    return out
+
+
+def _matrix_excerpt_line_for_llm(row: dict[str, str], title_h: str) -> str:
+    title = _md_cell(_cell(row, title_h), 100)
+    sp = _md_cell(_cell(row, "卖点(sellingPoint)"), 120)
+    ing_raw = _ingredients_from_product_attributes(_cell(row, "detail_product_attributes"))
+    ing = _md_cell(_ingredients_single_line(ing_raw), 100) if ing_raw else ""
+    chunks: list[str] = []
+    if title:
+        chunks.append(title)
+    if sp:
+        chunks.append(f"卖点:{sp}")
+    if ing:
+        chunks.append(f"配料:{ing}")
+    return "｜".join(chunks) if chunks else "（无标题摘录）"
+
+
+def _listing_price_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
+    title = _md_cell(_cell(row, title_h), 72)
+    lp = _cell(row, "标价(jdPrice,jdPriceText,realPrice)")
+    cp = _cell(
+        row,
+        "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
+    )
+    dp = _cell(row, "detail_price_final")
+    return f"{title}｜标价:{lp}｜券后:{cp}｜详情价:{dp}"
+
+
+def build_matrix_groups_llm_payload(
+    merged_rows: list[dict[str, str]],
+    *,
+    title_h: str,
+    sku_header: str = "",
+) -> list[dict[str, Any]]:
+    """供 ``generate_matrix_group_summaries_llm``：与 §5 细类划分一致。"""
+    _ = sku_header
+    if not merged_rows:
+        return []
+    out: list[dict[str, Any]] = []
+    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
+        prices = _collect_prices(grows)
+        pst = _price_stats_extended(prices) if prices else {"n": 0}
+        lines = [_matrix_excerpt_line_for_llm(r, title_h) for r in grows[:24]]
+        out.append(
+            {
+                "group": gname,
+                "sku_count": len(grows),
+                "price_stats": pst,
+                "lines": lines,
+            }
+        )
+    return out
+
+
+def build_price_groups_llm_payload(
+    merged_rows: list[dict[str, str]],
+    *,
+    title_h: str,
+    sku_header: str = "",
+) -> list[dict[str, Any]]:
+    """供 ``generate_price_group_summaries_llm``。"""
+    _ = sku_header
+    if not merged_rows:
+        return []
+    out: list[dict[str, Any]] = []
+    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
+        prices = _collect_prices(grows)
+        pst = _price_stats_extended(prices) if prices else {"n": 0}
+        snippets = [_listing_price_snippet_for_llm(r, title_h) for r in grows[:16]]
+        out.append(
+            {
+                "group": gname,
+                "sku_count": len(grows),
+                "price_stats": pst,
+                "listing_snippets": snippets,
+            }
+        )
+    return out
+
+
+def build_comment_groups_llm_payload(
+    *,
+    feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
+    focus_words: tuple[str, ...],
+    merged_rows: list[dict[str, str]],
+    sku_header: str,
+    title_h: str,
+) -> list[dict[str, Any]]:
+    """供 ``generate_comment_group_summaries_llm``。"""
+    if not feedback_groups:
+        return []
+    sku_meta: dict[str, tuple[str, str, str]] = {}
+    for row in merged_rows:
+        sku = _cell(row, sku_header).strip()
+        if not sku:
+            continue
+        sku_meta[sku] = (
+            _competitor_matrix_group_key(row),
+            _cell(row, title_h),
+            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+        )
+    out: list[dict[str, Any]] = []
+    for gname, cr, tu in feedback_groups:
+        if not tu and not cr:
+            continue
+        gh = _group_keyword_hits(cr, tu, focus_words=focus_words)
+        focus_hit_lines = [
+            f"「{w}」{n} 次" for w, n in gh.most_common(14) if n > 0
+        ]
+        snippets: list[str] = []
+        for row in cr[:48]:
+            txt = (row.get("tagCommentContent") or "").strip()
+            if not txt:
+                continue
+            sku = _cell(row, "sku").strip()
+            meta = sku_meta.get(sku)
+            if meta:
+                sg, tit, shop = meta
+                prefix = (
+                    f"【细类：{sg}｜SKU：{sku}｜品名：{_md_cell(tit, 60)}｜"
+                    f"店铺：{_md_cell(shop, 28)}】"
+                )
+                snippets.append(prefix + txt[:300])
+            else:
+                snippets.append(
+                    f"【细类：{gname}｜SKU：{sku or '—'}】" + txt[:320]
+                )
+            if len(snippets) >= 16:
+                break
+        eff = tu[:28]
+        if len(tu) > 28:
+            eff = list(eff) + [f"…共 {len(tu)} 条有效文本，此处截断"]
+        out.append(
+            {
+                "group": gname,
+                "comment_flat_rows": f"评价行 {len(cr)}；有效文本单元 {len(tu)}",
+                "effective_text_lines": eff,
+                "focus_hit_lines": focus_hit_lines,
+                "sample_text_snippets": snippets,
+            }
+        )
+    return out
+
+
 def build_comment_sentiment_llm_payload(
     texts: list[str],
     *,
+    attributed_texts: list[str] | None = None,
     max_samples_positive: int = 16,
     max_samples_negative: int = 30,
     max_samples_mixed: int = 10,
@@ -713,18 +893,27 @@ def build_comment_sentiment_llm_payload(
     pos_only_texts: list[str] = []
     neg_only_texts: list[str] = []
     mixed_texts: list[str] = []
-    for t in texts:
+    use_attr = (
+        attributed_texts is not None
+        and len(attributed_texts) == len(texts)
+    )
+    for i, t in enumerate(texts):
         s = (t or "").strip()
         if not s:
             continue
+        disp = (
+            (attributed_texts[i] or s).strip()
+            if use_attr
+            else s
+        )
         hp = any(k in s for k in _POS_CLASS)
         hn = any(k in s for k in _NEG_CLASS)
         if hp and hn:
-            mixed_texts.append(s)
+            mixed_texts.append(disp)
         elif hp:
-            pos_only_texts.append(s)
+            pos_only_texts.append(disp)
         elif hn:
-            neg_only_texts.append(s)
+            neg_only_texts.append(disp)
 
     def _sample(seq: list[str], cap: int) -> list[str]:
         out: list[str] = []
@@ -1136,26 +1325,73 @@ def _structure_category_mix(
     return _category_mix(rows)
 
 
+def _category_token_meaningless(seg: str) -> bool:
+    """纯数字类目 ID、空串或疑似内部编码的段，不宜直接作为矩阵分组展示名。"""
+    t = (seg or "").strip()
+    if not t:
+        return True
+    if t.isdigit():
+        return True
+    if len(t) >= 14 and re.fullmatch(r"[A-Za-z0-9_\-]+", t):
+        return True
+    return False
+
+
+def _matrix_display_segment_from_parts(parts: list[str]) -> str | None:
+    """
+    与历史逻辑一致的主选段；若该段无意义则自右向左找第一段可读文本
+    （避免「仅类目码」或中间段为数字 ID 时整组成品名式乱桶）。
+    """
+    if not parts:
+        return None
+    if len(parts) >= 4:
+        preferred = parts[-2]
+    elif len(parts) >= 3:
+        preferred = parts[1]
+    elif len(parts) >= 2:
+        preferred = parts[1]
+    else:
+        preferred = parts[0]
+    order: list[str] = []
+    if preferred:
+        order.append(preferred)
+    if len(parts) >= 2:
+        order.append(parts[-2])
+    order.append(parts[-1])
+    order.extend(reversed(parts))
+    seen: set[str] = set()
+    for cand in order:
+        if not cand or cand in seen:
+            continue
+        seen.add(cand)
+        if not _category_token_meaningless(cand):
+            return cand.strip()
+    return None
+
+
 def _competitor_matrix_group_key(row: dict[str, str]) -> str:
     """
-    竞品矩阵分组：使「饼干」「面条」等同细类同表。
-    - 路径 ≥4 段：取倒数第二段（如 … > 面条 > 挂面 → 面条）。
-    - 路径 3 段：取中间段（如 休闲食品 > 饼干 > 粗粮饼干 → 饼干）。
-    - 路径 2 段：取第二段；1 段：取该段。
+    竞品矩阵分组：使「饼干」「面条」等同细类同表（§5 / §8 / 统计图共用）。
+    优先商详类目路径；路径段仅为内部编码时退化为规格属性「简称」，避免一品一类。
     """
+    prop = _cell(row, _K_PROP_COL)
+    sn = _shortname_from_prop(prop)
     c = _category_cell(row)
     if not c:
+        if sn:
+            return sn[:80]
         return "未归类（无类目路径）"
     parts = [p.strip() for p in c.replace("＞", ">").split(">") if p.strip()]
     if not parts:
+        if sn:
+            return sn[:80]
         return "未归类（无类目路径）"
-    if len(parts) >= 4:
-        return parts[-2]
-    if len(parts) >= 3:
-        return parts[1]
-    if len(parts) >= 2:
-        return parts[1]
-    return parts[0]
+    key = _matrix_display_segment_from_parts(parts)
+    if key:
+        return key[:80]
+    if sn:
+        return sn[:80]
+    return "未归类（类目仅为内部编码）"
 
 
 def _merged_rows_grouped_for_matrix(
@@ -1426,6 +1662,9 @@ def build_competitor_markdown(
     meta: dict[str, Any] | None,
     report_config: dict[str, Any] | None = None,
     llm_sentiment_section_md: str | None = None,
+    llm_matrix_section_md: str | None = None,
+    llm_price_groups_section_md: str | None = None,
+    llm_comment_groups_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
     sku_header = "SKU(skuId)"
@@ -1895,6 +2134,20 @@ def build_competitor_markdown(
             )
         lines.append("")
 
+    _llm_mx = (llm_matrix_section_md or "").strip()
+    if _llm_mx:
+        lines.extend(
+            [
+                "",
+                "#### 细类要点归纳（大模型，与上表矩阵互补）",
+                "",
+                "> **说明**：与 §5 相同的细类划分下归纳卖点与配料共性；**具体 SKU、价格与表格列以正文为准**。",
+                "",
+                _llm_mx,
+                "",
+            ]
+        )
+
     ch6_price_title = (
         "## 六、价格分析（PC 搜索列表全量）"
         if list_export and pst_list.get("n", 0) > 0
@@ -1949,6 +2202,20 @@ def build_competitor_markdown(
         lines.append("")
         lines.extend(_markdown_price_promotion_section(promo_sig))
     lines.append("")
+
+    _llm_pr = (llm_price_groups_section_md or "").strip()
+    if _llm_pr:
+        lines.extend(
+            [
+                "",
+                "#### 细类价盘要点归纳（大模型，与 §6 量化表互补）",
+                "",
+                "> **说明**：侧重价带与标价/券后关系的可读叙述；**数值以正文分位数表为准**。",
+                "",
+                _llm_pr,
+                "",
+            ]
+        )
 
     attrs: list[str] = []
     for row in merged_rows:
@@ -2110,6 +2377,20 @@ def build_competitor_markdown(
             else:
                 lines.append("*未命中预设场景词组。*")
                 lines.append("")
+
+    _llm_cg = (llm_comment_groups_section_md or "").strip()
+    if _llm_cg:
+        lines.extend(
+            [
+                "",
+                "#### 细类评价与关注词要点归纳（大模型，与 §8.3～8.4 图表互补）",
+                "",
+                "> **说明**：归纳各细类反馈主题；**命中次数与条形图以正文为准**。",
+                "",
+                _llm_cg,
+                "",
+            ]
+        )
 
     lines.extend(
         [
