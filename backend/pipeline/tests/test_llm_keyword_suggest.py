@@ -59,6 +59,10 @@ class ParsePhrasesObjectTests(SimpleTestCase):
         raw = '{"phrases": ["低糖", "口感好"]}'
         self.assertEqual(_parse_phrases_object(raw), ["低糖", "口感好"])
 
+    def test_strips_phrase_whitespace(self) -> None:
+        raw = '{"phrases": ["口感", "回购  "]}'
+        self.assertEqual(_parse_phrases_object(raw), ["口感", "回购"])
+
     def test_fenced_json(self) -> None:
         raw = '```json\n{"phrases": ["A", "B"]}\n```'
         self.assertEqual(_parse_phrases_object(raw), ["A", "B"])
@@ -84,6 +88,13 @@ class ParseScenariosObjectTests(SimpleTestCase):
         out = _parse_scenarios_object(raw)
         self.assertEqual(out[0]["label"], "A")
         self.assertEqual(out[0]["triggers"], ["触发甲", "触发乙"])
+
+    def test_fenced_without_json_tag(self) -> None:
+        raw = '```\n{"scenarios": [{"label": "露营", "triggers": ["户外", "野餐"]}]}\n```'
+        out = _parse_scenarios_object(raw)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["label"], "露营")
+        self.assertEqual(out[0]["triggers"], ["户外", "野餐"])
 
 
 class SuggestFocusKeywordsTests(SimpleTestCase):
