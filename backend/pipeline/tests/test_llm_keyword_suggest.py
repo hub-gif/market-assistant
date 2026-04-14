@@ -78,9 +78,10 @@ class ParseScenariosObjectTests(SimpleTestCase):
         self.assertEqual(out[0]["triggers"], ["下午茶", "配咖啡"])
 
     def test_fenced(self) -> None:
-        raw = '```\n{"scenarios": [{"label": "A", "triggers": ["x", "y"]}]}\n```'
+        raw = '```json\n{"scenarios": [{"label": "A", "triggers": ["触发甲", "触发乙"]}]}\n```'
         out = _parse_scenarios_object(raw)
         self.assertEqual(out[0]["label"], "A")
+        self.assertEqual(out[0]["triggers"], ["触发甲", "触发乙"])
 
 
 class SuggestFocusKeywordsTests(SimpleTestCase):
