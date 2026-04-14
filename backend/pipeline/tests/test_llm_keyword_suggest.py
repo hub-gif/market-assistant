@@ -1,7 +1,9 @@
 """llm_keyword_suggest：分块/解析烟测；有 API 配置时直连大模型做联调。"""
 from __future__ import annotations
 
+import json
 import os
+import sys
 import unittest
 from pathlib import Path
 
@@ -125,6 +127,12 @@ class SuggestFocusKeywordsLiveLLMTests(SimpleTestCase):
             self.assertGreaterEqual(len(p), 2)
             self.assertLessEqual(len(p), 24)
         self.assertNotIn("甜度", kws)
+        sys.stderr.write(
+            "\n=== [Live LLM] suggest_focus_keywords_from_all_comments ===\n"
+            + json.dumps(out, ensure_ascii=False, indent=2)
+            + "\n"
+        )
+        sys.stderr.flush()
 
 
 @unittest.skipUnless(
@@ -153,3 +161,9 @@ class SuggestScenarioGroupsLiveLLMTests(SimpleTestCase):
         for g in groups:
             tr = g.get("triggers") or []
             self.assertGreaterEqual(len(tr), 1)
+        sys.stderr.write(
+            "\n=== [Live LLM] suggest_scenario_groups_llm ===\n"
+            + json.dumps(out, ensure_ascii=False, indent=2)
+            + "\n"
+        )
+        sys.stderr.flush()
