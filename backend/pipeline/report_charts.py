@@ -63,6 +63,52 @@ def _merge_labeled_counts_tail(
     return head
 
 
+def _matrix_block_chart_slug(group: str, index: int) -> str:
+    """与 ``jd_competitor_report._scenario_group_asset_slug`` 规则一致（文件名对齐）。"""
+    raw = (group or "").strip()
+    core = re.sub(r"[^\w\u4e00-\u9fff-]", "", raw)[:20]
+    if not core:
+        core = "group"
+    return f"i{index:02d}_{core}"
+
+
+def _parse_price_from_text(s: str) -> float | None:
+    t = (s or "").strip().replace(",", "")
+    if not t:
+        return None
+    m = re.search(r"(\d+(?:\.\d+)?)", t)
+    if not m:
+        return None
+    try:
+        v = float(m.group(1))
+        return v if 0 < v < 1_000_000 else None
+    except ValueError:
+        return None
+
+
+def _parse_comment_fuzzy_sortable(s: str) -> float | None:
+    """评价量/声量展示文案粗转可排序正数（启发式，非精确条数）。"""
+    t = (s or "").strip().replace("＋", "+").replace(" ", "")
+    if not t:
+        return None
+    m = re.search(r"(\d+(?:\.\d+)?)\s*万\+?", t)
+    if m:
+        return float(m.group(1)) * 10_000
+    m = re.search(r"(\d+(?:\.\d+)?)\s*亿\+?", t)
+    if m:
+        return float(m.group(1)) * 100_000_000
+    m = re.search(r"(\d+(?:\.\d+)?)\s*万", t)
+    if m:
+        return float(m.group(1)) * 10_000
+    m = re.search(r"(\d{2,})\+", t)
+    if m:
+        return float(m.group(1))
+    m = re.search(r"(\d+)", t)
+    if m:
+        return float(m.group(1))
+    return None
+
+
 def _merge_tail_as_other(
     labels: list[str], values: list[float], *, max_slices: int
 ) -> tuple[list[str], list[float]]:
@@ -88,6 +134,8 @@ _OBSOLETE_REPORT_ASSETS: frozenset[str] = frozenset(
         "chart_usage_scenarios.png",
         "chart_usage_scenarios_pie.png",
         "chart_focus_keywords_pie.png",
+        "chart_comment_focus_global_bar.png",
+        "chart_usage_scenarios_global_bar.png",
     }
 )
 
@@ -257,6 +305,17 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         "chart_shop_rows_pie.png",
     )
 
+    sf = brief.get("sales_floor_analysis") or {}
+    sf_chart = sf.get("bucket_chart") if isinstance(sf, dict) else None
+    labs_sf, vals_sf = _label_count_pairs(sf_chart or [])
+    save_bar_h(
+        labs_sf,
+        vals_sf,
+        "销量楼层档位分布（结构行数）",
+        "chart_sales_floor_buckets_bar.png",
+        "行数",
+    )
+
     def scenario_group_asset_slug(group: str, index: int) -> str:
         """与 ``jd_competitor_report._scenario_group_asset_slug`` 保持一致。"""
         raw = (group or "").strip()
@@ -331,6 +390,58 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
                 continue
             tkw = f"「{gname}」· 关注词命中次数" if gname else "细类 · 关注词命中次数"
             save_bar_h(wl, vl, tkw, f"chart_focus_keywords_bar__{slug}.png", "命中次数")
+
+    matrix_compact = bool(brief.get("matrix_compact_section", True))
+    mg = brief.get("matrix_by_group") or []
+    if matrix_compact and isinstance(mg, list):
+        for gi, block in enumerate(mg):
+            if not isinstance(block, dict):
+                continue
+            gname = str(block.get("group") or "").strip()
+            skus = block.get("skus")
+            if not isinstance(skus, list) or not skus:
+                continue
+            slug = _matrix_block_chart_slug(gname, gi)
+            triples: list[tuple[str, float, float]] = []
+            for s in skus:
+                if not isinstance(s, dict):
+                    continue
+                title = (s.get("title") or "").strip()[:30] or str(
+                    s.get("sku_id") or ""
+                ).strip()[:14] or "—"
+                p = _parse_price_from_text(str(s.get("detail_price_final") or ""))
+                if p is None:
+                    p = _parse_price_from_text(
+                        str(s.get("coupon_or_detail_price") or "")
+                    )
+                if p is None:
+                    p = _parse_price_from_text(str(s.get("list_price_show") or ""))
+                v = _parse_comment_fuzzy_sortable(str(s.get("comment_fuzzy") or ""))
+                triples.append((title, p or 0.0, v or 0.0))
+            if not triples:
+                continue
+            triples.sort(key=lambda x: x[1], reverse=True)
+            triples = triples[:36]
+            labs = [t[0] for t in triples]
+            prs = [t[1] for t in triples]
+            cms = [t[2] for t in triples]
+            tbase = f"「{gname}」" if gname else "细类"
+            if max(prs) > 0:
+                save_bar_h(
+                    labs,
+                    prs,
+                    f"{tbase}· 详情/券后价（元）",
+                    f"chart_matrix_price__{slug}.png",
+                    "元",
+                )
+            if max(cms) > 0:
+                save_bar_h(
+                    labs,
+                    cms,
+                    f"{tbase}· 评价量展示（粗算排序，非精确条数）",
+                    f"chart_matrix_comments__{slug}.png",
+                    "粗算值",
+                )
 
     sent = brief.get("comment_sentiment_lexicon") or {}
     if isinstance(sent, dict):
