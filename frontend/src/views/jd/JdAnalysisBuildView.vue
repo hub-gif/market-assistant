@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import {
+  clearRegenerateReportInFlightOnly,
   generationInFlightKey,
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
@@ -152,6 +153,11 @@ async function loadList() {
   }
 }
 
+function clearLocalRegenLock() {
+  regenErr.value = ''
+  clearRegenerateReportInFlightOnly()
+}
+
 async function regenerateReport() {
   const id = selectedId.value
   if (!id) return
@@ -246,7 +252,24 @@ watch(
         >
           {{ regenBusyThisTask ? '生成中…' : '重新生成报告' }}
         </button>
+        <button
+          v-if="regenBusyAny"
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          title="仅清除浏览器里记录的「报告生成中」状态；若后端仍在执行请勿点"
+          @click="clearLocalRegenLock"
+        >
+          清除误锁（本地）
+        </button>
       </div>
+      <p v-if="!successJobs.length" class="hint-top">
+        当前没有<strong>已成功</strong>的任务，无法生成报告；请先在任务列表确认流水线成功。
+      </p>
+      <p v-else-if="regenBusyAny" class="hint-top">
+        按钮因本页记录的「生成中」状态而禁用。若你已重启后端或确定没有在生成，可点「清除误锁（本地）」。
+        （亦可在控制台执行：
+        <code>sessionStorage.removeItem('ma_generation_inflight');sessionStorage.removeItem('ma_generation_inflight_ts');location.reload()</code>）
+      </p>
       <p v-if="regenBusyOtherTask" class="ma-warn-banner">
         任务 #{{ regenPendingJobId }} 的报告正在重新生成中，请稍候再切换任务或重复提交。
       </p>

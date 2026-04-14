@@ -70,6 +70,26 @@ export function generationInFlightKey() {
   return inFlightKeys
 }
 
+/**
+ * 清空本地「进行中」标记（sessionStorage + 内存）。
+ * 用于断网/关页后误锁导致按钮长期灰显时手动恢复；若服务端仍在跑请勿点。
+ */
+export function clearGenerationInFlightState() {
+  inFlightKeys.value = []
+  writePersistedKeys([])
+}
+
+const REGEN_REPORT_PREFIX = 'regenerate-report:'
+
+/**
+ * 仅移除「重新生成报告」相关的进行中 key，不影响策略生成、报告预览等其它并行锁。
+ */
+export function clearRegenerateReportInFlightOnly() {
+  const next = inFlightKeys.value.filter((k) => !String(k).startsWith(REGEN_REPORT_PREFIX))
+  inFlightKeys.value = next
+  writePersistedKeys(next)
+}
+
 function addInFlightKey(key) {
   const cur = inFlightKeys.value
   if (cur.includes(key)) return
