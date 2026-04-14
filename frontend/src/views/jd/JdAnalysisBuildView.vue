@@ -156,8 +156,8 @@ async function regenerateReport() {
   if (!id) return
   regenErr.value = ''
   const key = `${REGEN_PREFIX}${id}`
-  await withGenerationInFlight(key, async () => {
-    try {
+  try {
+    await withGenerationInFlight(key, async () => {
       const r = await api(`/api/jobs/${id}/regenerate-report/`, {
         method: 'POST',
         body: JSON.stringify({
@@ -177,10 +177,10 @@ async function regenerateReport() {
       const updated = JSON.parse(text)
       const idx = jobs.value.findIndex((x) => x.id === updated.id)
       if (idx >= 0) jobs.value[idx] = updated
-    } catch (e) {
-      regenErr.value = String(e)
-    }
-  })
+    })
+  } catch (e) {
+    regenErr.value = String(e)
+  }
 }
 
 onMounted(loadList)

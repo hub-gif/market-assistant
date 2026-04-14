@@ -59,6 +59,20 @@ export function generationInFlightKey() {
 }
 
 /**
+ * 切换页签/隐藏标签时浏览器可能中止 fetch，表现为 TypeError 等；此时服务端可能仍在执行，
+ * 不应清除「进行中」标记（否则按钮误恢复可点）。HTTP 4xx/5xx 仍由业务层 return，走正常清除。
+ */
+function isAmbiguousClientFailure(err) {
+  if (err == null) return false
+  const name = err.name || ''
+  if (name === 'AbortError') return true
+  const msg = String(err.message || err)
+  return /Failed to fetch|NetworkError|Load failed|ERR_NETWORK|INTERNET_DISCONNECTED|aborted|cancel/i.test(
+    msg,
+  )
+}
+
+/**
  * @param {string} key
  * @param {() => Promise<T>} fn
  * @returns {Promise<T>}
@@ -67,11 +81,17 @@ export async function withGenerationInFlight(key, fn) {
   inFlightKey.value = key
   writePersisted(key)
   try {
-    return await fn()
-  } finally {
+    const out = await fn()
     if (inFlightKey.value === key) {
       inFlightKey.value = null
       writePersisted(null)
     }
+    return out
+  } catch (e) {
+    if (inFlightKey.value === key && !isAmbiguousClientFailure(e)) {
+      inFlightKey.value = null
+      writePersisted(null)
+    }
+    throw e
   }
 }
