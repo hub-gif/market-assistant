@@ -281,7 +281,19 @@ def chat_completion_text(
         json=body,
         timeout=timeout,
     )
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        snippet = ""
+        if e.response is not None:
+            snippet = (e.response.text or "")[:1200].replace("\r\n", "\n").replace("\n", " ")
+        if snippet:
+            raise requests.HTTPError(
+                f"{e!s} | body: {snippet}",
+                response=e.response,
+                request=e.request,
+            ) from e
+        raise
     data = r.json()
     msg = (data.get("choices") or [{}])[0].get("message") or {}
     return _normalize_chat_content(msg.get("content"))
