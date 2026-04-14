@@ -11,6 +11,8 @@ import { useReportConfigForm } from '../../composables/useReportConfigForm'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
+/** 勾选则本次重新生成不走整篇大模型合并（仍先跑规则引擎落盘） */
+const useRulesOnly = ref(false)
 const regenErr = ref('')
 const genInFlight = generationInFlightKey()
 const REGEN_PREFIX = 'regenerate-report:'
@@ -156,7 +158,9 @@ async function regenerateReport() {
     try {
       const r = await api(`/api/jobs/${id}/regenerate-report/`, {
         method: 'POST',
-        body: JSON.stringify({ generator: 'rules' }),
+        body: JSON.stringify({
+          generator: useRulesOnly.value ? 'rules' : 'llm',
+        }),
       })
       const text = await r.text()
       if (!r.ok) {
@@ -210,12 +214,18 @@ watch(
     <section class="ma-card">
       <h2>分析报告生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。本页<strong>始终按规则引擎</strong>更新
-        <code>competitor_analysis.md</code>（统计图与表格），不重新爬取。若需大模型整篇稿或 §8.2 等开关，请用「高级 JSON」写入对应字段后保存，或通过 API 调用。
+        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。默认<strong>先规则引擎</strong>写出统计稿，再<strong>合并大模型补充</strong>（需网关与密钥）；不重新爬取。各章评价解读等开关由「填入推荐示例」或「高级 JSON」中的
+        <code>llm_*</code> 字段控制。
         阅读与下载请至
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
       </p>
 
+      <div class="toolbar">
+        <label class="chk-inline chk-rules-only">
+          <input v-model="useRulesOnly" type="checkbox" />
+          本次仅用规则引擎（跳过整篇大模型合并，更快、不调 LLM 全文接口）
+        </label>
+      </div>
       <div class="toolbar">
         <label class="sel-label">任务</label>
         <select v-model="selectedId" class="job-select">
@@ -280,8 +290,8 @@ watch(
           <p class="rc-help">
             打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
             <code>llm_comment_sentiment</code>、<code>llm_section_bridges</code>、<code>llm_matrix_group_summaries</code>
-            等布尔字段（须为 <code>true</code>/<code>false</code>）。重新生成整篇大模型稿需调接口
-            <code>POST …/regenerate-report/</code> 且 body 含 <code>"generator":"llm"</code>。
+            等布尔字段（须为 <code>true</code>/<code>false</code>）。页顶「重新生成报告」默认已使用
+            <code>generator:&quot;llm&quot;</code>；若只要规则稿请勾选「本次仅用规则引擎」。
           </p>
           <textarea v-model="advancedJsonText" class="report-config-editor" rows="10" spellcheck="false" />
           <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将 JSON 写回表单</button>
@@ -318,6 +328,10 @@ watch(
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+.chk-rules-only {
+  width: auto;
+  max-width: 100%;
 }
 .chk-inline {
   display: flex;

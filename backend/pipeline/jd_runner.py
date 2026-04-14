@@ -168,11 +168,11 @@ def get_default_report_config() -> dict[str, Any]:
     """与 ``jd_competitor_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
     return {
-        "llm_comment_sentiment": False,
-        "llm_section_bridges": False,
-        "llm_matrix_group_summaries": False,
-        "llm_comment_group_summaries": False,
-        "llm_price_group_summaries": False,
+        "llm_comment_sentiment": True,
+        "llm_section_bridges": True,
+        "llm_matrix_group_summaries": True,
+        "llm_comment_group_summaries": True,
+        "llm_price_group_summaries": True,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
             {"label": lbl, "triggers": list(trs)}

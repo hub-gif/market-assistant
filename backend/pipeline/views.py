@@ -144,6 +144,11 @@ class JobListCreateView(APIView):
         ser = CreatePipelineJobSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        raw_rc = data.get("report_config")
+        if not isinstance(raw_rc, dict) or raw_rc == {}:
+            report_config_initial = get_default_report_config()
+        else:
+            report_config_initial = raw_rc
         job = PipelineJob.objects.create(
             platform=data["platform"],
             keyword=data["keyword"],
@@ -157,7 +162,7 @@ class JobListCreateView(APIView):
             request_delay=data.get("request_delay") or "",
             list_pages=data.get("list_pages") or "",
             scenario_filter_enabled=data.get("scenario_filter_enabled"),
-            report_config=data.get("report_config") or {},
+            report_config=report_config_initial,
             status=JobStatus.PENDING,
         )
         t = threading.Thread(target=execute_job, args=(job.id,), daemon=True)
