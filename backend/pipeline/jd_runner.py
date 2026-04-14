@@ -168,6 +168,9 @@ def get_default_report_config() -> dict[str, Any]:
     return {
         "llm_comment_sentiment": False,
         "llm_section_bridges": False,
+        "llm_matrix_group_summaries": False,
+        "llm_comment_group_summaries": False,
+        "llm_price_group_summaries": False,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
             {"label": lbl, "triggers": list(trs)}
