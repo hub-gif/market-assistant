@@ -3,7 +3,7 @@
 关键词 → 调用 ``jd_keyword_pipeline`` 全链路采集 → 生成 **标准化竞品分析报告**（Markdown）。
 
 报告结构对齐常见竞品分析框架：研究范围与方法、执行摘要、**整体市场观察（列表可见度 proxy）**、
-市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析、**按细分类目的消费者反馈与用户画像**、策略提示与附录；并明确数据边界。
+市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析（含规则化价差/活动信号与可选 **细类价盘·促销** 大模型归纳）、**按细分类目的消费者反馈与用户画像**、**策略与机会提示**（以大模型归纳为主，可选）与附录；并明确数据边界。
 若运行配置中提供了外部市场规模摘录（``EXTERNAL_MARKET_TABLE_ROWS``），则追加对应表格小节；否则不输出占位行。
 
 依赖：全量抓取时与 ``jd_keyword_pipeline.py`` 相同（Node、h5st、Playwright、``common/jd_cookie.txt``）。
@@ -878,6 +878,72 @@ def build_price_groups_llm_payload(
     return out
 
 
+def _promo_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
+    """单条 SKU：合并表中的「促销摘要 / 榜单排名 / 列表卖点与腰带」摘录，供促销 LLM 用。"""
+    title = _md_cell(_cell(row, title_h), 56)
+    promo = _cell(
+        row,
+        MERGED_FIELD_TO_CSV_HEADER["buyer_promo_text"],
+        "buyer_promo_text",
+    )
+    br = _cell(
+        row,
+        MERGED_FIELD_TO_CSV_HEADER["buyer_ranking_line"],
+        "buyer_ranking_line",
+    )
+    sp = _cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY)
+    belt = _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY)
+    parts: list[str] = [title]
+    if promo.strip():
+        parts.append(
+            f"{MERGED_FIELD_TO_CSV_HEADER['buyer_promo_text']}:{_md_cell(promo, 360)}"
+        )
+    if br.strip():
+        parts.append(
+            f"{MERGED_FIELD_TO_CSV_HEADER['buyer_ranking_line']}:{_md_cell(br, 120)}"
+        )
+    if sp.strip():
+        parts.append(f"{JD_SEARCH_CSV_HEADERS['selling_point']}:{_md_cell(sp, 100)}")
+    if belt.strip():
+        parts.append(
+            f"{JD_SEARCH_CSV_HEADERS['hot_list_rank']}:{_md_cell(belt, 80)}"
+        )
+    return "｜".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
+
+
+def build_promo_groups_llm_payload(
+    merged_rows: list[dict[str, str]],
+    *,
+    title_h: str,
+    sku_header: str = "",
+) -> list[dict[str, Any]]:
+    """供 ``generate_promo_group_summaries_llm``：与 §5/§6 细类划分一致。"""
+    _ = sku_header
+    if not merged_rows:
+        return []
+    out: list[dict[str, Any]] = []
+    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
+        snippets = [_promo_snippet_for_llm(r, title_h) for r in grows[:16]]
+        nonempty = sum(
+            1
+            for r in grows
+            if _cell(
+                r,
+                MERGED_FIELD_TO_CSV_HEADER["buyer_promo_text"],
+                "buyer_promo_text",
+            ).strip()
+        )
+        out.append(
+            {
+                "group": gname,
+                "sku_count": len(grows),
+                "rows_with_buyer_promo_text": nonempty,
+                "promo_snippets": snippets,
+            }
+        )
+    return out
+
+
 def build_comment_groups_llm_payload(
     *,
     feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
@@ -1412,6 +1478,14 @@ def _pc_search_result_count_from_raw(
     return consensus_rc, list_kw, uniques, n_files, len(counts)
 
 
+def _structure_names_for_pie_counter(row_names: list[str]) -> list[str]:
+    """
+    与 ``_counter_mix_top_rows_with_remainder`` / 列表品牌·店铺扇图同一套规则：
+    按 strip 后的名称逐行保留一条，便于 ``_brand_cr`` 与饼图 Counter 一致。
+    """
+    return [(x or "").strip() for x in row_names if (x or "").strip()]
+
+
 def _brand_cr(cnames: list[str]) -> tuple[float | None, float | None, str, str]:
     """按名称计数返回 (第一大主体份额, 前三合计份额, 头部标签, 头部占比展示字符串)。"""
     if not cnames:
@@ -1433,8 +1507,8 @@ def _counter_mix_top_rows_with_remainder(
     row_names: list[str], *, top_n: int, remainder_label: str
 ) -> list[tuple[str, int]]:
     """
-    与 §4 集中度表、饼图一致：按行计数；``most_common(top_n)`` 未覆盖的长尾合并为
-    ``remainder_label``，保证 ``sum(count) == len(row_names)``（仅统计非空名行）。
+    与列表品牌/店铺扇图一致：按 strip 后的名称计数；``most_common(top_n)`` 未覆盖的长尾合并为
+    ``remainder_label``，保证各块 count 之和等于可统计行数（与 ``_structure_names_for_pie_counter`` 总条数一致）。
     """
     c = Counter((x or "").strip() for x in row_names if (x or "").strip())
     if not c:
@@ -1918,8 +1992,10 @@ def build_competitor_markdown(
     llm_sentiment_section_md: str | None = None,
     llm_matrix_section_md: str | None = None,
     llm_price_groups_section_md: str | None = None,
+    llm_promo_groups_section_md: str | None = None,
     llm_scenario_groups_section_md: str | None = None,
     llm_comment_groups_section_md: str | None = None,
+    llm_strategy_opportunities_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
     sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
@@ -1935,8 +2011,10 @@ def build_competitor_markdown(
     n_structure = len(structure_rows)
     shops_s = _structure_shops(structure_rows, list_export=list_export)
     brands_s = _structure_brands(structure_rows, list_export=list_export)
-    cr1_shop, cr3_shop, top_shop_s, _ = _brand_cr(shops_s)
-    cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_s)
+    shops_for_cr = _structure_names_for_pie_counter(shops_s)
+    brands_for_cr = _structure_names_for_pie_counter(brands_s)
+    cr1_shop, cr3_shop, top_shop_s, _ = _brand_cr(shops_for_cr)
+    cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_for_cr)
     # §4.3 类目分布：深入合并表口径，与 §5 竞品矩阵一致（非搜索列表行）
     cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
@@ -2101,20 +2179,20 @@ def build_competitor_markdown(
             )
     if (
         list_export
-        and len(brands_s) >= min_brand_rows
+        and len(brands_for_cr) >= min_brand_rows
         and cr1_list_brand is not None
         and top_list_brand
     ):
         if cr3_list_brand is not None:
             exec_bullets.append(
-                f"同批列表中**品牌信息有效** **{len(brands_s)}** 条：**品牌** 第一大品牌份额 ≈ **{100 * cr1_list_brand:.1f}%**（「{top_list_brand}」），"
+                f"同批列表中**品牌信息有效** **{len(brands_for_cr)}** 条：**品牌** 第一大品牌份额 ≈ **{100 * cr1_list_brand:.1f}%**（「{top_list_brand}」），"
                 f"前三品牌合计份额 ≈ **{100 * cr3_list_brand:.1f}%**。"
             )
         else:
             exec_bullets.append(
-                f"同批列表中**品牌信息有效** **{len(brands_s)}** 条：**品牌** 第一大品牌份额 ≈ **{100 * cr1_list_brand:.1f}%**（「{top_list_brand}」）。"
+                f"同批列表中**品牌信息有效** **{len(brands_for_cr)}** 条：**品牌** 第一大品牌份额 ≈ **{100 * cr1_list_brand:.1f}%**（「{top_list_brand}」）。"
             )
-    elif list_export and cr1_deep is not None and top_brand_deep and not brands_s:
+    elif list_export and cr1_deep is not None and top_brand_deep and not brands_for_cr:
         exec_bullets.append(
             f"列表导出缺少品牌标题字段，**深入 {n_sku} SKU** 商详品牌第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」），供与 §5 矩阵对照。"
         )
@@ -2270,24 +2348,16 @@ def build_competitor_markdown(
     lines.append("")
 
     lines.extend(["### 4.1 品牌分布与集中度", ""])
-    brand_rows_n = len(brands_s)
+    brand_rows_n = len(brands_for_cr)
     show_list_brand_cr = list_export and brand_rows_n >= min_brand_rows
     show_merged_brand_cr = not list_export and brand_rows_n > 0
     if (show_list_brand_cr or show_merged_brand_cr) and cr1_list_brand is not None:
-        lines.append("| 指标 | 数值 |")
-        lines.append("| --- | --- |")
-        lines.append(f"| 含品牌字段的列表行数 | {brand_rows_n} |")
-        lines.append(
-            f"| 第一大品牌份额（按行计） | {100 * cr1_list_brand:.1f}%（{_md_cell(top_list_brand, 36)}） |"
-        )
-        if cr3_list_brand is not None:
-            lines.append(f"| 前三品牌合计份额（按行计） | {100 * cr3_list_brand:.1f}% |")
-        lines.append("")
         lines.extend(
             _embed_chart(
                 run_dir,
                 "chart_brand_rows_pie.png",
-                "品牌列表曝光占比（扇形图；与上表按行计同源，长尾并入「（其余品牌）」；扇形内再合并为「其他」）",
+                "品牌列表曝光占比（扇形图；按 strip 后品牌名计数、与结构化摘要 ``list_brand_mix_top`` 同源；"
+                "长尾并入「（其余品牌）」；扇形内再合并为「其他」）",
             )
         )
         lines.extend(
@@ -2313,23 +2383,14 @@ def build_competitor_markdown(
     lines.append("")
 
     lines.extend(["### 4.2 店铺分布与集中度", ""])
-    shop_rows_n = len(shops_s)
-    if shops_s:
-        lines.append("| 指标 | 数值 |")
-        lines.append("| --- | --- |")
-        lines.append(f"| 含店铺名的行数 | {shop_rows_n} |")
-        if cr1_shop is not None and top_shop_s:
-            lines.append(
-                f"| 第一大店铺份额（按行计） | {100 * cr1_shop:.1f}%（{_md_cell(top_shop_s, 40)}） |"
-            )
-        if cr3_shop is not None:
-            lines.append(f"| 前三店铺合计份额（按行计） | {100 * cr3_shop:.1f}% |")
-        lines.append("")
+    shop_rows_n = len(shops_for_cr)
+    if shop_rows_n:
         lines.extend(
             _embed_chart(
                 run_dir,
                 "chart_shop_rows_pie.png",
-                "店铺列表曝光占比（扇形图；与上表按行计同源，长尾并入「（其余店铺）」）",
+                "店铺列表曝光占比（扇形图；按 strip 后店铺名计数、与结构化摘要 ``list_shop_mix_top`` 同源；"
+                "长尾并入「（其余店铺）」；扇形内再合并为「其他」）",
             )
         )
         lines.extend(
@@ -2498,6 +2559,21 @@ def build_competitor_markdown(
             ]
         )
 
+    _llm_po = (llm_promo_groups_section_md or "").strip()
+    if _llm_po:
+        lines.extend(
+            [
+                "",
+                "#### 细类促销与活动要点归纳（大模型，与 §6.1 及价盘互补）",
+                "",
+                "> **说明**：依据合并表「促销摘要」及列表卖点/腰带、榜单类文案等**页面展示摘录**；"
+                "归纳券/补贴/新人/榜单曝光等活动形态，**不**替代 §5 的配料/宣称归纳。**具体以页面与 CSV 为准**。",
+                "",
+                _llm_po,
+                "",
+            ]
+        )
+
     lines.extend(
         [
             "---",
@@ -2657,26 +2733,26 @@ def build_competitor_markdown(
             ]
         )
 
-    lines.extend(
-        [
-            "---",
-            "",
-            "## 九、策略与机会提示（假设清单，待验证）",
-            "",
-            "以下为基于本批次数据的**规则化提示**，用于内部脑暴与假设生成，**不可替代**定性访谈与渠道调研。",
-            "",
-        ]
-    )
-    for h in _strategy_hints(
-        cr1=cr1_hints,
-        pst=pst,
-        hits=hits,
-        n_comments=n_cmt,
-        scen_counts=scen_counts,
-        scen_n_texts=scen_n_texts,
-    ):
-        lines.append(f"- {h}")
-    lines.append("")
+    lines.extend(["---", "", "## 九、策略与机会提示（假设清单，待验证）", ""])
+    _llm_st = (llm_strategy_opportunities_section_md or "").strip()
+    if _llm_st:
+        lines.extend(
+            [
+                "基于本任务结构化摘要（价盘、集中度、评价与场景、促销信号等）的**假设性策略归纳**；数字与明细以前文及 CSV 为准，定稿前请结合贵司成本、渠道与合规复核。",
+                "",
+                "#### 策略与机会建议（大模型）",
+                "",
+                _llm_st,
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "未生成本节大模型正文：请在任务 `report_config` 中开启 `llm_strategy_opportunities` 并重跑产物，或检查 run 目录下 `strategy_opportunities_llm.json` 是否报错。",
+                "",
+            ]
+        )
 
     lines.extend(
         [
@@ -2735,8 +2811,10 @@ def build_competitor_brief(
     n_structure = len(structure_rows)
     shops_s = _structure_shops(structure_rows, list_export=list_export)
     brands_s = _structure_brands(structure_rows, list_export=list_export)
-    cr1_shop, cr3_shop, top_shop_s, top_shop_share = _brand_cr(shops_s)
-    cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_s)
+    shops_for_cr = _structure_names_for_pie_counter(shops_s)
+    brands_for_cr = _structure_names_for_pie_counter(brands_s)
+    cr1_shop, cr3_shop, top_shop_s, top_shop_share = _brand_cr(shops_for_cr)
+    cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_for_cr)
     cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
 
@@ -2915,7 +2993,7 @@ def build_competitor_brief(
                 meta_slice[k] = meta[k]
 
     list_brand_block: dict[str, Any] | None
-    if len(brands_s) >= min_brand_rows:
+    if len(brands_for_cr) >= min_brand_rows:
         list_brand_block = {
             "first_share": cr1_list_brand,
             "top_three_combined_share": cr3_list_brand,

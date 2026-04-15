@@ -198,7 +198,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(_cn_volume_int("2.5亿件"), 250_000_000)
 
     def test_mix_top_remainder_sums_to_all_rows(self) -> None:
-        """饼图与 §4 表同源：mix_top 各 count 之和须等于含名行数。"""
+        """mix_top 各 count 之和须等于 strip 后可统计行数（与扇图同源）。"""
         root = Path(settings.CRAWLER_JD_ROOT).resolve()
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
@@ -211,6 +211,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(sum(v for _, v in mix), 30)
         self.assertEqual(mix[-1][0], "（其余店铺）")
         self.assertEqual(mix[-1][1], 6)
+        self.assertEqual(len(jcr._structure_names_for_pie_counter(names)), 30)
 
     def test_infer_total_sales_from_sales_floor(self) -> None:
         self.assertEqual(
@@ -218,18 +219,3 @@ class BuildCompetitorBriefTests(SimpleTestCase):
             "已售50万+",
         )
         self.assertEqual(infer_total_sales_from_sales_floor(""), "")
-
-    def test_mix_top_remainder_sums_to_all_rows(self) -> None:
-        """饼图与 §4 表同源：mix_top 各 count 之和须等于含名行数。"""
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
-        names = [f"店{i}" for i in range(30)]
-        mix = jcr._counter_mix_top_rows_with_remainder(
-            names, top_n=24, remainder_label="（其余店铺）"
-        )
-        self.assertEqual(sum(v for _, v in mix), 30)
-        self.assertEqual(mix[-1][0], "（其余店铺）")
-        self.assertEqual(mix[-1][1], 6)

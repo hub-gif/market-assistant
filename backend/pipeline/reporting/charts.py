@@ -467,11 +467,14 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         fname: str,
         *,
         max_slices: int = 8,
+        figsize: tuple[float, float] | None = None,
+        dpi: int = 120,
     ) -> None:
         labs, vals = _merge_tail_as_other(labels, values, max_slices=max_slices)
         if not labs or not vals or sum(vals) <= 0:
             return
-        fig, ax = plt.subplots(figsize=(7.2, 5.4))
+        fs = figsize if figsize is not None else (6.2, 4.5)
+        fig, ax = plt.subplots(figsize=fs)
         colors = plt.cm.Set3(range(len(labs)))
         wedges, _t, autotexts = ax.pie(
             vals,
@@ -494,7 +497,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         ax.set_title(title, fontsize=12, pad=12)
         fig.tight_layout()
         path = out_dir / fname
-        fig.savefig(path, dpi=130, bbox_inches="tight")
+        fig.savefig(path, dpi=dpi, bbox_inches="tight")
         plt.close(fig)
         created.append(fname)
 
@@ -521,6 +524,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         vb,
         "品牌列表曝光占比",
         "chart_brand_rows_pie.png",
+        figsize=(4.9, 3.65),
     )
 
     shop_mix = brief.get("list_shop_mix_top") or []
@@ -530,6 +534,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         vs,
         "店铺列表曝光占比",
         "chart_shop_rows_pie.png",
+        figsize=(4.9, 3.65),
     )
 
     def scenario_group_asset_slug(group: str, index: int) -> str:
