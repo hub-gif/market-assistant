@@ -1,5 +1,5 @@
 """
-竞品报告中与大模型相关的块（与 ``jd_runner.write_competitor_analysis_for_run_dir`` 同源）：
+竞品报告中与大模型相关的块（与 ``pipeline.jd.runner.write_competitor_analysis_for_run_dir`` 同源）：
 
 - §5 后：``generate_matrix_group_summaries_llm``
 - §6 后：``generate_price_group_summaries_llm``
@@ -9,9 +9,9 @@
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend
-  python pipeline/run_report_llm_chapters_demo.py --run-dir "../data/JD/pipeline_runs/20260413_104252_低GI"
-  python pipeline/run_report_llm_chapters_demo.py --run-dir "..." --live
-  python pipeline/run_report_llm_chapters_demo.py --run-dir "..." --live --only matrix,price
+  python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "../data/JD/pipeline_runs/20260413_104252_低GI"
+  python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "..." --live
+  python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "..." --live --only matrix,price
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
-BACKEND_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -39,7 +39,7 @@ if str(JCR_ROOT) not in sys.path:
 import jd_competitor_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
-from pipeline.jd_runner import get_default_report_config  # noqa: E402
+from pipeline.jd.runner import get_default_report_config  # noqa: E402
 
 
 def _load_run(
@@ -160,7 +160,7 @@ def main() -> None:
         flush=True,
     )
 
-    from pipeline.llm_generate import (  # noqa: WPS433
+    from pipeline.llm.generate import (  # noqa: WPS433
         generate_comment_group_summaries_llm,
         generate_comment_sentiment_analysis_llm,
         generate_competitor_report_markdown_llm,
@@ -184,6 +184,8 @@ def main() -> None:
             pl = jcr.build_comment_sentiment_llm_payload(
                 comment_units,
                 attributed_texts=attr_units,
+                semantic_pool_max=40,
+                shuffle_seed=keyword,
             )
             pl["keyword"] = keyword
             return generate_comment_sentiment_analysis_llm(pl)

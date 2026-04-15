@@ -9,7 +9,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from pipeline.csv_schema import infer_total_sales_from_sales_floor
-from pipeline.report_charts import _cn_volume_int
+from pipeline.reporting.charts import _cn_volume_int
 
 
 class BuildCompetitorBriefTests(SimpleTestCase):
@@ -41,6 +41,24 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         import json
 
         json.dumps(out)
+
+    def test_comment_sentiment_llm_payload_has_semantic_pool(self) -> None:
+        root = Path(settings.CRAWLER_JD_ROOT).resolve()
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+        import jd_competitor_report as jcr  # noqa: WPS433
+
+        texts = ["口感软硬适中很好吃", "太差了不建议"]
+        attr = [f"【细类：A｜SKU：1｜品名：x｜店铺：y】{t}" for t in texts]
+        pl = jcr.build_comment_sentiment_llm_payload(
+            texts,
+            attributed_texts=attr,
+            shuffle_seed="unit-test-seed",
+            semantic_pool_max=10,
+        )
+        self.assertIn("sample_reviews_semantic_pool", pl)
+        self.assertEqual(pl.get("sentiment_bucket_method"), "keyword_substring_heuristic")
+        self.assertGreaterEqual(len(pl["sample_reviews_semantic_pool"]), 1)
 
     def test_custom_focus_words_in_report_config(self) -> None:
         root = Path(settings.CRAWLER_JD_ROOT).resolve()

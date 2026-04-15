@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import unittest
 
-from pipeline.llm_keyword_suggest import _parse_phrases_object, _parse_scenarios_object
+from pipeline.llm.keyword_suggest import _parse_phrases_object, _parse_scenarios_object
 
 
 class ParsePhrasesTests(unittest.TestCase):

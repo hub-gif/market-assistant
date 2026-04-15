@@ -12,7 +12,8 @@ from typing import Any
 
 from django.conf import settings
 
-from .models import PipelineJob
+from ..csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from ..models import PipelineJob
 
 
 def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
@@ -216,7 +217,7 @@ def write_competitor_analysis_for_run_dir(
     )
     if not skip_kw:
         try:
-            from .llm_keyword_suggest import suggest_focus_keywords_from_all_comments
+            from ..llm.keyword_suggest import suggest_focus_keywords_from_all_comments
 
             brief_pre = jcr.build_competitor_brief(
                 run_dir=run_dir,
@@ -263,7 +264,7 @@ def write_competitor_analysis_for_run_dir(
     )
     if not skip_scen:
         try:
-            from .llm_keyword_suggest import suggest_scenario_groups_llm
+            from ..llm.keyword_suggest import suggest_scenario_groups_llm
 
             raw_sg = eff_rc.get("comment_scenario_groups")
             if isinstance(raw_sg, list) and raw_sg:
@@ -329,7 +330,7 @@ def write_competitor_analysis_for_run_dir(
         meta=meta,
         report_config=eff_rc,
     )
-    from .report_charts import generate_report_charts
+    from ..reporting.charts import generate_report_charts
 
     generate_report_charts(run_dir, brief_final)
 
@@ -352,13 +353,13 @@ def write_competitor_analysis_for_run_dir(
         if len(comment_units) >= 2:
             sentiment_llm_record["attempted"] = True
             try:
-                from .llm_generate import generate_comment_sentiment_analysis_llm
+                from ..llm.generate import generate_comment_sentiment_analysis_llm
 
                 attr_units = jcr._comment_lines_with_product_context(
                     comment_rows,
                     merged_rows,
-                    sku_header="SKU(skuId)",
-                    title_h="标题(wareName)",
+                    sku_header=MERGED_FIELD_TO_CSV_HEADER["sku_id"],
+                    title_h=MERGED_FIELD_TO_CSV_HEADER["title"],
                 )
                 if len(attr_units) != len(comment_units):
                     attr_units = list(comment_units)
@@ -369,6 +370,8 @@ def write_competitor_analysis_for_run_dir(
                     max_samples_negative=30,
                     max_samples_mixed=10,
                     max_chars_per_review=360,
+                    semantic_pool_max=40,
+                    shuffle_seed=kw,
                 )
                 pl["keyword"] = kw
                 llm_sentiment_md = generate_comment_sentiment_analysis_llm(pl)
@@ -397,8 +400,8 @@ def write_competitor_analysis_for_run_dir(
     price_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     scenario_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     comment_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
-    sku_h = "SKU(skuId)"
-    title_h = "标题(wareName)"
+    sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+    title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
 
     def _env_on(name: str) -> bool:
         return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
@@ -427,7 +430,7 @@ def write_competitor_analysis_for_run_dir(
         if pl_mx:
             matrix_llm_rec["attempted"] = True
             try:
-                from .llm_generate import generate_matrix_group_summaries_llm
+                from ..llm.generate import generate_matrix_group_summaries_llm
 
                 llm_matrix_md = generate_matrix_group_summaries_llm(
                     pl_mx, keyword=kw
@@ -451,7 +454,7 @@ def write_competitor_analysis_for_run_dir(
         if pl_pr:
             price_llm_rec["attempted"] = True
             try:
-                from .llm_generate import generate_price_group_summaries_llm
+                from ..llm.generate import generate_price_group_summaries_llm
 
                 llm_price_md = generate_price_group_summaries_llm(pl_pr, keyword=kw)
                 price_llm_rec["ok"] = True
@@ -483,7 +486,7 @@ def write_competitor_analysis_for_run_dir(
         if pl_sg:
             scenario_gr_llm_rec["attempted"] = True
             try:
-                from .llm_generate import generate_scenario_group_summaries_llm
+                from ..llm.generate import generate_scenario_group_summaries_llm
 
                 llm_scenario_gr_md = generate_scenario_group_summaries_llm(
                     pl_sg, keyword=kw
@@ -520,7 +523,7 @@ def write_competitor_analysis_for_run_dir(
         if pl_cg:
             comment_gr_llm_rec["attempted"] = True
             try:
-                from .llm_generate import generate_comment_group_summaries_llm
+                from ..llm.generate import generate_comment_group_summaries_llm
 
                 llm_comment_gr_md = generate_comment_group_summaries_llm(
                     pl_cg, keyword=kw

@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from pipeline.cookie_paste import normalize_browser_cookie_paste
-from pipeline.jd_runner import run_jd_keyword_and_report
+from pipeline.jd.runner import run_jd_keyword_and_report
 from pipeline.models import PipelineJob
 
 

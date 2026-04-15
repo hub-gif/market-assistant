@@ -24,8 +24,10 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
+import random
 import re
 import statistics
 import sys
@@ -42,7 +44,65 @@ if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
 import jd_keyword_pipeline as kpl  # noqa: E402
-from pipeline.csv_schema import merged_csv_effective_total_sales  # noqa: E402
+from pipeline.csv_schema import (  # noqa: E402
+    COMMENT_CSV_COLUMNS,
+    JD_SEARCH_CSV_HEADERS,
+    MERGED_FIELD_TO_CSV_HEADER,
+    merged_csv_effective_total_sales,
+)
+
+_JD_LIST_PRICE_KEY = JD_SEARCH_CSV_HEADERS["price"]
+_COUPON_SHOW_PRICE_KEY = JD_SEARCH_CSV_HEADERS["coupon_price"]
+_ORIGINAL_LIST_PRICE_KEY = JD_SEARCH_CSV_HEADERS["original_price"]
+_SELLING_POINT_KEY = JD_SEARCH_CSV_HEADERS["selling_point"]
+_RANK_TAGLINE_KEY = JD_SEARCH_CSV_HEADERS["hot_list_rank"]
+
+# 历史批次 CSV 表头（括号英文）；新批次为纯中文，读取时新键优先
+_LEGACY_JD_LIST_PRICE_KEY = "标价(jdPrice,jdPriceText,realPrice)"
+_LEGACY_COUPON_SHOW_PRICE_KEY = (
+    "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)"
+)
+_LEGACY_SHOP_NAME_KEY = "店铺名(shopName)"
+_LEGACY_RANK_TAGLINE_KEY = "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)"
+_LEGACY_COMMENT_FUZZ_KEY = "评价量(commentFuzzy)"
+_LEGACY_SELLING_POINT_KEY = "卖点(sellingPoint)"
+_LIST_BRAND_TITLE_HEADER = "店铺信息标题"
+_LEGACY_LIST_BRAND_TITLE_KEY = "店铺信息标题(shopInfoTitle,brandName)"
+
+_DETAIL_PRICE_FINAL_CSV_KEYS: tuple[str, ...] = (
+    MERGED_FIELD_TO_CSV_HEADER["detail_price_final"],
+    "detail_price_final",
+)
+_LIST_PRICE_AND_COUPON_KEYS: tuple[str, ...] = (
+    *_DETAIL_PRICE_FINAL_CSV_KEYS,
+    _JD_LIST_PRICE_KEY,
+    _LEGACY_JD_LIST_PRICE_KEY,
+    _COUPON_SHOW_PRICE_KEY,
+    _LEGACY_COUPON_SHOW_PRICE_KEY,
+)
+
+# 报告摘录「标价」：列表标价优先，缺省时用商详到手价列兜底
+_LIST_SHOW_PRICE_CELL_KEYS: tuple[str, ...] = (
+    _JD_LIST_PRICE_KEY,
+    _LEGACY_JD_LIST_PRICE_KEY,
+    MERGED_FIELD_TO_CSV_HEADER["detail_price_final"],
+    "detail_price_final",
+)
+
+_MERGED_SHOP_CELL_KEYS: tuple[str, ...] = (
+    MERGED_FIELD_TO_CSV_HEADER["detail_shop_name"],
+    "detail_shop_name",
+    JD_SEARCH_CSV_HEADERS["shop_name"],
+    _LEGACY_SHOP_NAME_KEY,
+)
+
+_COMMENT_FUZZ_KEYS: tuple[str, ...] = (
+    MERGED_FIELD_TO_CSV_HEADER["comment_fuzzy"],
+    _LEGACY_COMMENT_FUZZ_KEY,
+)
+
+_COMMENT_CSV_SKU = COMMENT_CSV_COLUMNS[0]
+_COMMENT_CSV_BODY = COMMENT_CSV_COLUMNS[3]
 
 # ---------------------------------------------------------------------------
 # 运行配置（按需改这里）
@@ -197,9 +257,9 @@ def _cell(row: dict[str, str], *keys: str) -> str:
     return ""
 
 
-_DETAIL_CATEGORY_PATH_KEY = "detail_category_path"
-_K_CAT_COL = "类目(leafCategory,cid3Name,catid)"
-_K_PROP_COL = "规格属性(propertyList,color,catid,shortName)"
+_DETAIL_CATEGORY_PATH_KEY = MERGED_FIELD_TO_CSV_HEADER["detail_category_path"]
+_K_CAT_COL = JD_SEARCH_CSV_HEADERS["leaf_category"]
+_K_PROP_COL = JD_SEARCH_CSV_HEADERS["attributes"]
 
 
 def _shortname_from_prop(prop: str) -> str:
@@ -209,7 +269,7 @@ def _shortname_from_prop(prop: str) -> str:
 
 def _detail_category_path_cell(row: dict[str, str]) -> str:
     """细类矩阵与按细类评价统计仅以该列为准；空则视为商详类目不完整。"""
-    return str(row.get(_DETAIL_CATEGORY_PATH_KEY) or "").strip()
+    return _cell(row, _DETAIL_CATEGORY_PATH_KEY, "detail_category_path")
 
 
 def _search_export_catid_to_shortname_map(rows: list[dict[str, str]]) -> dict[str, str]:
@@ -259,27 +319,14 @@ def _float_price(s: str) -> float | None:
 
 def _collect_prices(rows: list[dict[str, str]]) -> list[float]:
     out: list[float] = []
-    price_keys = (
-        "detail_price_final",
-        "标价(jdPrice,jdPriceText,realPrice)",
-        "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    )
     for row in rows:
-        for k in price_keys:
+        for k in _LIST_PRICE_AND_COUPON_KEYS:
             p = _float_price(_cell(row, k))
             if p is not None and 0 < p < 1_000_000:
                 out.append(p)
                 break
     return out
 
-
-_JD_LIST_PRICE_KEY = "标价(jdPrice,jdPriceText,realPrice)"
-_COUPON_SHOW_PRICE_KEY = (
-    "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)"
-)
-_ORIGINAL_LIST_PRICE_KEY = "原价(oriPrice,originalPrice,marketPrice)"
-_SELLING_POINT_KEY = "卖点(sellingPoint)"
-_RANK_TAGLINE_KEY = "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)"
 
 # 列表/合并表中「卖点、腰带」常见活动话术子串（行级命中，非严谨 NLP）
 _PROMO_SUBSTRINGS_IN_COPY: tuple[str, ...] = (
@@ -323,8 +370,10 @@ def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
     pct_offs: list[float] = []
     ori_above_list = 0
     for row in rows:
-        jd = _float_price(_cell(row, _JD_LIST_PRICE_KEY))
-        cp = _float_price(_cell(row, _COUPON_SHOW_PRICE_KEY))
+        jd = _float_price(_cell(row, _JD_LIST_PRICE_KEY, _LEGACY_JD_LIST_PRICE_KEY))
+        cp = _float_price(
+            _cell(row, _COUPON_SHOW_PRICE_KEY, _LEGACY_COUPON_SHOW_PRICE_KEY)
+        )
         ori = _float_price(_cell(row, _ORIGINAL_LIST_PRICE_KEY))
         if jd is not None and jd > 0:
             with_jd += 1
@@ -345,16 +394,24 @@ def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
             ori_above_list += 1
 
     selling_nonempty = sum(
-        1 for r in rows if _cell(r, _SELLING_POINT_KEY).strip()
+        1
+        for r in rows
+        if _cell(r, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY).strip()
     )
-    rank_nonempty = sum(1 for r in rows if _cell(r, _RANK_TAGLINE_KEY).strip())
+    rank_nonempty = sum(
+        1
+        for r in rows
+        if _cell(r, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY).strip()
+    )
 
     kw_row_hits: dict[str, int] = {}
     for kw in _PROMO_SUBSTRINGS_IN_COPY:
         c = 0
         for row in rows:
             blob = (
-                _cell(row, _SELLING_POINT_KEY) + " " + _cell(row, _RANK_TAGLINE_KEY)
+                _cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY)
+                + " "
+                + _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY)
             )
             if kw in blob:
                 c += 1
@@ -472,7 +529,7 @@ def _comment_keyword_hits(
     c: Counter[str] = Counter()
     texts: list[str] = []
     for row in rows:
-        t = _cell(row, "tagCommentContent")
+        t = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
         if t:
             texts.append(t)
     blob = "\n".join(texts)
@@ -488,7 +545,11 @@ def _comment_keyword_hits(
 def _merge_comment_previews(merged_rows: list[dict[str, str]]) -> str:
     parts: list[str] = []
     for row in merged_rows:
-        p = _cell(row, "comment_preview")
+        p = _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["comment_preview"],
+            "comment_preview",
+        )
         if p:
             parts.append(p)
     return "\n".join(parts)
@@ -501,13 +562,17 @@ def _iter_comment_text_units(
     """逐条评价正文；无 flat 评论时用合并表 comment_preview 按行兜底。"""
     out: list[str] = []
     for row in comment_rows:
-        t = _cell(row, "tagCommentContent")
+        t = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
         if t:
             out.append(t)
     if out:
         return out
     for row in merged_rows:
-        p = _cell(row, "comment_preview")
+        p = _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["comment_preview"],
+            "comment_preview",
+        )
         if p:
             out.append(p)
     return out
@@ -540,7 +605,6 @@ _NEG_LEX = (
     "骗",
     "退货",
     "不建议",
-    "硬",
     "糟糕",
     "难用",
     "臭",
@@ -571,10 +635,14 @@ _POS_LEXEME_DETAIL = (
     "代餐很方便",
     "品质很稳定",
     "值得信赖",
+    "软硬适中",
 )
 _NEG_LEXEME_DETAIL = (
     "口感偏硬",
     "口感很硬",
+    "咬不动",
+    "发硬",
+    "硬邦邦",
     "口感发粘",
     "太甜了",
     "甜得发腻",
@@ -708,14 +776,14 @@ def _comment_lines_with_product_context(
         sku_meta[sku] = (
             gk,
             _cell(row, title_h),
-            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+            _cell(row, *_MERGED_SHOP_CELL_KEYS),
         )
     out: list[str] = []
     for cr in comment_rows:
-        txt = (cr.get("tagCommentContent") or "").strip()
+        txt = _cell(cr, _COMMENT_CSV_BODY, "tagCommentContent")
         if not txt:
             continue
-        sku = _cell(cr, "sku").strip()
+        sku = _cell(cr, _COMMENT_CSV_SKU, "sku").strip()
         meta = sku_meta.get(sku)
         if meta:
             gname, tit, shop = meta
@@ -731,8 +799,14 @@ def _comment_lines_with_product_context(
 
 def _matrix_excerpt_line_for_llm(row: dict[str, str], title_h: str) -> str:
     title = _md_cell(_cell(row, title_h), 100)
-    sp = _md_cell(_cell(row, "卖点(sellingPoint)"), 120)
-    ing_raw = _ingredients_from_product_attributes(_cell(row, "detail_product_attributes"))
+    sp = _md_cell(_cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY), 120)
+    ing_raw = _ingredients_from_product_attributes(
+        _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["detail_product_attributes"],
+            "detail_product_attributes",
+        )
+    )
     ing = _md_cell(_ingredients_single_line(ing_raw), 100) if ing_raw else ""
     chunks: list[str] = []
     if title:
@@ -746,12 +820,9 @@ def _matrix_excerpt_line_for_llm(row: dict[str, str], title_h: str) -> str:
 
 def _listing_price_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
     title = _md_cell(_cell(row, title_h), 72)
-    lp = _cell(row, "标价(jdPrice,jdPriceText,realPrice)")
-    cp = _cell(
-        row,
-        "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    )
-    dp = _cell(row, "detail_price_final")
+    lp = _cell(row, *_LIST_SHOW_PRICE_CELL_KEYS)
+    cp = _cell(row, _COUPON_SHOW_PRICE_KEY, _LEGACY_COUPON_SHOW_PRICE_KEY)
+    dp = _cell(row, *_DETAIL_PRICE_FINAL_CSV_KEYS)
     return f"{title}｜标价:{lp}｜券后:{cp}｜详情价:{dp}"
 
 
@@ -829,7 +900,7 @@ def build_comment_groups_llm_payload(
         sku_meta[sku] = (
             gk,
             _cell(row, title_h),
-            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+            _cell(row, *_MERGED_SHOP_CELL_KEYS),
         )
     out: list[dict[str, Any]] = []
     for gname, cr, tu in feedback_groups:
@@ -841,10 +912,10 @@ def build_comment_groups_llm_payload(
         ]
         snippets: list[str] = []
         for row in cr[:48]:
-            txt = (row.get("tagCommentContent") or "").strip()
+            txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
             if not txt:
                 continue
-            sku = _cell(row, "sku").strip()
+            sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
             meta = sku_meta.get(sku)
             if meta:
                 sg, tit, shop = meta
@@ -896,7 +967,7 @@ def build_scenario_groups_llm_payload(
         sku_meta[sku] = (
             gk,
             _cell(row, title_h),
-            _cell(row, "detail_shop_name") or _cell(row, "店铺名(shopName)"),
+            _cell(row, *_MERGED_SHOP_CELL_KEYS),
         )
     lexicon = [
         {"label": lbl, "trigger_examples": list(trigs[:12])}
@@ -924,12 +995,12 @@ def build_scenario_groups_llm_payload(
             )
         snippets: list[str] = []
         for row in cr:
-            txt = (row.get("tagCommentContent") or "").strip()
+            txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
             if not txt:
                 continue
             if not _text_hits_scenario_triggers(txt, scenario_groups):
                 continue
-            sku = _cell(row, "sku").strip()
+            sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
             meta = sku_meta.get(sku)
             if meta:
                 sg, tit, shop = meta
@@ -946,10 +1017,10 @@ def build_scenario_groups_llm_payload(
                 break
         if len(snippets) < 5:
             for row in cr:
-                txt = (row.get("tagCommentContent") or "").strip()
+                txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
                 if not txt:
                     continue
-                sku = _cell(row, "sku").strip()
+                sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
                 meta = sku_meta.get(sku)
                 if meta:
                     sg, tit, shop = meta
@@ -985,11 +1056,15 @@ def build_comment_sentiment_llm_payload(
     max_samples_negative: int = 30,
     max_samples_mixed: int = 10,
     max_chars_per_review: int = 300,
+    semantic_pool_max: int = 40,
+    shuffle_seed: str = "",
 ) -> dict[str, Any]:
     """
-    供大模型做正/负向语义归纳：附规则统计与**去重后的评价原文抽样**（与 §8.2 词表分桶一致）。
+    供大模型做正/负向语义归纳：附规则统计、关键词分桶抽样，以及 **sample_reviews_semantic_pool**
+   （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
 
-    负向样本默认多于正向，便于大模型做「具体问题是什么」的主题归因，而非只复述词频。
+    ``sentiment_bucket_method`` 标明分桶依据为子串词表；条形图与 lexicon 仍与此口径一致，
+    但正文归纳应以模型对 ``sample_reviews_semantic_pool`` 的整句理解为准。
     """
     pos_only_texts: list[str] = []
     neg_only_texts: list[str] = []
@@ -998,6 +1073,8 @@ def build_comment_sentiment_llm_payload(
         attributed_texts is not None
         and len(attributed_texts) == len(texts)
     )
+    all_unique_disp: list[str] = []
+    seen_unique: set[str] = set()
     for i, t in enumerate(texts):
         s = (t or "").strip()
         if not s:
@@ -1007,6 +1084,9 @@ def build_comment_sentiment_llm_payload(
             if use_attr
             else s
         )
+        if disp and disp not in seen_unique:
+            seen_unique.add(disp)
+            all_unique_disp.append(disp)
         hp = any(k in s for k in _POS_CLASS)
         hn = any(k in s for k in _NEG_CLASS)
         if hp and hn:
@@ -1015,6 +1095,27 @@ def build_comment_sentiment_llm_payload(
             pos_only_texts.append(disp)
         elif hn:
             neg_only_texts.append(disp)
+
+    def _semantic_pool(seq: list[str], cap: int) -> list[str]:
+        """去重列表的洗牌子样本；shuffle_seed 非空时按种子固定顺序以便同任务可复现。"""
+        if not seq or cap <= 0:
+            return []
+        work = list(seq)
+        if (shuffle_seed or "").strip():
+            h = hashlib.sha256(shuffle_seed.encode("utf-8")).digest()
+            rnd = random.Random(int.from_bytes(h[:8], "big"))
+            rnd.shuffle(work)
+        out: list[str] = []
+        for raw in work:
+            if len(raw) > max_chars_per_review:
+                out.append(raw[:max_chars_per_review] + "…")
+            else:
+                out.append(raw)
+            if len(out) >= cap:
+                break
+        return out
+
+    semantic_pool = _semantic_pool(all_unique_disp, semantic_pool_max)
 
     def _sample(seq: list[str], cap: int) -> list[str]:
         out: list[str] = []
@@ -1040,6 +1141,8 @@ def build_comment_sentiment_llm_payload(
         "comment_sentiment_lexicon": lex,
         "positive_lexeme_hits_top": pos_h_top,
         "negative_lexeme_hits_top": neg_h_top,
+        "sentiment_bucket_method": "keyword_substring_heuristic",
+        "sample_reviews_semantic_pool": semantic_pool,
         "sample_reviews_positive_biased": _sample(pos_only_texts, max_samples_positive),
         "sample_reviews_negative_biased": _sample(neg_only_texts, max_samples_negative),
         "sample_reviews_mixed_tone": _sample(mixed_texts, max_samples_mixed),
@@ -1135,7 +1238,7 @@ def _comment_text_units_for_matrix_group(
     """某细类下的评价正文列表；无 flat 时用该细类合并行的 comment_preview。"""
     texts: list[str] = []
     for row in comment_rows_in_group:
-        t = _cell(row, "tagCommentContent")
+        t = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
         if t:
             texts.append(t)
     if texts:
@@ -1143,7 +1246,11 @@ def _comment_text_units_for_matrix_group(
     for row in merged_rows:
         if _competitor_matrix_group_key(row) != gname:
             continue
-        p = _cell(row, "comment_preview")
+        p = _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["comment_preview"],
+            "comment_preview",
+        )
         if p:
             texts.append(p)
     return texts
@@ -1201,7 +1308,7 @@ def _consumer_feedback_by_matrix_group(
             merged_by_sku[s] = row
     by_g: dict[str, list[dict[str, str]]] = {}
     for row in comment_rows:
-        sku = _cell(row, "sku").strip()
+        sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
         g = sku_map.get(sku)
         if g:
             by_g.setdefault(g, []).append(row)
@@ -1370,10 +1477,10 @@ def _search_list_proxies(rows: list[dict[str, str]]) -> dict[str, Any]:
     """
     基于 pc_search_export 的「列表可见度」指标，**不是**全渠道零售额或 TAM。
     """
-    sku_k = "SKU(skuId)"
-    shop_k = "店铺名(shopName)"
-    page_k = "页码(page)"
-    cat_k = "类目(leafCategory,cid3Name,catid)"
+    sku_k = JD_SEARCH_CSV_HEADERS["sku_id"]
+    shop_k = JD_SEARCH_CSV_HEADERS["shop_name"]
+    page_k = JD_SEARCH_CSV_HEADERS["page"]
+    cat_k = JD_SEARCH_CSV_HEADERS["leaf_category"]
     skus: set[str] = set()
     shops: set[str] = set()
     pages: set[str] = set()
@@ -1490,32 +1597,31 @@ def _merged_rows_grouped_for_matrix(
     return sorted(buckets.items(), key=sort_key)
 
 
-def _category_mix(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
-    """深入合并表：仅统计具备可读细类标签的 ``detail_category_path``。"""
+def _category_mix(
+    rows: list[dict[str, str]], *, top_k: int = 12
+) -> list[tuple[str, int]]:
+    """
+    按「可读细类标签」统计 SKU 分布（与 §5 ``_competitor_matrix_group_key`` 同源）；
+    仅含 ``detail_category_path`` 可解析为展示名的行。
+    """
     labels: list[str] = []
     for r in rows:
         k = _matrix_group_label_from_detail_path(r)
         if k:
             labels.append(k)
-    return Counter(labels).most_common(8)
-
-
-def _category_mix_search_export(rows: list[dict[str, str]]) -> list[tuple[str, int]]:
-    """列表导出：仅当行上存在 ``detail_category_path`` 时纳入（与 §5 口径一致）。"""
-    labels: list[str] = []
-    for r in rows:
-        k = _matrix_group_label_from_detail_path(r)
-        if k:
-            labels.append(k)
-    return Counter(labels).most_common(12)
+    return Counter(labels).most_common(top_k)
 
 
 def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
     if list_export:
-        return [_cell(r, "店铺名(shopName)") for r in rows if _cell(r, "店铺名(shopName)")]
+        return [
+            _cell(r, JD_SEARCH_CSV_HEADERS["shop_name"], _LEGACY_SHOP_NAME_KEY)
+            for r in rows
+            if _cell(r, JD_SEARCH_CSV_HEADERS["shop_name"], _LEGACY_SHOP_NAME_KEY)
+        ]
     out: list[str] = []
     for r in rows:
-        s = _cell(r, "detail_shop_name") or _cell(r, "店铺名(shopName)")
+        s = _cell(r, *_MERGED_SHOP_CELL_KEYS)
         if s:
             out.append(s)
     return out
@@ -1523,17 +1629,16 @@ def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[s
 
 def _structure_brands(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
     if list_export:
-        k = "店铺信息标题(shopInfoTitle,brandName)"
-        return [_cell(r, k) for r in rows if _cell(r, k)]
-    return [_cell(r, "detail_brand") for r in rows if _cell(r, "detail_brand")]
-
-
-def _structure_category_mix(
-    rows: list[dict[str, str]], *, list_export: bool
-) -> list[tuple[str, int]]:
-    if list_export:
-        return _category_mix_search_export(rows)
-    return _category_mix(rows)
+        return [
+            _cell(r, _LIST_BRAND_TITLE_HEADER, _LEGACY_LIST_BRAND_TITLE_KEY)
+            for r in rows
+            if _cell(r, _LIST_BRAND_TITLE_HEADER, _LEGACY_LIST_BRAND_TITLE_KEY)
+        ]
+    return [
+        _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
+        for r in rows
+        if _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
+    ]
 
 
 def _is_ingredient_url_blob(s: str) -> bool:
@@ -1572,11 +1677,20 @@ def _matrix_ingredients_cell(row: dict[str, str], *, max_len: int = 420) -> str:
     优先 ``detail_body_ingredients``（配料 OCR/文本）；旧合并表可能为 ``detail_body_image_urls``。
     若为 URL 串则尝试 ``detail_product_attributes`` 中的「配料/配料表：」片段。
     """
-    raw = _cell(row, "detail_body_ingredients", "detail_body_image_urls")
+    raw = _cell(
+        row,
+        MERGED_FIELD_TO_CSV_HEADER["detail_body_ingredients"],
+        "detail_body_ingredients",
+        "detail_body_image_urls",
+    )
     if raw and not _is_ingredient_url_blob(raw):
         return _md_cell(_ingredients_single_line(raw), max_len)
     from_attr = _ingredients_from_product_attributes(
-        _cell(row, "detail_product_attributes")
+        _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["detail_product_attributes"],
+            "detail_product_attributes",
+        )
     )
     if from_attr:
         return _md_cell(from_attr, max_len)
@@ -1593,19 +1707,28 @@ def _competitor_matrix_md_line(
 ) -> str:
     sku = _md_cell(_cell(row, sku_header), 14)
     title = _md_cell(_cell(row, title_h), 56)
-    brand = _md_cell(_cell(row, "detail_brand"), 16)
-    pj = _md_cell(_cell(row, "标价(jdPrice,jdPriceText,realPrice)"), 10)
-    df = _md_cell(_cell(row, "detail_price_final"), 10)
-    shop = _md_cell(_cell(row, "店铺名(shopName)", "detail_shop_name"), 22)
-    sell = _md_cell(_cell(row, "卖点(sellingPoint)"), 36)
+    brand = _md_cell(
+        _cell(row, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand"), 16
+    )
+    pj = _md_cell(_cell(row, *_LIST_SHOW_PRICE_CELL_KEYS), 10)
+    df = _md_cell(_cell(row, *_DETAIL_PRICE_FINAL_CSV_KEYS), 10)
+    shop = _md_cell(_cell(row, *_MERGED_SHOP_CELL_KEYS), 22)
+    sell = _md_cell(_cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY), 36)
     rank = _md_cell(
-        _cell(row, "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)"), 28
+        _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY), 28
     )
     cat = _md_cell(_detail_category_path_cell(row), 24)
     ing = _matrix_ingredients_cell(row)
     ts_eff = merged_csv_effective_total_sales(row)
-    cc = _md_cell(ts_eff or _cell(row, "评价量(commentFuzzy)"), 14)
-    prev = _md_cell(_cell(row, "comment_preview"), 72)
+    cc = _md_cell(ts_eff or _cell(row, *_COMMENT_FUZZ_KEYS), 14)
+    prev = _md_cell(
+        _cell(
+            row,
+            MERGED_FIELD_TO_CSV_HEADER["comment_preview"],
+            "comment_preview",
+        ),
+        72,
+    )
     return (
         f"| {sku} | {title} | {brand} | {pj} | {df} | {shop} | {sell} | {rank} | "
         f"{cat} | {ing} | {cc} | {prev} |"
@@ -1676,7 +1799,7 @@ def _embed_chart(run_dir: Path, filename: str, caption: str = "") -> list[str]:
 
 
 def _scenario_group_asset_slug(group: str, index: int) -> str:
-    """与 ``pipeline.report_charts`` 中场景分组图文件名规则一致（勿改格式）。"""
+    """与 ``pipeline.reporting.charts`` 中场景分组图文件名规则一致（勿改格式）。"""
     raw = (group or "").strip()
     core = re.sub(r"[^\w\u4e00-\u9fff-]", "", raw)[:20]
     if not core:
@@ -1685,13 +1808,13 @@ def _scenario_group_asset_slug(group: str, index: int) -> str:
 
 
 def _focus_scenario_combo_bar_filename(group: str, index: int) -> str:
-    """关注词 + 使用场景并排条形图（与 ``report_charts.save_combo_focus_scenario_bar`` 同源）。"""
+    """关注词 + 使用场景并排条形图（与 ``pipeline.reporting.charts.save_combo_focus_scenario_bar`` 同源）。"""
     slug = _scenario_group_asset_slug(group, index)
     return f"chart_focus_and_scenarios_bar__{slug}.png"
 
 
 def _matrix_prices_sales_chart_filename(group: str, index: int) -> str:
-    """与 ``report_charts.generate_report_charts`` 中 ``chart_matrix_prices_sales__*`` 一致。"""
+    """与 ``pipeline.reporting.charts.generate_report_charts`` 中 ``chart_matrix_prices_sales__*`` 一致。"""
     slug = _scenario_group_asset_slug(group, index)
     return f"chart_matrix_prices_sales__{slug}.png"
 
@@ -1753,28 +1876,31 @@ def _lines_4_reading_shop(
 
 def _lines_4_reading_category(
     cm_structure: list[tuple[str, int]],
+    *,
+    n_merged_sku: int,
+    n_sku_matrix: int,
 ) -> list[str]:
-    if not cm_structure:
-        return []
-    total = sum(c for _, c in cm_structure)
-    if total <= 0:
+    if not cm_structure or n_sku_matrix <= 0:
         return []
     top_lbl, top_c = cm_structure[0]
-    share = top_c / total
+    share = top_c / float(n_sku_matrix)
     lines = [
         "",
         "**数据解读（规则摘要）**：",
         "",
-        f"- 具备 ``detail_category_path`` 且可解析为细类标签的结构行共 **{total}** 行，对应 **{len(cm_structure)}** 种细类取值（与 §5 同源）；"
-        f"其中「{_md_cell(top_lbl, 40)}」行数最多，约占 **{100 * share:.1f}%**。",
-        "- 若头部细类占比极高，说明当前关键词下货架被少数品类定义；跨品类机会需结合商详矩阵（§5）再核对。",
+        f"- **统计口径**：与 **§5 竞品矩阵**相同，均来自深入合并表列 ``detail_category_path`` 解析出的可读细类标签。",
+        f"- **有效总量**：合并表共 **{n_merged_sku}** 个 SKU；其中 **{n_sku_matrix}** 个具备可解析细类标签（**有效细类 SKU**）；"
+        f"**{max(0, n_merged_sku - n_sku_matrix)}** 个无可用路径或无法解析，与 §5 一致**不纳入**本小节分布。",
+        f"- 扇形图与简报包按 SKU 数取 **Top 12** 细类；下表列 **Top 5**。当前「{_md_cell(top_lbl, 40)}」款数最多，"
+        f"约占有效细类 SKU 的 **{100 * share:.1f}%**（{top_c}/{n_sku_matrix}）。",
+        "- 若头部细类占比极高，说明当前关键词下深入样本被少数品类定义；跨品类机会需结合 §5 矩阵再核对。",
         "",
-        "| 细类标签（Top 5） | 结构行数 | 占本章有效行 |",
+        "| 细类标签（Top 5） | SKU 数 | 占有效细类 SKU 数 |",
         "| --- | ---: | ---: |",
     ]
     for lbl, cnt in cm_structure[:5]:
         lines.append(
-            f"| {_md_cell(lbl, 36)} | {cnt} | {100 * cnt / total:.1f}% |"
+            f"| {_md_cell(lbl, 36)} | {cnt} | {100 * cnt / float(n_sku_matrix):.1f}% |"
         )
     lines.append("")
     return lines
@@ -1796,8 +1922,8 @@ def build_competitor_markdown(
     llm_comment_groups_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
-    sku_header = "SKU(skuId)"
-    title_h = "标题(wareName)"
+    sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+    title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     batch = _run_batch_label(run_dir)
     n_sku = len(merged_rows)
     n_cmt = len(comment_rows)
@@ -1811,10 +1937,15 @@ def build_competitor_markdown(
     brands_s = _structure_brands(structure_rows, list_export=list_export)
     cr1_shop, cr3_shop, top_shop_s, _ = _brand_cr(shops_s)
     cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_s)
-    cm_structure = _structure_category_mix(structure_rows, list_export=list_export)
+    # §4.3 类目分布：深入合并表口径，与 §5 竞品矩阵一致（非搜索列表行）
+    cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
 
-    brands_deep = [_cell(r, "detail_brand") for r in merged_rows if _cell(r, "detail_brand")]
+    brands_deep = [
+        _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
+        for r in merged_rows
+        if _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
+    ]
     cr1_deep, cr3_deep, top_brand_deep, _top_share_deep = _brand_cr(brands_deep)
     cr1_hints = (
         cr1_shop if list_export and cr1_shop is not None else cr1_deep
@@ -2217,22 +2348,28 @@ def build_competitor_markdown(
         lines.append("*无店铺字段。*")
     lines.append("")
 
-    lines.extend(["### 4.3 类目/叶子类目（列表字段 Top）", ""])
-    if cm_structure:
+    lines.extend(["### 4.3 细分类目分布（深入合并表 · 与 §5 矩阵同口径）", ""])
+    if cm_structure and n_sku_matrix > 0:
         lines.extend(
             _embed_chart(
                 run_dir,
                 "chart_category_mix_pie.png",
-                "细类标签分布（扇形图；自 ``detail_category_path`` 解析，与 §5 口径一致）",
+                "细类标签分布（扇形图；合并表 ``detail_category_path``，与 §5 同源）",
             )
         )
-        lines.extend(_lines_4_reading_category(cm_structure))
+        lines.extend(
+            _lines_4_reading_category(
+                cm_structure,
+                n_merged_sku=n_sku,
+                n_sku_matrix=n_sku_matrix,
+            )
+        )
         lines.append(
             "*完整类目分布见界面「数据摘要」或简报包中的数据文件。*"
         )
     else:
         lines.append(
-            "*结构样本中无带 ``detail_category_path`` 的可解析细类行，本小节不展示扇形图；细类分布以 §5 为准。*"
+            "*深入合并表中无具备可解析 ``detail_category_path`` 细类标签的 SKU，本小节不展示扇形图；请核对商详抓取与合并字段。*"
         )
     lines.append("")
 
@@ -2586,11 +2723,12 @@ def build_competitor_brief(
     与 ``build_competitor_markdown`` 共用统计口径，输出可 JSON 序列化的结构化竞品摘要（**规则驱动**，无 LLM）。
     """
     focus_words, scenario_groups, _ext = resolve_report_tuning(report_config)
-    sku_header = "SKU(skuId)"
-    title_h = "标题(wareName)"
+    sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+    title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     batch = _run_batch_label(run_dir)
     n_sku = len(merged_rows)
     n_cmt = len(comment_rows)
+    n_sku_matrix = sum(1 for r in merged_rows if _competitor_matrix_group_key(r))
 
     list_export = len(search_export_rows) > 0
     structure_rows = search_export_rows if list_export else merged_rows
@@ -2599,11 +2737,13 @@ def build_competitor_brief(
     brands_s = _structure_brands(structure_rows, list_export=list_export)
     cr1_shop, cr3_shop, top_shop_s, top_shop_share = _brand_cr(shops_s)
     cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_s)
-    cm_structure = _structure_category_mix(structure_rows, list_export=list_export)
+    cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
 
     brands_deep = [
-        _cell(r, "detail_brand") for r in merged_rows if _cell(r, "detail_brand")
+        _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
+        for r in merged_rows
+        if _cell(r, MERGED_FIELD_TO_CSV_HEADER["detail_brand"], "detail_brand")
     ]
     cr1_deep, cr3_deep, top_brand_deep, top_brand_deep_share = _brand_cr(
         brands_deep
@@ -2676,21 +2816,26 @@ def build_competitor_brief(
                 {
                     "sku_id": _cell(row, sku_header),
                     "title": _cell(row, title_h),
-                    "brand": _cell(row, "detail_brand"),
+                    "brand": _cell(
+                        row,
+                        MERGED_FIELD_TO_CSV_HEADER["detail_brand"],
+                        "detail_brand",
+                    ),
                     "list_price_show": _cell(
-                        row, "标价(jdPrice,jdPriceText,realPrice)"
+                        row, *_LIST_SHOW_PRICE_CELL_KEYS
                     ),
                     "coupon_or_detail_price": _cell(
                         row,
-                        "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
+                        _COUPON_SHOW_PRICE_KEY,
+                        _LEGACY_COUPON_SHOW_PRICE_KEY,
                     ),
-                    "detail_price_final": _cell(row, "detail_price_final"),
-                    "shop": _cell(
-                        row, "店铺名(shopName)", "detail_shop_name"
-                    ),
+                    "detail_price_final": _cell(row, *_DETAIL_PRICE_FINAL_CSV_KEYS),
+                    "shop": _cell(row, *_MERGED_SHOP_CELL_KEYS),
                     "category": _detail_category_path_cell(row),
-                    "selling_point": _cell(row, "卖点(sellingPoint)")[:240],
-                    "comment_fuzzy": _cell(row, "评价量(commentFuzzy)"),
+                    "selling_point": _cell(
+                        row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY
+                    )[:240],
+                    "comment_fuzzy": _cell(row, *_COMMENT_FUZZ_KEYS),
                     "total_sales": merged_csv_effective_total_sales(row),
                 }
             )
@@ -2789,6 +2934,8 @@ def build_competitor_brief(
             "comment_flat_rows": n_cmt,
             "structure_source_rows": n_structure,
             "uses_pc_search_list_export": list_export,
+            "category_mix_source": "keyword_pipeline_merged",
+            "category_mix_valid_matrix_sku_count": n_sku_matrix,
         },
         "meta": meta_slice or None,
         "pc_search_raw": {

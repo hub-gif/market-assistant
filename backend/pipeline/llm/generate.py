@@ -13,8 +13,8 @@ from typing import Any
 
 from django.conf import settings
 
-from .brief_compact import compact_brief_for_llm
-from .strategy_draft import build_strategy_draft_markdown
+from ..reporting.brief_compact import compact_brief_for_llm
+from ..reporting.strategy_draft import build_strategy_draft_markdown
 
 
 def _ensure_ai_crawler_path() -> None:
@@ -112,37 +112,42 @@ def generate_competitor_report_markdown_llm(brief: dict[str, Any], keyword: str)
 
 
 SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON 含：
-- ``comment_sentiment_lexicon``：关键词规则下的条数与短语命中（粗判，非深度学习）；
-- ``positive_lexeme_hits_top`` / ``negative_lexeme_hits_top``：短语级命中摘要（与条形图同源）；
-- ``sample_reviews_*``：按同一规则从评价中抽样的短文（已截断），**仅可依据这些原文与 lexicon 数字归纳**。
-  每条样本通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头，表示该句评价对应的 **§5 矩阵细类**、**具体 SKU/商品标题**与**店铺**；写归纳与引用「」短引文时**须让读者能回答「哪家店、哪条 SKU、哪款品名」**——或保留该前缀，或在同一句内用「店铺名 + 品名/SKU」复述一致信息，**禁止**把多条样本混成「用户普遍」却不交代是哪一店哪一品。
+
+- ``comment_sentiment_lexicon``：子串词表统计（与报告条形图口径一致，**仅作定量参考**；子串命中≠说话人态度）。
+- ``positive_lexeme_hits_top`` / ``negative_lexeme_hits_top``：短语级命中摘要（同源）。
+- ``sentiment_bucket_method``：恒为 ``keyword_substring_heuristic``；``sample_reviews_positive_biased`` / ``negative`` / ``mixed_tone`` 是按该词表机械分桶的抽样，**可能与整句真实褒贬不一致**（例如「软硬适中」曾被误归负向）。
+- **``sample_reviews_semantic_pool``**（若有）：本批评价经去重后的**随机/洗牌抽样**，覆盖未命中任一关键词的句子。**归纳正/负向体验、引用「」短引文时，优先以此池与上述各列表中的原文为准，自行结合语境理解**：转折、对比（如「没那么甜」「软硬适中」）、先抑后扬/先扬后抑整句态度；**不得以子串是否命中负面词来断言该句为抱怨**。
+
+每条样本通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头，表示 **§5 细类、SKU、品名、店铺**；写归纳与「」引文时须能还原「哪家店、哪条 SKU、哪款品名」，或保留前缀，**禁止**无指代地写「用户普遍…」。
 
 **硬性要求**：
 - **仅输出 Markdown 正文**（不要用 ``` 围栏包裹全文）；
 - **不要编造**样本中未出现的具体事实、品牌、价格、医学功效；
-- 条数、占比等**定量表述须与** ``comment_sentiment_lexicon`` **一致**，勿与样本矛盾；
-- 若某具体措辞（如「口感偏硬」）**未**出现在任一 ``sample_reviews_*`` 字符串（含前缀后的正文）中，**禁止**用引号写出该句或暗示为直接引语；仅可写「口感相关抱怨在样本/词表中较集中」等聚合表述。
-- **不要**只复述「某词出现 N 次」——词频条形图已在报告正文；你的价值是**语义层归纳**：用户在说什么、不满/满意的具体事由是什么。
+- **定量数字**（条数、占比、lexicon 各字段）须与 ``comment_sentiment_lexicon`` **一致**，勿编造；
+- **定性归纳**（满意点/抱怨点、引语是否算差评）：以**整句语义**为准；若某句在语义上为褒义或中性描述，**不得**放入「质地差、口感硬」等负向归因；若词表分桶与句意冲突，**以句意为准**，并在「使用注意」点明「关键词分桶仅作统计口径」。
+- 若某措辞**未**出现在任一抽样原文（含前缀后正文）中，**禁止**用引号写成直接引语。
+- **不要**只复述「某词出现 N 次」——条形图已展示；你的价值是**语义归纳**。
 
 **建议结构**（使用四级标题 ``####``）：
-1. ``#### 正向体验主题``：3～6 条；每条用一句话概括一类满意点（如口感、甜度、饱腹、性价比、物流），**尽量**在句末用简短「」引用样本中的原话片段佐证（无合适原话则省略引号，勿杜撰）。
-2. ``#### 负向评价主题归因``：**核心段落**。在「偏负向」与「混合」样本中归纳 **4～8 个具体问题维度**（示例维度，按需选用：口味/难吃/怪味、过甜或寡淡、质地口感、价格与促销、包装破损、物流时效、真伪与效期、与宣传不符、健康/功效疑虑等）。每个维度下用 1～2 条列表项写清「用户具体在抱怨什么」，并**尽量**附上来自 ``sample_reviews_negative_biased`` 或 ``sample_reviews_mixed_tone`` 的「」短引文（引文内**须含** ``【细类…｜…店铺…】`` 前缀，或明确写出与前缀一致的**店铺 + 品名/SKU**）；若某维度在样本中几乎无依据则不要硬写。
-3. ``#### 混合评价中的典型张力``（可选）：若 ``sample_reviews_mixed_tone`` 非空，用 2～4 条说明同一条评价里正负并存时在讨论什么（如「认可低糖但嫌口感」）；否则写一句「本批混合样本较少，从略」。
-4. ``#### 使用注意``：1～3 句说明：关键词分桶的局限、抽样与截断、与医学/功效结论无关等。
+1. ``#### 正向体验主题``：3～6 条；概括满意点（口感、甜度、性价比等），**尽量**用「」引用 ``sample_reviews_semantic_pool`` 或其它样本中**语义确为正面**的短句（勿把对比褒义句当差评例子）。
+2. ``#### 负向评价主题归因``：**核心段落**。依据你读后判定为**确有不满**的句子，归纳 **4～8 个**问题维度（口味、质地、价格、物流等）。引文优先取自句意确为批评的原文（可来自任一档位键，不限于 ``sample_reviews_negative_biased``）；引文须含 ``【细类…｜…店铺…】`` 或同义店铺+品名/SKU。
+3. ``#### 混合评价中的典型张力``（可选）：同一评价里褒贬并存时，说明在争什么；若无则略写。
+4. ``#### 使用注意``：关键词子串统计的局限、``sample_reviews_semantic_pool`` 与分桶的差异、抽样截断、非医学结论。
 
 总字数约 **700～1600 字**，简体中文，语气客观。"""
 
 
 def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
-    """基于规则分桶抽样评价 + lexicon 统计，生成 §8.2 大模型解读段落（Markdown）。"""
+    """基于 lexicon 统计 + 语义池与分桶抽样，生成 §8.2 大模型解读段落（Markdown）。"""
     p = dict(payload)
     raw = json.dumps(p, ensure_ascii=False)
     if len(raw) > 88_000:
-        # 超长时优先压缩正向与混合，保留更多负向样本以利主题归因
+        # 超长时优先压缩关键词分桶样本，再压缩语义池；尽量保留 semantic_pool 条数略多
         for k, cap, maxlen in (
-            ("sample_reviews_positive_biased", 8, 200),
-            ("sample_reviews_mixed_tone", 6, 200),
-            ("sample_reviews_negative_biased", 18, 220),
+            ("sample_reviews_positive_biased", 6, 180),
+            ("sample_reviews_mixed_tone", 4, 180),
+            ("sample_reviews_negative_biased", 14, 200),
+            ("sample_reviews_semantic_pool", 30, 340),
         ):
             lst = p.get(k)
             if isinstance(lst, list):
@@ -355,6 +360,7 @@ COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：
 每个 group 含 ``group``（与 §5 矩阵一致的细分类目名）、``comment_flat_rows``、``effective_text_lines``、
 ``focus_hit_lines``（关注词子串命中摘要，与 §8.3 同源）、``sample_text_snippets``（评价短摘录，已截断）。
 摘录行通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头：细类可与本 group 名对照，**品名/SKU/店铺**表示该句具体出自哪条链接；归纳时若引用原话，**须交代是「哪家店、哪条 SKU、哪款品名」上的反馈**，勿只写「有用户说口感差」而不指代产品。
+关注词命中为子串统计，可能与句意不一致；**请以整句语义**判断褒贬（如「软硬适中」「没那么甜」常为满意表述，不得据此写成质地问题）。
 
 请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
 - 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题（不要使用 ``##`` 一级标题）；

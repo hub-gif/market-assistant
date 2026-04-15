@@ -5,11 +5,12 @@ import csv
 import sys
 from pathlib import Path
 
-from .ingest import FILE_DETAIL_WARE_CSV, FILE_MERGED_CSV, SKU_FIELD_MERGED
+from ..csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from ..ingest import FILE_DETAIL_WARE_CSV, FILE_MERGED_CSV, SKU_FIELD_MERGED
 
 
 def _ensure_crawler_copy_path() -> None:
-    root = Path(__file__).resolve().parent.parent / "crawler_copy" / "jd_pc_search"
+    root = Path(__file__).resolve().parents[2] / "crawler_copy" / "jd_pc_search"
     for sub in ("detail", ""):
         p = root / sub if sub else root
         s = str(p.resolve())
@@ -19,6 +20,11 @@ def _ensure_crawler_copy_path() -> None:
 
 def regenerate_detail_ware_rows(run_dir: Path) -> list[dict[str, str]]:
     _ensure_crawler_copy_path()
+    from jd_detail_buyer_extraction import (  # noqa: WPS433
+        buyer_promo_text_from_profile,
+        buyer_ranking_line_from_profile,
+        extract_buyer_offer_profile_from_json_text,
+    )
     from jd_detail_ware_business_requests import (  # noqa: WPS433
         DETAIL_WARE_LEAN_CSV_FIELDNAMES,
         detail_ware_lean_csv_row,
@@ -43,7 +49,12 @@ def regenerate_detail_ware_rows(run_dir: Path) -> list[dict[str, str]]:
             if not jp.is_file():
                 continue
             text = jp.read_text(encoding="utf-8")
-            ing = (row.get("detail_body_ingredients") or "").strip()
+            ing = (
+                row.get(MERGED_FIELD_TO_CSV_HEADER["detail_body_ingredients"])
+                or row.get("detail_body_ingredients")
+                or ""
+            ).strip()
+            prof = extract_buyer_offer_profile_from_json_text(text)
             rows_out.append(
                 detail_ware_lean_csv_row(
                     sku,
@@ -51,6 +62,8 @@ def regenerate_detail_ware_rows(run_dir: Path) -> list[dict[str, str]]:
                     text,
                     detail_body_ingredients=ing,
                     detail_body_ingredients_source_url="",
+                    buyer_ranking_line=buyer_ranking_line_from_profile(prof),
+                    buyer_promo_text=buyer_promo_text_from_profile(prof),
                 )
             )
     return rows_out

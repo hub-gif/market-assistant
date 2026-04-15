@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from django.test import SimpleTestCase
 
-from pipeline.strategy_draft import build_strategy_draft_markdown
+from pipeline.reporting.strategy_draft import build_strategy_draft_markdown
 
 
 class StrategyDraftTests(SimpleTestCase):

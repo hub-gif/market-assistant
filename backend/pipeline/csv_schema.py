@@ -6,7 +6,19 @@ from __future__ import annotations
 
 import re
 
-# --- 搜索导出 pc_search_export.csv（列名为中文，与 jd_h5_search_requests.JD_EXPORT_COLUMN_HEADERS 一致）---
+
+def strip_buyer_ranking_line_prefix(value: str) -> str:
+    """去掉榜单列上的 ``榜单/曝光：`` 历史前缀，展示与入库一致。"""
+    s = (value or "").strip()
+    prefix = "榜单/曝光："
+    if s.startswith(prefix):
+        return s[len(prefix) :].strip()
+    if s.startswith("榜单/曝光"):
+        return s[len("榜单/曝光") :].lstrip("：").strip()
+    return s
+
+
+# --- 搜索导出 pc_search_export.csv（纯中文表头，与 jd_h5_search_requests.JD_EXPORT_COLUMN_HEADERS 一致）---
 JD_SEARCH_INTERNAL_KEYS: tuple[str, ...] = (
     "item_id",
     "sku_id",
@@ -34,29 +46,29 @@ JD_SEARCH_INTERNAL_KEYS: tuple[str, ...] = (
 )
 
 JD_SEARCH_CSV_HEADERS: dict[str, str] = {
-    "item_id": "主商品ID(wareId)",
-    "sku_id": "SKU(skuId)",
-    "title": "标题(wareName)",
-    "price": "标价(jdPrice,jdPriceText,realPrice)",
-    "coupon_price": "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    "original_price": "原价(oriPrice,originalPrice,marketPrice)",
-    "selling_point": "卖点(sellingPoint)",
-    "comment_sales_floor": "销量楼层(commentSalesFloor)",
-    "total_sales": "销量口径(totalSales)",
-    "hot_list_rank": "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
-    "comment_count": "评价量(commentFuzzy)",
-    "shop_name": "店铺名(shopName)",
-    "shop_url": "店铺链接(shopUrl,shopId)",
-    "shop_info_url": "店铺信息链接(shopInfoUrl,brandUrl)",
-    "location": "地域(deliveryAddress,area,procity)",
-    "detail_url": "商品链接(toUrl,clickUrl,item.m.jd.com)",
-    "image": "主图(imageurl,imageUrl)",
-    "seckill_info": "秒杀(seckillInfo,secKill)",
-    "attributes": "规格属性(propertyList,color,catid,shortName)",
-    "leaf_category": "类目(leafCategory,cid3Name,catid)",
-    "platform": "平台(platform)",
-    "keyword": "搜索词(keyword)",
-    "page": "页码(page)",
+    "item_id": "主商品ID",
+    "sku_id": "SKU",
+    "title": "标题",
+    "price": "标价",
+    "coupon_price": "券后到手价",
+    "original_price": "原价",
+    "selling_point": "卖点",
+    "comment_sales_floor": "销量楼层",
+    "total_sales": "销量口径",
+    "hot_list_rank": "榜单类文案",
+    "comment_count": "评价量",
+    "shop_name": "店铺名",
+    "shop_url": "店铺链接",
+    "shop_info_url": "店铺信息链接",
+    "location": "地域",
+    "detail_url": "商品链接",
+    "image": "主图",
+    "seckill_info": "秒杀",
+    "attributes": "规格属性",
+    "leaf_category": "类目",
+    "platform": "平台",
+    "keyword": "搜索词",
+    "page": "页码",
 }
 
 # CSV 表头 -> 模型属性名
@@ -64,28 +76,70 @@ SEARCH_CSV_HEADER_TO_FIELD: dict[str, str] = {
     h: k for k, h in JD_SEARCH_CSV_HEADERS.items()
 }
 
-# lean 商详子集：合并宽表商详块、detail_ware_export（lean）、JdJobDetailRow 共用（CSV 列名与 ORM 一致）
-LEAN_DETAIL_EXPORT_FIELDNAMES: tuple[str, ...] = (
+# lean 商详：ORM 内部键（英文 snake_case）；CSV 表头为中文（见 DETAIL_CSV_COLUMNS）
+MERGED_LEAN_DETAIL_INTERNAL_KEYS: tuple[str, ...] = (
     "detail_brand",
     "detail_price_final",
     "detail_shop_name",
     "detail_category_path",
     "detail_product_attributes",
     "detail_body_ingredients",
+    "buyer_ranking_line",
+    "buyer_promo_text",
 )
 
-# --- 商详 detail_ware_export.csv（lean：skuId + 上列；full 模式爬虫仍可能多列，入库只认 DETAIL_CSV_COLUMNS）---
-JD_DETAIL_MERGE_KEYS: tuple[str, ...] = LEAN_DETAIL_EXPORT_FIELDNAMES
+LEAN_DETAIL_EXPORT_FIELDNAMES: tuple[str, ...] = MERGED_LEAN_DETAIL_INTERNAL_KEYS
 
-DETAIL_CSV_COLUMNS: tuple[str, ...] = ("skuId", *JD_DETAIL_MERGE_KEYS)
+LEAN_DETAIL_CSV_HEADERS: tuple[str, ...] = (
+    "品牌",
+    "到手价",
+    "店铺名称",
+    "类目路径",
+    "商品参数",
+    "配料表",
+    "榜单排名",
+    "促销摘要",
+)
+
+DETAIL_CSV_HEADER_TO_FIELD: dict[str, str] = dict(
+    zip(LEAN_DETAIL_CSV_HEADERS, MERGED_LEAN_DETAIL_INTERNAL_KEYS)
+)
+
+# --- 商详 detail_ware_export.csv（lean：SKU + 上列；full 模式爬虫仍可能多列，入库只认 DETAIL_CSV_COLUMNS）---
+JD_DETAIL_MERGE_KEYS: tuple[str, ...] = MERGED_LEAN_DETAIL_INTERNAL_KEYS
+
+DETAIL_CSV_COLUMNS: tuple[str, ...] = ("SKU", *LEAN_DETAIL_CSV_HEADERS)
 
 DETAIL_CSV_TO_FIELD: dict[str, str] = {
-    "skuId": "sku_id",
-    **{k: k for k in JD_DETAIL_MERGE_KEYS},
+    "SKU": "sku_id",
+    **DETAIL_CSV_HEADER_TO_FIELD,
 }
 
-# --- 评价 comments_flat.csv ---
+# --- 评价 comments_flat.csv（表头中文；爬虫行字典仍用英文 API 键，写出时映射）---
 COMMENT_CSV_COLUMNS: tuple[str, ...] = (
+    "SKU",
+    "评价ID",
+    "用户昵称",
+    "评价内容",
+    "评价时间",
+    "购买次数",
+    "晒图链接",
+    "评分",
+)
+
+COMMENT_CSV_TO_FIELD: dict[str, str] = {
+    "SKU": "sku_id",
+    "评价ID": "comment_id",
+    "用户昵称": "user_nick_name",
+    "评价内容": "tag_comment_content",
+    "评价时间": "comment_date",
+    "购买次数": "buy_count_text",
+    "晒图链接": "large_pic_urls",
+    "评分": "comment_score",
+}
+
+# 爬虫评价行 dict 键（与京东接口字段一致）→ CSV 中文表头
+COMMENT_ROW_DICT_KEYS: tuple[str, ...] = (
     "sku",
     "commentId",
     "userNickName",
@@ -96,40 +150,7 @@ COMMENT_CSV_COLUMNS: tuple[str, ...] = (
     "commentScore",
 )
 
-COMMENT_CSV_TO_FIELD: dict[str, str] = {
-    "sku": "sku_id",
-    "commentId": "comment_id",
-    "userNickName": "user_nick_name",
-    "tagCommentContent": "tag_comment_content",
-    "commentDate": "comment_date",
-    "buyCountText": "buy_count_text",
-    "largePicURLs": "large_pic_urls",
-    "commentScore": "comment_score",
-}
-
 # --- 合并宽表 keyword_pipeline_merged.csv（lean = 搜索块 + 商详块 + 评论块；改列请改对应块，勿在尾部堆列）---
-
-MERGED_SEARCH_CSV_COLUMNS: tuple[str, ...] = (
-    "pipeline_keyword",
-    "SKU(skuId)",
-    "主商品ID(wareId)",
-    "标题(wareName)",
-    "标价(jdPrice,jdPriceText,realPrice)",
-    "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    "原价(oriPrice,originalPrice,marketPrice)",
-    "卖点(sellingPoint)",
-    "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
-    "评价量(commentFuzzy)",
-    "销量楼层(commentSalesFloor)",
-    "销量口径(totalSales)",
-    "店铺名(shopName)",
-    "商品链接(toUrl,clickUrl,item.m.jd.com)",
-    "主图(imageurl,imageUrl)",
-    "规格属性(propertyList,color,catid,shortName)",
-    "类目(leafCategory,cid3Name,catid)",
-    "搜索词(keyword)",
-    "页码(page)",
-)
 
 MERGED_SEARCH_INTERNAL_KEYS: tuple[str, ...] = (
     "pipeline_keyword",
@@ -153,12 +174,30 @@ MERGED_SEARCH_INTERNAL_KEYS: tuple[str, ...] = (
     "page",
 )
 
-# 商详块：列名与 ORM 属性同名；与 LEAN_DETAIL_EXPORT_FIELDNAMES / 流水线 lean 一致
-MERGED_LEAN_DETAIL_KEYS: tuple[str, ...] = LEAN_DETAIL_EXPORT_FIELDNAMES
+
+def _merged_search_csv_header_for_internal(k: str) -> str:
+    """整合表搜索块：内部键 → 中文 CSV 表头（与 PC 搜索导出列名对齐，合并表专有列单独处理）。"""
+    if k == "ware_id":
+        return JD_SEARCH_CSV_HEADERS["item_id"]
+    if k == "comment_fuzzy":
+        return "评价量"
+    return JD_SEARCH_CSV_HEADERS[k]
+
+
+MERGED_SEARCH_CSV_COLUMNS: tuple[str, ...] = (
+    "流水线关键词",
+    *(
+        _merged_search_csv_header_for_internal(k)
+        for k in MERGED_SEARCH_INTERNAL_KEYS[1:]
+    ),
+)
+
+# 商详块：CSV 为中文表头；内部键见 MERGED_LEAN_DETAIL_INTERNAL_KEYS
+MERGED_LEAN_DETAIL_KEYS: tuple[str, ...] = LEAN_DETAIL_CSV_HEADERS
 
 MERGED_COMMENT_CSV_COLUMNS: tuple[str, ...] = (
-    "comment_count",
-    "comment_preview",
+    "评论条数",
+    "评价摘要",
 )
 
 MERGED_COMMENT_INTERNAL_KEYS: tuple[str, ...] = (
@@ -174,7 +213,7 @@ MERGED_CSV_COLUMNS: tuple[str, ...] = (
 
 MERGED_INTERNAL_KEYS: tuple[str, ...] = (
     *MERGED_SEARCH_INTERNAL_KEYS,
-    *MERGED_LEAN_DETAIL_KEYS,
+    *MERGED_LEAN_DETAIL_INTERNAL_KEYS,
     *MERGED_COMMENT_INTERNAL_KEYS,
 )
 
@@ -185,6 +224,14 @@ MERGED_CSV_TO_FIELD: dict[str, str] = dict(zip(MERGED_CSV_COLUMNS, MERGED_INTERN
 MERGED_FIELD_TO_CSV_HEADER: dict[str, str] = {
     internal: csv_h for csv_h, internal in MERGED_CSV_TO_FIELD.items()
 }
+
+
+def remap_merged_row_english_detail_keys_to_csv_headers(merged: dict[str, str]) -> None:
+    """整合表写入前：将 ``ware_flat`` / 抽取逻辑产生的英文商详与购买者内部键改为中文 CSV 列名（原地修改）。"""
+    for ik, zh in zip(MERGED_LEAN_DETAIL_INTERNAL_KEYS, LEAN_DETAIL_CSV_HEADERS):
+        if ik in merged:
+            merged[zh] = str(merged.get(ik) or "")
+            del merged[ik]
 
 
 def infer_total_sales_from_sales_floor(cell: str) -> str:

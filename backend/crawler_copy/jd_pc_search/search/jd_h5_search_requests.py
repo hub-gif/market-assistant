@@ -58,7 +58,11 @@ import requests
 _JD_PKG_ROOT = Path(__file__).resolve().parent.parent
 if str(_JD_PKG_ROOT) not in sys.path:
     sys.path.insert(0, str(_JD_PKG_ROOT))
+_BACKEND_ROOT = Path(__file__).resolve().parents[3]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
 from common.jd_delay_utils import parse_request_delay_range, sleep_pc_search_request_gap
+from pipeline.csv_schema import JD_SEARCH_CSV_HEADERS as JD_EXPORT_COLUMN_HEADERS  # noqa: E402
 
 _JD_PC_SEARCH_DIR = Path(__file__).resolve().parent
 
@@ -358,39 +362,6 @@ JD_ITEM_CSV_FIELDS = (
     "keyword",
     "page",
 )
-
-# 导出列名：中文说明(JSON 中主要原始字段名)，便于对照接口
-JD_EXPORT_COLUMN_HEADERS: dict[str, str] = {
-    "item_id": "主商品ID(wareId)",
-    "sku_id": "SKU(skuId)",
-    "title": "标题(wareName)",
-    # "title_plain": "标题纯文本(wareName)",
-    "price": "标价(jdPrice,jdPriceText,realPrice)",
-    "coupon_price": "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    "original_price": "原价(oriPrice,originalPrice,marketPrice)",
-    "selling_point": "卖点(sellingPoint)",
-    "comment_sales_floor": "销量楼层(commentSalesFloor)",
-    "total_sales": "销量口径(totalSales)",
-    "hot_list_rank": "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
-    "comment_count": "评价量(commentFuzzy)",
-    "shop_name": "店铺名(shopName)",
-    "shop_url": "店铺链接(shopUrl,shopId)",
-    "shop_info_url": "店铺信息链接(shopInfoUrl,brandUrl)",
-    "location": "地域(deliveryAddress,area,procity)",
-    "detail_url": "商品链接(toUrl,clickUrl,item.m.jd.com)",
-    "image": "主图(imageurl,imageUrl)",
-    # "video_cover": "视频封面(videoImage,videoPic)",
-    # "video_dimension": "视频比例(videoRatio)",
-    "seckill_info": "秒杀(seckillInfo,secKill)",
-    "attributes": "规格属性(propertyList,color,catid,shortName)",
-    "leaf_category": "类目(leafCategory,cid3Name,catid)",
-    # "same_count": "同款数(sameStyleCount,sameCount)",
-    # "relation_score": "相关度(relationScore,score)",
-    # "is_p4p": "广告位(isAdv,isAd,extensionId)",
-    "platform": "平台(platform)",
-    "keyword": "搜索词(keyword)",
-    "page": "页码(page)",
-}
 
 CSV_FIELDS = tuple(JD_EXPORT_COLUMN_HEADERS[k] for k in JD_ITEM_CSV_FIELDS)
 

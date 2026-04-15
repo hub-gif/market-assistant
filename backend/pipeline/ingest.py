@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -26,6 +27,7 @@ from .csv_schema import (
     SEARCH_CSV_HEADER_TO_FIELD,
     merged_csv_effective_total_sales,
     search_csv_effective_total_sales,
+    strip_buyer_ranking_line_prefix,
 )
 from .models import (
     JdJobCommentRow,
@@ -44,9 +46,9 @@ FILE_PC_SEARCH_CSV = "pc_search_export.csv"
 FILE_DETAIL_WARE_CSV = "detail_ware_export.csv"
 FILE_COMMENTS_FLAT_CSV = "comments_flat.csv"
 
-SKU_FIELD_MERGED = "SKU(skuId)"
-WARE_FIELD = "主商品ID(wareId)"
-TITLE_FIELD = "标题(wareName)"
+SKU_FIELD_MERGED = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+WARE_FIELD = MERGED_FIELD_TO_CSV_HEADER["ware_id"]
+TITLE_FIELD = MERGED_FIELD_TO_CSV_HEADER["title"]
 
 BULK_CHUNK = 400
 
@@ -81,9 +83,12 @@ def _search_row_kwargs(row: dict[str, str]) -> dict[str, str]:
 
 
 def _detail_row_kwargs(row: dict[str, str]) -> dict[str, str]:
-    return {
+    kw = {
         DETAIL_CSV_TO_FIELD[col]: str(row.get(col) or "").strip() for col in DETAIL_CSV_COLUMNS
     }
+    if kw.get("buyer_ranking_line"):
+        kw["buyer_ranking_line"] = strip_buyer_ranking_line_prefix(kw["buyer_ranking_line"])
+    return kw
 
 
 def _comment_row_kwargs(row: dict[str, str]) -> dict[str, str]:
@@ -99,9 +104,12 @@ def _normalize_merged_csv_total_sales(row: dict[str, str]) -> None:
 
 
 def _merged_row_kwargs(row: dict[str, str]) -> dict[str, str]:
-    return {
+    kw = {
         MERGED_CSV_TO_FIELD[col]: str(row.get(col) or "").strip() for col in MERGED_CSV_COLUMNS
     }
+    if kw.get("buyer_ranking_line"):
+        kw["buyer_ranking_line"] = strip_buyer_ranking_line_prefix(kw["buyer_ranking_line"])
+    return kw
 
 
 def _bulk_create_in_chunks(model, objects: list[Any]) -> None:
@@ -111,6 +119,32 @@ def _bulk_create_in_chunks(model, objects: list[Any]) -> None:
 
 def _run_dir(job: PipelineJob) -> Path:
     return Path(job.run_dir or "").expanduser().resolve()
+
+
+def resolve_and_validate_run_dir(path_str: str) -> Path:
+    """
+    将用户输入解析为 ``LOW_GI_PROJECT_ROOT/data/JD`` 下的绝对路径，且须为已存在目录。
+
+    相对路径相对 ``data/JD``（与创建任务时 ``pipeline_run_dir`` 语义一致）。
+    """
+    if not (path_str or "").strip():
+        raise ValueError("run_dir 为空")
+    root = (settings.LOW_GI_PROJECT_ROOT or "").strip()
+    if not root:
+        raise ValueError("LOW_GI_PROJECT_ROOT 未配置")
+    project_data = Path(root).resolve() / "data" / "JD"
+    p = Path(path_str.strip()).expanduser()
+    if not p.is_absolute():
+        p = project_data / p
+    p = p.resolve()
+    jd = project_data.resolve()
+    try:
+        p.relative_to(jd)
+    except ValueError as e:
+        raise ValueError(f"路径须位于京东数据目录下：{jd}") from e
+    if not p.is_dir():
+        raise ValueError(f"目录不存在：{p}")
+    return p
 
 
 def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
@@ -202,17 +236,21 @@ def ingest_job_merged_csv(job: PipelineJob) -> dict[str, Any]:
         if not sku:
             continue
         _normalize_merged_csv_total_sales(row)
+        br_h = MERGED_FIELD_TO_CSV_HEADER["buyer_ranking_line"]
+        br = (row.get(br_h) or "").strip()
+        if br:
+            row[br_h] = strip_buyer_ranking_line_prefix(br)
         payload = _payload_as_json(row)
         title = (row.get(TITLE_FIELD) or "")[:2000]
         ware = (row.get(WARE_FIELD) or "").strip()[:64]
-        brand = (row.get("detail_brand") or "").strip()[:512]
+        brand = (row.get(MERGED_FIELD_TO_CSV_HEADER["detail_brand"]) or "").strip()[:512]
         price = (
-            (row.get("detail_price_final") or "").strip()
+            (row.get(MERGED_FIELD_TO_CSV_HEADER["detail_price_final"]) or "").strip()
             or (row.get(JD_SEARCH_CSV_HEADERS["coupon_price"]) or "").strip()
             or (row.get(JD_SEARCH_CSV_HEADERS["price"]) or "").strip()
         )[:128]
         cat = (
-            (row.get("detail_category_path") or "").strip()
+            (row.get(MERGED_FIELD_TO_CSV_HEADER["detail_category_path"]) or "").strip()
             or (row.get(JD_SEARCH_CSV_HEADERS["leaf_category"]) or "").strip()
         )[:2000]
 

@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 
 from django.test import SimpleTestCase
 
-from pipeline.brief_pack import (
+from pipeline.reporting.brief_pack import (
     build_brief_pack_zip_bytes,
     markdown_summary_from_brief,
 )

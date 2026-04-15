@@ -10,14 +10,21 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
+
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+from pipeline.csv_schema import JD_SEARCH_CSV_HEADERS  # noqa: E402
 
 # 与 CSV 导出列名一致（jd_h5_search_requests.CSV_FIELDS 子集）
 _SCENARIO_TEXT_FIELDS: tuple[str, ...] = (
-    "标题(wareName)",
-    "卖点(sellingPoint)",
-    "类目(leafCategory,cid3Name,catid)",
-    "规格属性(propertyList,color,catid,shortName)",
+    JD_SEARCH_CSV_HEADERS["title"],
+    JD_SEARCH_CSV_HEADERS["selling_point"],
+    JD_SEARCH_CSV_HEADERS["leaf_category"],
+    JD_SEARCH_CSV_HEADERS["attributes"],
 )
 
 # 4.1 中式（米）面点及主食（含常见同义/细分）

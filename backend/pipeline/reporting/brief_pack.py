@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from pipeline.brief_concentration import (
+from .brief_concentration import (
     concentration_first_share,
     concentration_top_three_share,
 )

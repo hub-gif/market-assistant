@@ -32,7 +32,11 @@ from playwright.sync_api import sync_playwright
 _JD_PKG_ROOT = Path(__file__).resolve().parent.parent
 if str(_JD_PKG_ROOT) not in sys.path:
     sys.path.insert(0, str(_JD_PKG_ROOT))
+_BACKEND_ROOT = Path(__file__).resolve().parents[3]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
 from common.jd_delay_utils import parse_request_delay_range
+from pipeline.csv_schema import COMMENT_CSV_COLUMNS, COMMENT_ROW_DICT_KEYS  # noqa: E402
 from _low_gi_root import low_gi_project_root  # noqa: E402
 
 _JD_COMMENT_DIR = Path(__file__).resolve().parent
@@ -350,30 +354,19 @@ def extract_comment_rows_from_parsed(sku: str, parsed: Any) -> list[dict[str, An
     return rows
 
 
-def _comment_flat_fieldnames() -> list[str]:
-    return [
-        "sku",
-        "commentId",
-        "userNickName",
-        "tagCommentContent",
-        "commentDate",
-        "buyCountText",
-        "largePicURLs",
-        "commentScore",
-    ]
-
-
 def _write_comments_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     buf = StringIO()
-    fn = _comment_flat_fieldnames()
+    fn = list(COMMENT_CSV_COLUMNS)
     w = csv.DictWriter(buf, fieldnames=fn, extrasaction="ignore")
     w.writeheader()
     for r in rows:
-        line = {k: r.get(k, "") for k in fn}
-        line["largePicURLs"] = json.dumps(
-            r.get("largePicURLs") or [], ensure_ascii=False
-        )
+        line: dict[str, Any] = {}
+        for h, api_k in zip(COMMENT_CSV_COLUMNS, COMMENT_ROW_DICT_KEYS):
+            if api_k == "largePicURLs":
+                line[h] = json.dumps(r.get("largePicURLs") or [], ensure_ascii=False)
+            else:
+                line[h] = r.get(api_k, "")
         w.writerow(line)
     path.write_text("\ufeff" + buf.getvalue(), encoding="utf-8")
 

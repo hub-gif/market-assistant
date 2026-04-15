@@ -2,8 +2,8 @@
 细类价盘要点归纳：打印 ``generate_price_group_summaries_llm`` 输出（与报告 §6 后大模型段同源）。
 
   cd backend
-  .venv\\Scripts\\python.exe pipeline/run_price_groups_llm_demo.py --job 12 --live
-  .venv\\Scripts\\python.exe pipeline/run_price_groups_llm_demo.py --merged "D:/path/keyword_pipeline_merged.csv" --live
+  .venv\\Scripts\\python.exe -m pipeline.demos.run_price_groups_llm_demo --job 12 --live
+  .venv\\Scripts\\python.exe -m pipeline.demos.run_price_groups_llm_demo --merged "D:/path/keyword_pipeline_merged.csv" --live
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import os
 import sys
 from pathlib import Path
 
-BACKEND_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -110,7 +110,7 @@ def main() -> None:
         print("\n加 --live 调用 generate_price_group_summaries_llm", file=sys.stderr)
         return
 
-    from pipeline.llm_generate import generate_price_group_summaries_llm  # noqa: WPS433
+    from pipeline.llm.generate import generate_price_group_summaries_llm  # noqa: WPS433
 
     out = generate_price_group_summaries_llm(groups, keyword=keyword)
     print(out)

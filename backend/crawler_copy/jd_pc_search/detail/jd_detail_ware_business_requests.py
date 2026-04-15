@@ -562,8 +562,21 @@ SKU_BODY_IMAGES_ONLY_FIELDNAMES: tuple[str, ...] = (
     "detail_body_ingredients",
 )
 
-# 与合并表 lean 商详块一致 + skuId；keyword_pipeline DETAIL_WARE_CSV_MODE=lean 写 detail_ware_export.csv
+# 与合并表 lean 商详块一致 + SKU；keyword_pipeline DETAIL_WARE_CSV_MODE=lean 写 detail_ware_export.csv（纯中文表头）
 DETAIL_WARE_LEAN_CSV_FIELDNAMES: tuple[str, ...] = (
+    "SKU",
+    "品牌",
+    "到手价",
+    "店铺名称",
+    "类目路径",
+    "商品参数",
+    "配料表",
+    "榜单排名",
+    "促销摘要",
+)
+
+# ``ware_parsed_row`` 可提供的 lean 列（购买者摘要由独立抽取补充）
+_DETAIL_WARE_LEAN_FROM_RESPONSE_KEYS: tuple[str, ...] = (
     "skuId",
     "detail_brand",
     "detail_price_final",
@@ -581,8 +594,10 @@ def detail_ware_lean_csv_row(
     *,
     detail_body_ingredients: str = "",
     detail_body_ingredients_source_url: str = "",
+    buyer_ranking_line: str = "",
+    buyer_promo_text: str = "",
 ) -> dict[str, str]:
-    """lean 详情汇总表一行（无 http_status）；字段来自 ``ware_parsed_row`` 子集。"""
+    """lean 详情汇总表一行（无 http_status）；字段来自 ``ware_parsed_row`` 子集 + 购买者摘要列。"""
     full = ware_parsed_row(
         sku,
         http_status,
@@ -590,7 +605,22 @@ def detail_ware_lean_csv_row(
         detail_body_ingredients=detail_body_ingredients,
         detail_body_ingredients_source_url=detail_body_ingredients_source_url,
     )
-    return {k: str(full.get(k) or "") for k in DETAIL_WARE_LEAN_CSV_FIELDNAMES}
+    out = {k: str(full.get(k) or "") for k in _DETAIL_WARE_LEAN_FROM_RESPONSE_KEYS}
+    out["buyer_ranking_line"] = (buyer_ranking_line or "").strip()
+    out["buyer_promo_text"] = (buyer_promo_text or "").strip()
+    _cn = DETAIL_WARE_LEAN_CSV_FIELDNAMES
+    _en = (
+        "skuId",
+        "detail_brand",
+        "detail_price_final",
+        "detail_shop_name",
+        "detail_category_path",
+        "detail_product_attributes",
+        "detail_body_ingredients",
+        "buyer_ranking_line",
+        "buyer_promo_text",
+    )
+    return {_cn[i]: str(out.get(_en[i]) or "") for i in range(len(_cn))}
 
 
 def minimal_sku_body_images_row(

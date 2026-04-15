@@ -149,6 +149,74 @@ def _merge_tail_as_other(
 
 
 # 已不再写入报告正文的旧版图，避免 run_dir 里残留误导性 PNG
+# 横向条形图：统一柱厚、柱端数值字号（全文件条形图共用）
+_BARH_HEIGHT = 0.6
+_BAR_VALUE_FONTSIZE = 8
+
+
+def _thin_barh_height(n: int) -> float:
+    """
+    横向条形图：类目条数 n 较少时降低 barh 的 height（与 y 轴跨度同量纲）。
+    n=1 时若仍用 0.6 且 ylim 跨度仅 1，单条会占满大半幅、视觉上极粗。
+    """
+    if n <= 0:
+        return _BARH_HEIGHT
+    if n == 1:
+        return 0.30
+    if n == 2:
+        return 0.44
+    if n <= 5:
+        return 0.50
+    if n <= 10:
+        return 0.54
+    return _BARH_HEIGHT
+
+
+def _set_barh_category_ylim(ax: Any, n: int) -> None:
+    """n 条类目横条时设置纵轴范围；n=1 时略放宽，使柱相对更细。"""
+    if n <= 0:
+        return
+    if n == 1:
+        ax.set_ylim(-1.0, 1.0)
+    else:
+        ax.set_ylim(-0.5, float(n) - 0.5)
+
+
+def _fmt_bar_value(v: float, *, as_int: bool = False) -> str:
+    if as_int or (math.isfinite(v) and abs(v - round(v)) < 1e-6):
+        return str(int(round(v)))
+    s = f"{v:.2f}".rstrip("0").rstrip(".")
+    return s if s else "0"
+
+
+def _annotate_barh_numeric(
+    ax: Any,
+    bars: Any,
+    values: list[float],
+    *,
+    as_int: bool = False,
+    x_pad_ratio: float = 0.02,
+) -> None:
+    """在横向柱末端标注数值；调用前请已设置合适的 xlim。"""
+    if not bars or not values:
+        return
+    x1 = ax.get_xlim()[1]
+    if x1 <= 0:
+        return
+    pad = max(x1 * x_pad_ratio, 0.02 * max(values) if values else 0.1)
+    for bar, v in zip(bars, values):
+        if v is None or not math.isfinite(float(v)) or float(v) <= 0:
+            continue
+        w = bar.get_width()
+        ax.text(
+            w + pad,
+            bar.get_y() + bar.get_height() / 2,
+            _fmt_bar_value(float(v), as_int=as_int),
+            va="center",
+            fontsize=_BAR_VALUE_FONTSIZE,
+        )
+
+
 _OBSOLETE_REPORT_ASSETS: frozenset[str] = frozenset(
     {
         "chart_focus_keywords_bar.png",
@@ -212,13 +280,21 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         fig_h = max(3.2, min(14.0, 0.38 * n + 1.5))
         fig, ax = plt.subplots(figsize=(8.2, fig_h))
         y_pos = range(n)
-        ax.barh(list(y_pos), values, color="#2563eb", height=0.65)
+        bh = _thin_barh_height(n)
+        bars = ax.barh(
+            list(y_pos), values, color="#2563eb", height=bh
+        )
         ax.set_yticks(list(y_pos))
         ax.set_yticklabels(labels, fontsize=9)
         ax.invert_yaxis()
+        _set_barh_category_ylim(ax, n)
         ax.set_title(title, fontsize=12, pad=10)
         if xlabel:
             ax.set_xlabel(xlabel, fontsize=9)
+        ax.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
+        vmax = max(values)
+        ax.set_xlim(0, vmax * 1.14 + max(0.08 * vmax, 0.5))
+        _annotate_barh_numeric(ax, bars, list(values), as_int=True)
         fig.tight_layout()
         path = out_dir / fname
         fig.savefig(path, dpi=130, bbox_inches="tight")
@@ -242,21 +318,26 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         fig_h = max(3.2, min(14.0, 0.38 * n_b + 1.8))
         fig, ax = plt.subplots(figsize=(8.8, fig_h))
         y_pos = range(n_b)
-        bars = ax.barh(list(y_pos), pcts, color="#2563eb", height=0.65)
+        bh = _thin_barh_height(n_b)
+        bars = ax.barh(list(y_pos), pcts, color="#2563eb", height=bh)
         ax.set_yticks(list(y_pos))
         ax.set_yticklabels(labels, fontsize=9)
         ax.invert_yaxis()
+        _set_barh_category_ylim(ax, n_b)
         ax.set_title(title, fontsize=12, pad=10)
         ax.set_xlabel("占有效评价文本比例（%）", fontsize=9)
+        ax.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
         xmax = max(pcts) * 1.12 + 4.0
         ax.set_xlim(0, max(xmax, max(pcts) + 10.0, 24.0))
+        x1 = ax.get_xlim()[1]
+        pad = max(x1 * 0.015, 0.35)
         for bar, c, p in zip(bars, counts, pcts):
             ax.text(
-                min(bar.get_width() + 0.6, ax.get_xlim()[1] * 0.97),
+                min(bar.get_width() + pad, x1 * 0.985),
                 bar.get_y() + bar.get_height() / 2,
                 f"{int(c)}条 · {p:.1f}%",
                 va="center",
-                fontsize=8,
+                fontsize=_BAR_VALUE_FONTSIZE,
             )
         fig.tight_layout()
         path = out_dir / fname
@@ -286,7 +367,7 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         fig = plt.figure(figsize=(10.8, fig_h))
         ttl = (gname or "").strip()[:22] or "细类"
         fig.suptitle(
-            f"「{ttl}」· 关注词与使用场景（与 §8.3 统计同源；左右 Y 轴独立）",
+            f"「{ttl}」· 关注词与使用场景",
             fontsize=11,
             y=0.98,
         )
@@ -304,14 +385,22 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         ax_r = fig.add_axes([x_r, base_bottom, ax_w, h_r])
         if has_l:
             y_pos = list(range(n_l))
-            ax_l.barh(y_pos, vl[:n_l], color="#2563eb", height=0.62)
+            bh_l = _thin_barh_height(n_l)
+            bars_l = ax_l.barh(
+                y_pos, vl[:n_l], color="#2563eb", height=bh_l
+            )
             ax_l.set_yticks(y_pos)
             ax_l.set_yticklabels(wl[:n_l], fontsize=8)
-            ax_l.set_ylim(-0.5, n_l - 0.5)
             ax_l.invert_yaxis()
+            _set_barh_category_ylim(ax_l, n_l)
             ax_l.set_xlabel("关注词子串命中次数", fontsize=9)
-            ax_l.set_title("关注词（左轴：词表）", fontsize=10, pad=6)
+            ax_l.set_title("关注词", fontsize=10, pad=6)
             ax_l.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
+            vmax_l = max(vl[:n_l])
+            ax_l.set_xlim(0, vmax_l * 1.14 + max(0.5, 0.08 * vmax_l))
+            _annotate_barh_numeric(
+                ax_l, bars_l, list(vl[:n_l]), as_int=True
+            )
         else:
             ax_l.text(
                 0.5,
@@ -328,30 +417,32 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             pcts = [100.0 * c / n_texts for c in gv[: len(gl)]]
             n_b = len(gl)
             y_pos = list(range(n_b))
-            bars = ax_r.barh(y_pos, pcts, color="#059669", height=0.62)
+            bh_r = _thin_barh_height(n_b)
+            bars = ax_r.barh(y_pos, pcts, color="#059669", height=bh_r)
             ax_r.set_yticks(y_pos)
             ax_r.set_yticklabels(gl[:n_b], fontsize=8)
-            ax_r.set_ylim(-0.5, n_b - 0.5)
             ax_r.invert_yaxis()
+            _set_barh_category_ylim(ax_r, n_b)
             ax_r.set_xlabel("占有效评价文本比例（%）", fontsize=9)
             if pcts:
                 xmax = max(pcts) * 1.12 + 4.0
                 ax_r.set_xlim(0, max(xmax, max(pcts) + 10.0, 24.0))
             else:
                 ax_r.set_xlim(0, 24.0)
+            x1r = ax_r.get_xlim()[1]
+            pad_r = max(x1r * 0.015, 0.35)
             for bar, c, p in zip(bars, gv[:n_b], pcts):
                 ax_r.text(
-                    min(bar.get_width() + 0.6, ax_r.get_xlim()[1] * 0.97),
+                    min(bar.get_width() + pad_r, x1r * 0.985),
                     bar.get_y() + bar.get_height() / 2,
                     f"{int(c)}条 · {p:.1f}%",
                     va="center",
-                    fontsize=8,
+                    fontsize=_BAR_VALUE_FONTSIZE,
                 )
-            ax_r.set_title("使用场景（右轴：场景标签）", fontsize=10, pad=6)
-            # 场景类目轴画在右侧，与左侧关注词轴分离，避免中间挤两列标签
-            ax_r.yaxis.tick_right()
-            ax_r.yaxis.set_label_position("right")
-            ax_r.tick_params(axis="y", left=False, right=True, labelleft=False, labelright=True)
+            ax_r.set_title("使用场景", fontsize=10, pad=6)
+            ax_r.yaxis.tick_left()
+            ax_r.yaxis.set_label_position("left")
+            ax_r.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
         else:
             ax_r.text(
                 0.5,
@@ -412,15 +503,15 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
     save_pie(
         labs_m,
         vals_m,
-        "类目/可读名称分布（列表行占比）",
+        "细类分布（合并表 SKU）",
         "chart_category_mix_pie.png",
     )
     save_bar_h(
         labs_m[:15],
         vals_m[:15],
-        "类目分布（行数，Top）",
+        "细类分布（合并表 SKU 数，Top）",
         "chart_category_mix.png",
-        "行数",
+        "SKU 数",
     )
 
     brand_mix = brief.get("list_brand_mix_top") or []
@@ -614,24 +705,66 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             fig, (ax_l, ax_r) = plt.subplots(
                 1, 2, figsize=(10.6, fig_h), sharey=True
             )
-            for yi, pr in enumerate(prices_mx):
-                if pr is not None and pr > 0 and math.isfinite(pr):
-                    ax_l.barh(yi, pr, height=0.62, color="#2563eb")
+            bh_mx = _thin_barh_height(n)
+            price_w = [
+                float(pr)
+                if pr is not None and pr > 0 and math.isfinite(pr)
+                else 0.0
+                for pr in prices_mx
+            ]
+            bars_pl = ax_l.barh(
+                y_pos, price_w, height=bh_mx, color="#2563eb"
+            )
             ax_l.set_yticks(y_pos)
             ax_l.set_yticklabels(labels_mx, fontsize=8)
             ax_l.invert_yaxis()
+            _set_barh_category_ylim(ax_l, n)
             ax_l.set_xlabel("展示价（元）", fontsize=9)
             ax_l.set_title("展示价", fontsize=10, pad=8)
-            ax_r.barh(y_pos, sales_mx, height=0.62, color="#059669")
-            ax_r.set_xlabel("销量（搜索列表 totalSales 口径，已解析为件数）", fontsize=9)
+            ax_l.tick_params(axis="y", left=True, right=False, labelleft=True, labelright=False)
+            pmax = max(price_w) if price_w else 0.0
+            if pmax > 0:
+                ax_l.set_xlim(0, pmax * 1.12 + max(0.08 * pmax, 0.5))
+            else:
+                ax_l.set_xlim(0, 1)
+            pad_p = max(ax_l.get_xlim()[1] * 0.012, 0.08)
+            for bar, pr in zip(bars_pl, prices_mx):
+                if pr is not None and pr > 0 and math.isfinite(pr):
+                    ax_l.text(
+                        bar.get_width() + pad_p,
+                        bar.get_y() + bar.get_height() / 2,
+                        _fmt_bar_value(float(pr), as_int=False),
+                        va="center",
+                        fontsize=_BAR_VALUE_FONTSIZE,
+                    )
+            sales_f = [float(s) for s in sales_mx]
+            bars_sr = ax_r.barh(
+                y_pos, sales_f, height=bh_mx, color="#059669"
+            )
+            ax_r.set_xlabel("销量", fontsize=9)
             ax_r.set_title("销量", fontsize=10, pad=8)
             ax_r.xaxis.set_major_formatter(
                 FuncFormatter(_format_xaxis_int_cn)
             )
             ax_r.tick_params(axis="y", left=False, labelleft=False)
+            smax = max(sales_f) if sales_f else 0.0
+            if smax > 0:
+                ax_r.set_xlim(0, smax * 1.1 + max(0.04 * smax, smax * 0.02))
+            else:
+                ax_r.set_xlim(0, 1)
+            pad_s = max(ax_r.get_xlim()[1] * 0.008, smax * 0.01 if smax else 0.1)
+            for bar, sv in zip(bars_sr, sales_mx):
+                if sv > 0:
+                    ax_r.text(
+                        bar.get_width() + pad_s,
+                        bar.get_y() + bar.get_height() / 2,
+                        _format_xaxis_int_cn(float(sv), None),
+                        va="center",
+                        fontsize=_BAR_VALUE_FONTSIZE,
+                    )
             ttl = gname[:22] if gname else "细类"
             fig.suptitle(
-                f"「{ttl}」· 竞品矩阵：价格与销量（与 §5 表同源）",
+                f"「{ttl}」· 竞品矩阵：价格与销量",
                 fontsize=11,
                 y=1.01,
             )

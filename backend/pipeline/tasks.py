@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from .cookie_paste import normalize_browser_cookie_paste
 from .ingest import try_ingest_job_full
-from .jd_runner import (
+from .jd.runner import (
     resolve_pipeline_run_directory_for_job,
     try_write_competitor_report_if_merged_exists,
 )

@@ -30,21 +30,21 @@ from .row_serialize import (
     merged_row_to_dict,
     search_row_to_dict,
 )
-from .brief_pack import build_brief_pack_zip_bytes
-from .strategy_draft import build_strategy_draft_markdown
-from .ingest import ingest_job_full
-from .jd_runner import (
+from .ingest import ingest_job_full, resolve_and_validate_run_dir
+from .reporting.brief_pack import build_brief_pack_zip_bytes
+from .reporting.strategy_draft import build_strategy_draft_markdown
+from .jd.runner import (
     build_competitor_brief_for_job,
     get_default_report_config,
     merge_llm_supplement_with_rules_report,
     regenerate_competitor_report,
     write_competitor_analysis_markdown,
 )
-from .llm_generate import (
+from .llm.generate import (
     generate_competitor_report_markdown_llm,
     generate_strategy_draft_markdown_llm,
 )
-from .md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
+from .reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 from .models import (
     JdJobCommentRow,
     JdJobDetailRow,
@@ -189,10 +189,27 @@ class JobDetailView(APIView):
         job = PipelineJob.objects.filter(pk=pk).first()
         if not job:
             raise Http404()
-        ser = JobReportConfigPatchSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        job.report_config = ser.validated_data["report_config"]
-        job.save(update_fields=["report_config", "updated_at"])
+        body = request.data if isinstance(request.data, dict) else {}
+        update_fields: list[str] = []
+        if "report_config" in body:
+            ser = JobReportConfigPatchSerializer(data={"report_config": body["report_config"]})
+            ser.is_valid(raise_exception=True)
+            job.report_config = ser.validated_data["report_config"]
+            update_fields.append("report_config")
+        if "run_dir" in body:
+            try:
+                job.run_dir = str(
+                    resolve_and_validate_run_dir(str(body.get("run_dir") or ""))
+                )
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            update_fields.append("run_dir")
+        if not update_fields:
+            return Response(
+                {"detail": "请提供 report_config 或 run_dir（用于绑定已有批次目录）"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        job.save(update_fields=update_fields + ["updated_at"])
         return Response(PipelineJobSerializer(job).data)
 
 
@@ -876,7 +893,13 @@ class JdProductListView(APIView):
                 | Q(detail_brand__icontains=q)
             )
         if kw:
-            qs = qs.filter(current_payload__pipeline_keyword=kw)
+            from .csv_schema import MERGED_FIELD_TO_CSV_HEADER
+
+            h_kw = MERGED_FIELD_TO_CSV_HEADER["pipeline_keyword"]
+            qs = qs.filter(
+                Q(current_payload__pipeline_keyword=kw)
+                | Q(**{f"current_payload__{h_kw}": kw})
+            )
         total = qs.count()
         page = qs.order_by("-updated_at")[offset : offset + limit]
         return Response(
@@ -947,9 +970,17 @@ class JobImportMergedView(APIView):
         job = PipelineJob.objects.filter(pk=pk).first()
         if not job:
             raise Http404()
-        if job.status != JobStatus.SUCCESS or not (job.run_dir or "").strip():
+        if job.status == JobStatus.RUNNING:
             return Response(
-                {"detail": "仅可对已成功且含 run_dir 的任务执行入库"},
+                {"detail": "执行中不可入库，请待任务结束或终止后再试"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (job.run_dir or "").strip():
+            return Response(
+                {
+                    "detail": "任务未绑定 run_dir。可 PATCH /api/pipeline/jobs/<id>/ "
+                    "传入 run_dir，或使用 python manage.py ingest_pipeline_dataset。"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:

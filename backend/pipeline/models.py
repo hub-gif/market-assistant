@@ -207,6 +207,8 @@ class JdJobDetailRow(models.Model):
     detail_category_path = models.TextField(blank=True, default="")
     detail_product_attributes = models.TextField(blank=True, default="")
     detail_body_ingredients = models.TextField(blank=True, default="")
+    buyer_ranking_line = models.TextField(blank=True, default="")
+    buyer_promo_text = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["row_index"]
@@ -292,6 +294,8 @@ class JdJobMergedRow(models.Model):
     detail_category_path = models.TextField(blank=True, default="")
     detail_product_attributes = models.TextField(blank=True, default="")
     detail_body_ingredients = models.TextField(blank=True, default="")
+    buyer_ranking_line = models.TextField(blank=True, default="")
+    buyer_promo_text = models.TextField(blank=True, default="")
     pipeline_comment_count = models.TextField(blank=True, default="")
     comment_preview = models.TextField(blank=True, default="")
 

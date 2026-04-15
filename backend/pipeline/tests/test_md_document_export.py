@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from django.test import SimpleTestCase
 
-from pipeline.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
+from pipeline.reporting.md_document_export import (
+    markdown_to_docx_bytes,
+    markdown_to_pdf_bytes,
+)
 
 
 class MdDocumentExportTests(SimpleTestCase):
