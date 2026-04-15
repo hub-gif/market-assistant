@@ -46,6 +46,7 @@ REPORT_SYSTEM = """你是业务与产品读者顾问。输入 JSON 含 `keyword`
 所有数字、占比、条数、品牌名、价格区间等**必须严格来自输入 JSON**，禁止编造未在输入中出现的定量结论。
 
 **硬性禁止**：
+- 正文中**勿**写「第九章」「策略与机会」等与宿主文档已有标题**重复**的章名、小节名或起首套话；本段小节仅用 ``####`` 业务主题；
 - **不要**使用「## 一」「## 八」等会打乱宿主文档的顶级章节号；请使用 ``####`` 或必要时 ``###`` 作为本段内小节标题；
 - **不要**输出完整报告目录或复述「研究范围与方法」长章；
 - **不要**撰写 Markdown 表格版「竞品对比矩阵」或罗列 SKU 明细——**正文已含矩阵**，此处只做分组级语义归纳；
@@ -53,13 +54,13 @@ REPORT_SYSTEM = """你是业务与产品读者顾问。输入 JSON 含 `keyword`
 
 **请输出**（仅输出将置于 §8.5 下的正文，不要自造「### 8.5」标题行）：
 - **Markdown**，约 **800～1500 字**；
-- 建议用 ``####`` 组织：**执行摘要级要点**、**竞争与价盘**、**用户声量与负向事由**（须归纳用户在抱怨什么类型的问题，而非只堆关键词）、**与第九章衔接的策略边界**；
+- 建议用 ``####`` 组织：**执行摘要级要点**、**竞争与价盘**、**用户声量与负向事由**（须归纳用户在抱怨什么类型的问题，而非只堆关键词）、**后续可验证动作（假设）**（不写第九章目录或重复策略章内容）；
 - 若有 `comment_sentiment_lexicon`，概括正/负向粗判局限；**负向**写清事由类型（口感、价格、物流等）；
 - **归因与引语（硬性）**：`consumer_feedback_by_matrix_group` 与 `comment_sentiment_lexicon` 等均为**跨 SKU/跨店铺的关键词子串或条数统计**，**不能**单独据此推断「某一店铺某一单品」的结论。  
   - **具体体验句式（含口感、包装等）**须以正文 **§8.2** 中带 ``【细类｜SKU｜品名｜店铺】`` 前缀的抽样为准；本段**不要**新增无前缀、无店铺/品名/SKU 指向的「」引语。  
   - 若写口感、包装、物流、价格等**聚合**维度，须点明口径（如「在已合并的评价文本中，『物流』『价格』类关键词命中较多，为全样本子串计数」）；可结合 `matrix_overview_for_llm` 谈细类结构；**可一句**引导读者「见 §8.2 按店铺/品名的负向举例」。  
   - 若 §8.2 已归纳带店铺与 SKU 的负向主题，本段**只做执行摘要级收束**，勿重复编造新引文。  
-- 语气专业、中文；缺失项写「本段未提供该项」而非猜测。"""
+- 语气专业、中文；某类信息在输入中缺失时**一句带过数据缺口**即可，**禁止**输出「本段未提供该项」等套话占位。"""
 
 REPORT_USER_PREFIX = """请根据以下 JSON 撰写上文所述 §8.5 嵌入段落（Markdown 正文，勿加 ### 8.5 标题）。\n\n"""
 
@@ -365,6 +366,7 @@ COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：
 请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
 - 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题（不要使用 ``##`` 一级标题）；
 - 每段约 **100～220 字**中文：归纳该细类下**消费者在讨论什么**（口感、价格、物流、功效疑虑等）、**关注词命中反映的诉求**；勿编造摘录中未出现的品牌、医学结论；
+- **去重与可证（本章仅评论侧）**：本段**只**依据评价/关注词摘录，**禁止**把 ``keyword``、品类常识或商品标题卖点套话写成「用户评价」；**禁止**各细类段首复用同一句总括（如「整体上满足了消费者对低 GI、高蛋白、便携性的需求」）；每段开头句式须**有变化**，并至少一句体现**该细类与相邻细类在讨论焦点上的差异**。**利益/诉求词**（低 GI、高蛋白、便携、代餐、控糖等）**仅当**在 ``sample_text_snippets``、``effective_text_lines`` 或 ``focus_hit_lines`` 的**原文**中可子串命中或可明确同义（便携↔随身、小包装、单片、独立装等）时才写；若上述字段中**未**出现「蛋白」「便携」「随身」「小包装」「单片」等，则**不得**写「高蛋白」「便携性」等；**禁止**为凑齐常见卖点组合而脑补未在输入中出现的词。
 - **禁止**输出 Markdown 表格、禁止逐条复述全部评价；
 - 若 ``effective_text_lines`` 很少，明确写「样本较少，归纳供启发」。
 
@@ -627,7 +629,7 @@ PRICE_GROUPS_SYSTEM = """你是定价与渠道顾问。输入为 JSON：``keywor
 请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
 - 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题；
 - 每段约 **80～200 字**中文，**只写价盘与价差**：用 ``price_stats`` 概括价带/离散度（如 min～max、中位数、相对集中或拉得开）；用 ``listing_snippets`` 归纳**标价 vs 券后 vs 详情价**是否常一致、是否常见券后低于标价、价差幅度的大致印象；**可一句**联系标题里**显式出现的规格数字**（如克重、件数）解释**价高/价差大是否可能来自大规格或组合装**——仅当摘录里确有数字时写，勿展开成宣称解读；
-- **硬性禁止**（本章不是卖点章）：不要列举或归纳「0 蔗糖 / 低 GI / 全麦 / 代餐 / 孕妇 / 控糖」等**营销宣称或场景关键词**；不要写配料、功效、品牌叙事、用户画像；这些若出现应留给报告 **§5 细类要点归纳**；
+- **硬性禁止**（本章不是卖点章）：不要列举或归纳「0 蔗糖 / 低 GI / 全麦 / 代餐 / 孕妇 / 控糖」等**营销宣称或场景关键词**；不要写配料、功效、品牌叙事、用户画像；这些若出现应留给报告 **§5 细类要点归纳**。
 - **禁止** Markdown 表格、禁止罗列全部 SKU；勿编造未出现的到手价、销量排名；
 - 若 ``price_stats`` 中 n=0 或缺失，写「该细类无可解析数值价，从略」。
 
@@ -662,3 +664,89 @@ def generate_price_group_summaries_llm(
         raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
     user = PRICE_GROUPS_USER_PREFIX + raw
     return _call_llm(PRICE_GROUPS_SYSTEM, user)
+
+
+PROMO_GROUPS_SYSTEM = """你是电商促销与价盘顾问。输入为 JSON：``keyword`` 与 ``groups``。
+每个 group 含 ``group``（细分类目名，与 §5 矩阵、§6 一致）、``sku_count``、``rows_with_buyer_promo_text``（该细类合并表中「促销摘要」非空行数）、
+``promo_snippets``（若干条摘录：标题 + 促销摘要/购买者侧榜单/列表卖点与腰带等，已截断）。
+
+请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
+- 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题；
+- 每段约 **80～220 字**中文，**只写促销与活动形态**：如券后/满减/百亿补贴/新人包邮/限购提示/「到手价」展示方式、与 **§6.1** 规则统计可对照的**活动话术密度**印象；可一句点出**榜单/腰带**是否常见、是否与价格带并存；
+- **硬性禁止**：不要展开配料、功效、用户画像；不要复述 §5 的配料归纳；不要编造未在摘录中出现的具体金额或活动规则；
+- 若该细类 ``rows_with_buyer_promo_text`` 为 0 且摘录几乎只有标题，写「该细类缺少购买者侧促销摘要，从略」。
+
+总输出约 **500～2800 字**。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+
+PROMO_GROUPS_USER_PREFIX = (
+    "请根据以下 JSON 撰写竞品报告第六章「细类促销与活动要点归纳」正文（Markdown）。"
+    "依据 ``promo_snippets`` 中的促销摘要与列表文案，**不写**价带分位数（留给上一小节）。\n\n"
+)
+
+
+def generate_promo_group_summaries_llm(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    trimmed: list[dict[str, Any]] = []
+    for g in groups:
+        if not isinstance(g, dict):
+            continue
+        g2 = dict(g)
+        sn = g2.get("promo_snippets")
+        if isinstance(sn, list) and len(sn) > 14:
+            g2["promo_snippets"] = sn[:14]
+        trimmed.append(g2)
+    payload = {"keyword": keyword, "groups": trimmed}
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 95_000:
+        for g2 in trimmed:
+            sn = g2.get("promo_snippets")
+            if isinstance(sn, list) and len(sn) > 8:
+                g2["promo_snippets"] = sn[:8]
+        raw = json.dumps({"keyword": keyword, "groups": trimmed}, ensure_ascii=False)
+    user = PROMO_GROUPS_USER_PREFIX + raw
+    return _call_llm(PROMO_GROUPS_SYSTEM, user)
+
+
+STRATEGY_OPPORTUNITIES_SYSTEM = """你是 B 端市场与增长顾问。输入 JSON 含 ``keyword`` 与 ``competitor_brief``（与本任务规则报告同源的结构化摘要，可能经裁剪，并含 ``matrix_overview_for_llm``）。
+
+请输出 **Markdown 正文**（不要用 ``` 围栏包裹），将**直接嵌入**宿主文档中**已存在章节标题之下**的小节，读者已知当前处于「策略与机会」相关章节。
+
+**标题与措辞（硬性）**：
+- **禁止**在正文开头或任何位置重复宿主已有章名/小节名，包括但不限于：「第九章」「第9章」「九、」「策略与机会提示」「策略与机会建议」「策略与机会」等；**不要**自造 ``##`` 一级标题；
+- 小节标题**仅允许**使用业务主题式 ``####``（如下所列），从第一句起就进入实质内容。
+
+**必须遵守**：
+- **数字与事实**：价格分位数、集中度份额、条数、占比等**只能**来自输入 JSON 中已有字段；**禁止编造**未出现的品牌销量、具体 GMV、未给出的到手价；
+- **语气**：分节给出**可操作的假设性建议**（定价区间思路、应对齐的差异化观测点、应规避的风险、促销与机制设计线索、转化与详情页/评价侧改进方向），每条建议用「假设：」「待验证：」等标明不确定性；
+- **结构**：至少使用 ``####`` 组织以下主题（可合并子条，但须覆盖）：**定价与价带**、**差异化与应对齐的优势**、**风险与避免项**、**促销与活动机制**、**转化与体验**；
+- **禁止**：不要写完整报告目录；不要复述「研究范围与方法」；不要使用 CR1/CR3 缩写（用「第一大……份额」「前三家合计」）；不要输出与输入矛盾的价带描述。
+
+篇幅约 **900～3200 字**（数据丰富可偏长）。"""
+
+
+STRATEGY_OPPORTUNITIES_USER_PREFIX = (
+    "请根据以下 JSON 撰写策略归纳正文（Markdown）。宿主报告已含章节标题，**勿在输出中写第九章或「策略与机会」类标题**。\n\n"
+)
+
+
+def generate_strategy_opportunities_llm(
+    brief: dict[str, Any], *, keyword: str
+) -> str:
+    """
+    基于 ``build_competitor_brief`` 全量摘要，生成策略与机会小节正文（不含章名，由宿主 Markdown 加标题）。
+    """
+    compact = compact_brief_for_llm(brief, max_chars=100_000)
+    payload = {"keyword": keyword, "competitor_brief": compact}
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 110_000:
+        compact = compact_brief_for_llm(brief, max_chars=65_000)
+        payload = {"keyword": keyword, "competitor_brief": compact}
+        raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 110_000:
+        compact = compact_brief_for_llm(brief, max_chars=40_000)
+        payload = {"keyword": keyword, "competitor_brief": compact}
+        raw = json.dumps(payload, ensure_ascii=False)
+    user = STRATEGY_OPPORTUNITIES_USER_PREFIX + raw
+    return _call_llm(STRATEGY_OPPORTUNITIES_SYSTEM, user)
