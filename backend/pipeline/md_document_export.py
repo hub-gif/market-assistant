@@ -116,6 +116,7 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         p.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
         text = _strip_inline_md(line)
         p.add_run(text)
+        i += 1
 
     bio = BytesIO()
     doc.save(bio)
