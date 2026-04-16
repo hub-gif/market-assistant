@@ -17,7 +17,7 @@
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
 
-嵌入竞品报告：任务 ``report_config`` 中 ``chapter8_text_mining_probe``: true 时，流水线会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **§8.3**，替代原「关注词 + 场景」条图及对应两段大模型；**§8.2 与「大模型深入解读（主题归因…）」保留**。
+嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **§8.3**，替代原「关注词 + 场景」条图及对应两段大模型；**§8.2 与「大模型深入解读（主题归因…）」保留**。
 """
 from __future__ import annotations
 

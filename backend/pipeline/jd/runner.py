@@ -174,7 +174,7 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_promo_group_summaries": True,
         "llm_strategy_opportunities": True,
         "llm_group_summaries_chunk_by_matrix": True,
-        "chapter8_text_mining_probe": False,
+        "chapter8_text_mining_probe": True,
         "chapter8_text_mining_probe_live_llm": True,
         "chapter8_text_mining_probe_llm_chunked": True,
         "chapter8_text_mining_probe_wordcloud": True,
