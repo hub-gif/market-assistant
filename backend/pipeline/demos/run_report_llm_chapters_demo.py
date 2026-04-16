@@ -6,7 +6,7 @@
 - §8.2：``generate_comment_sentiment_analysis_llm``
 - §8末细类评价：``generate_comment_group_summaries_llm``
 - §8.3 右栏后使用场景：``generate_scenario_group_summaries_llm``
-- §9 策略与机会：``generate_strategy_opportunities_llm``（输入为 ``build_competitor_brief`` 摘要）
+- §9 策略与机会：``generate_strategy_opportunities_llm``（``build_competitor_brief`` + 可选 ``chapter_llm_narratives`` 与各章归纳对齐）
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend

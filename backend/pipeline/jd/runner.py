@@ -718,11 +718,38 @@ def write_competitor_analysis_for_run_dir(
         try:
             from ..llm.generate import generate_strategy_opportunities_llm
 
+            _strategy_narratives: dict[str, str] = {}
+            if (llm_sentiment_md or "").strip():
+                _strategy_narratives["sec8_2_sentiment_theme_attribution"] = (
+                    llm_sentiment_md
+                )
+            if (llm_matrix_md or "").strip():
+                _strategy_narratives["sec5_matrix_group_summaries"] = llm_matrix_md
+            if (llm_price_md or "").strip():
+                _strategy_narratives["sec6_price_group_summaries"] = llm_price_md
+            if (llm_promo_md or "").strip():
+                _strategy_narratives["sec6_promo_group_summaries"] = llm_promo_md
+            if (llm_scenario_gr_md or "").strip():
+                _strategy_narratives["sec8_3_scenario_summaries"] = llm_scenario_gr_md
+            if use_ch8_probe and (chapter8_probe_embed_md or "").strip():
+                _strategy_narratives["sec8_3_text_mining_probe"] = (
+                    chapter8_probe_embed_md
+                )
+            elif (llm_comment_gr_md or "").strip():
+                _strategy_narratives["sec8_3_comment_focus_summaries"] = (
+                    llm_comment_gr_md
+                )
+
             llm_strategy_opp_md = generate_strategy_opportunities_llm(
-                brief_final, keyword=kw
+                brief_final,
+                keyword=kw,
+                chapter_llm_narratives=_strategy_narratives or None,
             )
             strategy_opp_llm_rec["ok"] = True
             strategy_opp_llm_rec["chars"] = len(llm_strategy_opp_md)
+            strategy_opp_llm_rec["prior_chapter_narrative_keys"] = sorted(
+                _strategy_narratives.keys()
+            )
         except Exception as e:
             strategy_opp_llm_rec["ok"] = False
             strategy_opp_llm_rec["error"] = str(e)
