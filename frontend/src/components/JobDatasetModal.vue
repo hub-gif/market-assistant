@@ -42,7 +42,8 @@ const sortField = ref('row_index')
 const sortOrder = ref('asc')
 /** 类目（§5 矩阵），对应接口参数 report_group */
 const reportGroup = ref('')
-const shopQ = ref('')
+/** 店铺名精确筛选，对应接口参数 shop；选项来自摘要 shop_options */
+const selectedShop = ref('')
 const priceMin = ref('')
 const priceMax = ref('')
 const detailCategoryQ = ref('')
@@ -72,6 +73,7 @@ const sortOptions = computed(() => {
 })
 
 const categoryOptions = computed(() => summary.value?.category_options || [])
+const shopOptions = computed(() => summary.value?.shop_options || [])
 
 const displayColumns = computed(() => {
   const s = summary.value
@@ -163,7 +165,7 @@ async function refreshList() {
             sort: sortField.value,
             order: sortOrder.value,
             reportGroup: reportGroup.value.trim(),
-            shopQ: shopQ.value.trim(),
+            shop: selectedShop.value.trim(),
             priceMin: priceMin.value,
             priceMax: priceMax.value,
             detailCategoryQ: detailCategoryQ.value.trim(),
@@ -198,7 +200,7 @@ watch(
       sortField.value = 'row_index'
       sortOrder.value = 'asc'
       reportGroup.value = ''
-      shopQ.value = ''
+      selectedShop.value = ''
       priceMin.value = ''
       priceMax.value = ''
       detailCategoryQ.value = ''
@@ -217,7 +219,7 @@ watch(tab, () => {
   sortField.value = 'row_index'
   sortOrder.value = 'asc'
   reportGroup.value = ''
-  shopQ.value = ''
+  selectedShop.value = ''
   priceMin.value = ''
   priceMax.value = ''
   detailCategoryQ.value = ''
@@ -228,7 +230,7 @@ watch(
     sortField,
     sortOrder,
     reportGroup,
-    shopQ,
+    selectedShop,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -248,7 +250,7 @@ watch(
     sortField,
     sortOrder,
     reportGroup,
-    shopQ,
+    selectedShop,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -434,20 +436,18 @@ async function runExport(format) {
             </select>
           </label>
           <label class="filter-item">
-            类目（§5 矩阵）
+            类目
             <select v-model="reportGroup" class="filter-select wide">
               <option value="">全部</option>
               <option v-for="g in categoryOptions" :key="g" :value="g">{{ g }}</option>
             </select>
           </label>
           <label class="filter-item">
-            店铺名包含
-            <input
-              v-model="shopQ"
-              type="search"
-              class="filter-input wide"
-              placeholder="模糊匹配店铺名"
-            />
+            店铺
+            <select v-model="selectedShop" class="filter-select wide">
+              <option value="">全部</option>
+              <option v-for="s in shopOptions" :key="s" :value="s">{{ s }}</option>
+            </select>
           </label>
           <template v-if="tab === 'detail' || tab === 'merged'">
             <label class="filter-item">

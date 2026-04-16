@@ -32,7 +32,7 @@ from .dataset_api import (
     parse_sort_meta,
     price_bounds_from_request,
     report_group_from_request,
-    shop_q_from_request,
+    shop_from_request,
 )
 from .dataset_nonempty import (
     comment_columns_for_api,
@@ -777,6 +777,48 @@ def _detail_category_path_options(job: PipelineJob) -> list[str]:
     )
 
 
+def _shop_options_for_job(job: PipelineJob) -> list[str]:
+    """任务内各表出现的店铺名去重排序（搜索 shop_name、商详/宽表店铺列）。"""
+    names: set[str] = set()
+    for v in (
+        JdJobSearchRow.objects.filter(job=job)
+        .exclude(shop_name="")
+        .values_list("shop_name", flat=True)
+        .distinct()
+    ):
+        t = str(v).strip()
+        if t:
+            names.add(t)
+    for v in (
+        JdJobDetailRow.objects.filter(job=job)
+        .exclude(detail_shop_name="")
+        .values_list("detail_shop_name", flat=True)
+        .distinct()
+    ):
+        t = str(v).strip()
+        if t:
+            names.add(t)
+    for v in (
+        JdJobMergedRow.objects.filter(job=job)
+        .exclude(shop_name="")
+        .values_list("shop_name", flat=True)
+        .distinct()
+    ):
+        t = str(v).strip()
+        if t:
+            names.add(t)
+    for v in (
+        JdJobMergedRow.objects.filter(job=job)
+        .exclude(detail_shop_name="")
+        .values_list("detail_shop_name", flat=True)
+        .distinct()
+    ):
+        t = str(v).strip()
+        if t:
+            names.add(t)
+    return sorted(names)
+
+
 class JobDatasetSummaryView(APIView):
     """任务在库中的搜索/详情/评价行数（入库后可用）。"""
 
@@ -796,6 +838,7 @@ class JobDatasetSummaryView(APIView):
                 "comment_columns": comment_columns_for_api(job),
                 "merged_columns": merged_columns_for_api(job),
                 "category_options": _report_group_options_for_job(job),
+                "shop_options": _shop_options_for_job(job),
                 "detail_category_path_options": _detail_category_path_options(job),
                 "dataset_sort_help": {
                     "search": sorted(SEARCH_SORT_FIELDS),
@@ -814,7 +857,7 @@ class JobDatasetSearchView(APIView):
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in SEARCH_SORT_FIELDS else "row_index"
         rg = report_group_from_request(request)
-        sq = shop_q_from_request(request)
+        sp = shop_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobSearchRow.objects.filter(job=job)
@@ -830,7 +873,7 @@ class JobDatasetSearchView(APIView):
                 "page_size": page_size,
                 "filters": filter_echo(
                     report_group=rg,
-                    shop_q=sq,
+                    shop=sp,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,
@@ -849,7 +892,7 @@ class JobDatasetDetailView(APIView):
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in DETAIL_SORT_FIELDS else "row_index"
         rg = report_group_from_request(request)
-        sq = shop_q_from_request(request)
+        sp = shop_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobDetailRow.objects.filter(job=job)
@@ -865,7 +908,7 @@ class JobDatasetDetailView(APIView):
                 "page_size": page_size,
                 "filters": filter_echo(
                     report_group=rg,
-                    shop_q=sq,
+                    shop=sp,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,
@@ -906,7 +949,7 @@ class JobDatasetMergedView(APIView):
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in MERGED_SORT_FIELDS else "row_index"
         rg = report_group_from_request(request)
-        sq = shop_q_from_request(request)
+        sp = shop_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobMergedRow.objects.filter(job=job)
@@ -922,7 +965,7 @@ class JobDatasetMergedView(APIView):
                 "page_size": page_size,
                 "filters": filter_echo(
                     report_group=rg,
-                    shop_q=sq,
+                    shop=sp,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,
