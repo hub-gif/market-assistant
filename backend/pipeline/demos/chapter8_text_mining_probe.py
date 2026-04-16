@@ -30,8 +30,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
@@ -51,20 +49,25 @@ import jd_keyword_pipeline as kpl  # noqa: E402
 from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
 from pipeline.llm.generate import _call_llm  # noqa: E402 探针专用，不新增 generate 导出
 
+# 导入失败时**不得** ``sys.exit``：本模块会被 ``runner`` 在 Web 请求中 import，退出会整进程 500。
+_PROBE_TEXT_MINING_DEPS_OK = False
+_PROBE_TEXT_MINING_IMPORT_ERROR = ""
 try:
+    import numpy as np  # noqa: WPS433
     import jieba  # noqa: WPS433
     from sklearn.decomposition import LatentDirichletAllocation  # noqa: WPS433
     from sklearn.feature_extraction.text import (  # noqa: WPS433
         CountVectorizer,
         TfidfVectorizer,
     )
+    _PROBE_TEXT_MINING_DEPS_OK = True
 except ImportError as e:
-    print(
-        "缺少依赖，请先安装：pip install jieba scikit-learn numpy\n"
-        f"原始错误: {e}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    np = None  # type: ignore[assignment]
+    jieba = None  # type: ignore[assignment]
+    LatentDirichletAllocation = None  # type: ignore[assignment]
+    CountVectorizer = None  # type: ignore[assignment]
+    TfidfVectorizer = None  # type: ignore[assignment]
+    _PROBE_TEXT_MINING_IMPORT_ERROR = str(e)
 
 try:
     import matplotlib
@@ -507,6 +510,15 @@ def _run_probe_text_mining_llm(
         return f"> **探针 LLM 解读**调用失败：{e}"
 
 
+def _ensure_probe_dependencies() -> None:
+    if not _PROBE_TEXT_MINING_DEPS_OK:
+        raise ImportError(
+            "第八章文本挖掘探针依赖未安装，请在 backend 环境下执行："
+            "pip install jieba scikit-learn numpy wordcloud\n"
+            f"原始错误: {_PROBE_TEXT_MINING_IMPORT_ERROR}"
+        )
+
+
 def build_markdown(
     run_dir: Path,
     *,
@@ -520,6 +532,7 @@ def build_markdown(
     wordcloud_enabled: bool,
     wordcloud_max: int,
 ) -> str:
+    _ensure_probe_dependencies()
     kw, merged, comments = _load_run(run_dir)
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     groups = jcr._consumer_feedback_by_matrix_group(
@@ -746,6 +759,13 @@ def markdown_embed_body_for_competitor_report(full_probe_md: str) -> str:
 
 
 def main() -> None:
+    if not _PROBE_TEXT_MINING_DEPS_OK:
+        print(
+            "缺少依赖，请先安装：pip install jieba scikit-learn numpy wordcloud\n"
+            f"原始错误: {_PROBE_TEXT_MINING_IMPORT_ERROR}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     ap = argparse.ArgumentParser(description="第八章文本挖掘探针（独立脚本）")
     ap.add_argument(
         "--run-dir",

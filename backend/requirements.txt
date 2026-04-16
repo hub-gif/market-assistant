@@ -9,7 +9,8 @@ reportlab>=4.0
 matplotlib>=3.8
 playwright>=1.40
 
-# 可选：pipeline.demos.chapter8_text_mining_probe（第八章文本挖掘探针）
-# jieba>=0.42
-# scikit-learn>=1.4
-# wordcloud>=1.9
+# 第八章文本挖掘探针（默认写入竞品报告 §8.3 时需安装）
+jieba>=0.42
+scikit-learn>=1.4
+numpy>=1.26
+wordcloud>=1.9
