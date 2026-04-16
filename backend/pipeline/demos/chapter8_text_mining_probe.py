@@ -2,7 +2,7 @@
 第八章「文本挖掘探针」独立脚本（**不修改**主报告代码）。
 
 流程（按细类分组）：清洗（jieba 分词 + 停用词）→ **词云图（可选）** → 词频 / TF-IDF → 共现对 → LDA 主题
-→ 规则化叙事小结 → 文末可选 **细类 LLM 归纳**（与正式报告 ``generate_comment_group_summaries_llm`` / ``llm_comment_group_summaries`` 同源，非 §8.2 情感）。
+→ 规则化叙事小结 → 文末可选 **探针专用 LLM**（结构化 JSON + ``PROBE_TEXT_MINING_SYSTEM`` + ``_call_llm``；**非** ``COMMENT_GROUPS_SYSTEM``、**非** §8.2 情感）。
 
 依赖（请自行安装）::
 
@@ -47,6 +47,7 @@ import jd_competitor_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
 from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
+from pipeline.llm.generate import _call_llm  # noqa: E402 探针专用，不新增 generate 导出
 
 try:
     import jieba  # noqa: WPS433
@@ -83,6 +84,32 @@ _STOP_BASIC: frozenset[str] = frozenset(
     的 了 和 是 在 也 有 就 都 很 啊 还 吗 吧 呢 呀 哦 噢 哈 呵 与 及 或 等 为 被 让 从 到 把 而 又 对 中 这 那 其 一个 一些 没有 不是 可以 这样 我们 你们 他们 它们 它 会 要 能 去 来 做 用 给 自己 这个 那个 什么 怎么 如果 因为 所以 但是 而且 然后 还是 或者 还有 就是 只是 只是 已经 还是
     非常 真的 比较 特别 感觉 觉得 认为 看到 收到 东西 商品 产品 卖家 买家 店铺 京东 物流 快递 包装 评价 评论 购买 买 卖 收到 天 次 个 款 种 条 块
     """.split()
+)
+
+# --- 文本挖掘探针 · 专用 LLM（与正式报告 ``COMMENT_GROUPS_SYSTEM`` / §8.2 均不同）---
+PROBE_TEXT_MINING_SYSTEM = """你是用户研究与文本挖掘方向的助手。
+
+输入 JSON 为「第八章文本挖掘探针」的**专用**结果（``schema_version``=1），**不是**正式竞品报告里的关注词规则统计、也不是 §8.2 情感 Lexicon。其中的数字与词表来自 **jieba 分词 + sklearn（TF-IDF / 共现 / LDA）**，与业务侧子串计数**口径不同**。
+
+每个 ``groups`` 元素含：
+- ``probe_status``：``ok`` 表示该细类已完成分词与统计；``skipped`` 表示样本过少等未下钻。
+- ``word_freq_top`` / ``tfidf_top`` / ``cooccurrence_top``：统计型特征（开放词表）。
+- ``lda``：无监督主题词；**仅为探索**，同一词可出现在多主题，**禁止**当作严格品类或固定标签。
+- ``focus_hit_lines`` / ``sample_text_snippets``：与正式管线摘取方式**类似**，仅用于**对照语境**；若与 TF-IDF 焦点冲突，以**整句原文**为准，并在段末或「使用注意」中可点明「统计与语义可能不一致」。
+
+**任务**：对 ``groups`` 中**每一项**输出对应 Markdown（**顺序与输入一致**）：
+- 对 ``probe_status == "ok"``：以 ``#### `` + 与该条 ``group`` 字段**完全一致**的细类名作为小节标题（勿用 ``##`` 一级标题）；每段约 **100～260 字**。
+- 内容须包含：①用 **1～2 句**概括该细类评论**主要讨论焦点**（综合词频与 TF-IDF，**不要罗列具体数字**）；② **1～2 句**说明共现词对**暗示**哪些维度常一起出现（**非因果**）；③若 ``lda.topics`` 非空，**1～2 句**说明主题粗分侧重点，并**明确** LDA 无监督、**不**与矩阵细类一一对应；④至少 **一句**与 ``sample_text_snippets`` 或 ``focus_hit_lines`` 中的**原文信息**呼应（可保留 ``【细类…店铺…】`` 前缀）；若无可用摘录则写明。
+- 对 ``probe_status == "skipped"``：该小节仅 **一句**说明原因。
+
+**禁止**：编造数据中未出现的品牌、价格、医学功效或疗效承诺；不要把 ``keyword`` 监测词写进「用户原话」；不要输出 Markdown 表格；不要声称本段与「正式报告 §8 末」完全同源——本任务为**探针解读**。
+
+全文末可另起一段 **「使用注意」**（简短）：点明开放词表统计与人工阅读差异、LDA 局限、小样本细类不可靠。
+
+总字数约 **800～4500 字**（细类多则偏长）。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
+
+PROBE_TEXT_MINING_USER_PREFIX = (
+    "请根据以下 JSON 撰写「文本挖掘探针」解读正文（Markdown）。\n\n"
 )
 
 
@@ -366,18 +393,31 @@ def _effective_focus_words(run_dir: Path) -> tuple[str, ...]:
     return jcr.COMMENT_FOCUS_WORDS
 
 
-def _run_comment_groups_llm_section(
+def _truncate_probe_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """压缩摘录长度，避免单次 JSON 顶满上下文。"""
+    out: dict[str, Any] = dict(payload)
+    groups: list[Any] = []
+    for g in (out.get("groups") or []):
+        if not isinstance(g, dict):
+            groups.append(g)
+            continue
+        g2 = dict(g)
+        sn = g2.get("sample_text_snippets")
+        if isinstance(sn, list):
+            g2["sample_text_snippets"] = [str(x)[:260] for x in sn[:12]]
+        groups.append(g2)
+    out["groups"] = groups
+    return out
+
+
+def _merge_snippets_from_comment_groups(
+    probe_rows: list[dict[str, Any]],
     *,
-    run_dir: Path,
-    keyword: str,
     merged_rows: list[dict[str, str]],
     comment_rows: list[dict[str, str]],
-    llm_chunked: bool,
-) -> str:
-    """
-    与正式报告 **§8 末** 一致：``build_comment_groups_llm_payload`` +
-    ``generate_comment_group_summaries_llm``（或 chunked 变体）。
-    """
+    run_dir: Path,
+) -> None:
+    """把正式 ``build_comment_groups_llm_payload`` 中的摘录并入探针行（原地修改）。"""
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     fb = jcr._consumer_feedback_by_matrix_group(
@@ -393,26 +433,75 @@ def _run_comment_groups_llm_section(
         sku_header=sku_h,
         title_h=title_h,
     )
-    if not pl:
-        return (
-            "> **细类 LLM 归纳**：payload 为空（无可用评价分组或全部被过滤），跳过。"
-        )
+    by_g = {str(x.get("group")): x for x in pl if isinstance(x, dict)}
+    for row in probe_rows:
+        if row.get("probe_status") != "ok":
+            continue
+        gname = str(row.get("group") or "")
+        src = by_g.get(gname)
+        if not src:
+            continue
+        row["comment_flat_rows"] = src.get("comment_flat_rows")
+        fh = src.get("focus_hit_lines")
+        if isinstance(fh, list):
+            row["focus_hit_lines"] = [str(x) for x in fh[:14]]
+        sn = src.get("sample_text_snippets")
+        if isinstance(sn, list):
+            row["sample_text_snippets"] = [str(x)[:300] for x in sn[:14]]
+
+
+def _run_probe_text_mining_llm(
+    payload: dict[str, Any],
+    *,
+    chunked: bool,
+) -> str:
+    """探针专用：``PROBE_TEXT_MINING_SYSTEM`` + 结构化 JSON；可选按细类拆分调用。"""
+    if not payload.get("groups"):
+        return "> **探针 LLM 解读**：无分组数据，跳过。"
     try:
-        if llm_chunked:
-            from pipeline.llm.generate import (  # noqa: WPS433
-                generate_comment_group_summaries_llm_chunked,
+        if not chunked:
+            p = _truncate_probe_payload(payload)
+            raw = json.dumps(p, ensure_ascii=False)
+            if len(raw) > 88_000:
+                raw = (
+                    raw[:82_000]
+                    + "\n\n…（JSON 过长已截断，仅依据可见字段撰写。）\n"
+                )
+            return _call_llm(
+                PROBE_TEXT_MINING_SYSTEM,
+                PROBE_TEXT_MINING_USER_PREFIX + raw,
+            ).strip()
+        kw = str(payload.get("keyword") or "")
+        note = str(payload.get("probe_note") or "")
+        parts: list[str] = []
+        for g in payload.get("groups") or []:
+            if not isinstance(g, dict):
+                continue
+            gname = str(g.get("group") or "?")
+            if g.get("probe_status") != "ok":
+                parts.append(
+                    f"#### {gname}\n\n"
+                    f"*（未做探针：{g.get('reason', '')}）*"
+                )
+                continue
+            mini = {
+                "schema_version": payload.get("schema_version", 1),
+                "keyword": kw,
+                "probe_note": note,
+                "groups": [g],
+            }
+            raw = json.dumps(mini, ensure_ascii=False)
+            if len(raw) > 48_000:
+                raw = raw[:44_000] + "\n…\n"
+            parts.append(
+                _call_llm(
+                    PROBE_TEXT_MINING_SYSTEM,
+                    PROBE_TEXT_MINING_USER_PREFIX + raw,
+                ).strip()
             )
-
-            body = generate_comment_group_summaries_llm_chunked(pl, keyword=keyword)
-        else:
-            from pipeline.llm.generate import (  # noqa: WPS433
-                generate_comment_group_summaries_llm,
-            )
-
-            body = generate_comment_group_summaries_llm(pl, keyword=keyword)
+        return "\n\n---\n\n".join(parts)
     except Exception as e:
-        return f"> **细类 LLM 归纳**调用失败：{e}"
-    return body.strip()
+        return f"> **探针 LLM 解读**调用失败：{e}"
 
 
 def build_markdown(
@@ -446,7 +535,7 @@ def build_markdown(
         "## 8.0 说明",
         "",
         "本稿为**独立探针**，流程参考「清洗 → 词云（可选）→ 词频/TF-IDF → 共现 → LDA → 叙事小结」；"
-        "文末可选 **细类 LLM 归纳**（与正式 ``llm_comment_group_summaries`` / ``generate_comment_group_summaries_llm`` 同源）。"
+        "文末可选 **探针专用 LLM 解读**（独立 JSON + ``PROBE_TEXT_MINING_SYSTEM``，**非**正式 ``COMMENT_GROUPS_SYSTEM`` / §8.2）。"
         "与线上一致的部分：**细类划分与 SKU 归因**复用 ``jd_competitor_report._consumer_feedback_by_matrix_group``；"
         "其余为 **jieba + sklearn** 的开放词表分析，**不替代**正式报告中的规则统计。",
         "",
@@ -471,9 +560,17 @@ def build_markdown(
         )
 
     wc_n = 0
+    probe_rows: list[dict[str, Any]] = []
     for gname, _cr_rows, texts in groups:
         n_raw = len([t for t in texts if (t or "").strip()])
         if n_raw < min_texts:
+            probe_rows.append(
+                {
+                    "group": gname,
+                    "probe_status": "skipped",
+                    "reason": f"有效文本 {n_raw} 条，低于 min_texts={min_texts}",
+                }
+            )
             lines.extend(
                 [
                     f"## {gname}",
@@ -488,6 +585,13 @@ def build_markdown(
 
         cut_docs = _docs_cut(texts)
         if len(cut_docs) < 2:
+            probe_rows.append(
+                {
+                    "group": gname,
+                    "probe_status": "skipped",
+                    "reason": "分词后不足 2 条",
+                }
+            )
             lines.extend(
                 [
                     f"## {gname}",
@@ -504,6 +608,33 @@ def build_markdown(
         tfidf_top = _tfidf_top(cut_docs, top_k_words)
         cooc = _cooc_top_pairs(cut_docs, cooc_vocab, cooc_pairs)
         lda_t, lda_err = _lda_topics(cut_docs, lda_topics_n, 12)
+        if (lda_err or "").strip():
+            lda_obj: dict[str, Any] = {
+                "status": "skipped",
+                "reason": lda_err.strip(),
+            }
+        else:
+            lda_obj = {"status": "ok", "topics": lda_t}
+        probe_rows.append(
+            {
+                "group": gname,
+                "probe_status": "ok",
+                "comment_text_units": n_raw,
+                "jieba_cut_document_count": len(cut_docs),
+                "word_freq_top": [
+                    {"term": w, "count": int(n)} for w, n in tf_top[:20]
+                ],
+                "tfidf_top": [
+                    {"term": w, "score": round(float(s), 4)}
+                    for w, s in tfidf_top[:20]
+                ],
+                "cooccurrence_top": [
+                    {"term_a": a, "term_b": b, "joint_count": int(c)}
+                    for a, b, c in cooc[:15]
+                ],
+                "lda": lda_obj,
+            }
+        )
 
         lines.extend([f"## {gname}", ""])
         if (
@@ -539,33 +670,41 @@ def build_markdown(
         ))
         lines.extend(["", "---", ""])
 
+    _merge_snippets_from_comment_groups(
+        probe_rows,
+        merged_rows=merged,
+        comment_rows=comments,
+        run_dir=run_dir,
+    )
+    llm_payload: dict[str, Any] = {
+        "schema_version": 1,
+        "keyword": kw,
+        "probe_note": (
+            "jieba 分词 + 停用词；TF-IDF/共现/LDA 为 sklearn；"
+            "与正式报告的关注词规则统计、§8.2 情感口径均不同；"
+            "评价摘录字段合并自 build_comment_groups_llm_payload，供语境对照。"
+        ),
+        "groups": probe_rows,
+    }
+
     lines.extend(
         [
             "",
             "---",
             "",
-            "## 细类评论要点归纳（大模型 · 与正式报告 §8 末同源）",
+            "## 探针归纳（大模型 · 文本挖掘专用）",
             "",
-            "> 输入为 ``build_comment_groups_llm_payload``：关注词子串命中、有效文本行、带 SKU/品名/店铺前缀的评价摘录；"
-            "模型为 ``COMMENT_GROUPS_SYSTEM``（与 ``generate_comment_group_summaries_llm`` 一致）。"
-            "上方 jieba / TF-IDF / LDA / 词云为**独立探针**，**未**注入本段 payload。",
+            "> 输入为探针 JSON（``schema_version``=1）：每细类含 **word_freq / tfidf / cooccurrence / lda** 及合并后的 **focus_hit_lines、sample_text_snippets**；"
+            "系统提示为脚本内 ``PROBE_TEXT_MINING_SYSTEM``，**不是** ``COMMENT_GROUPS_SYSTEM``。",
             "",
         ]
     )
     if live_llm:
-        lines.append(
-            _run_comment_groups_llm_section(
-                run_dir=run_dir,
-                keyword=kw,
-                merged_rows=merged,
-                comment_rows=comments,
-                llm_chunked=llm_chunked,
-            )
-        )
+        lines.append(_run_probe_text_mining_llm(llm_payload, chunked=llm_chunked))
     else:
         lines.append(
-            "> **细类 LLM 归纳**：未启用。请使用 ``--live-llm``（需 ``AI_crawler`` 等可用）；"
-            "细类很多、单次 JSON 易超上下文时可加 ``--llm-chunked``（逐细类调用后拼接）。"
+            "> **探针 LLM 解读**：未启用。请使用 ``--live-llm``（需 ``AI_crawler`` 等可用）；"
+            "细类很多、单次 JSON 易超长时可加 ``--llm-chunked``（按细类多次调用后拼接）。"
         )
 
     lines.append("")
@@ -595,15 +734,12 @@ def main() -> None:
     ap.add_argument(
         "--live-llm",
         action="store_true",
-        help=(
-            "文末调用与正式管线一致的细类归纳："
-            "``generate_comment_group_summaries_llm``（需 AI_crawler 等可用）"
-        ),
+        help="文末调用探针专用 LLM（PROBE_TEXT_MINING_SYSTEM + 结构化 JSON；需 AI_crawler 等）",
     )
     ap.add_argument(
         "--llm-chunked",
         action="store_true",
-        help="细类逐条调用 ``generate_comment_group_summaries_llm_chunked``，防上下文过长",
+        help="按细类拆分多次调用同一探针提示词，防单次 JSON 过长",
     )
     ap.add_argument(
         "--no-wordcloud",
