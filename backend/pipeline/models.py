@@ -142,6 +142,18 @@ class JdProductSnapshot(models.Model):
         return f"{self.product_id} @ job {self.job_id}"
 
 
+class JdLeafCategoryNorm(models.Model):
+    """叶类目归一：与导出 ``leaf_category`` 原文一致（去空格），用于任务内类目筛选索引。"""
+
+    label = models.CharField(max_length=512, unique=True, db_index=True)
+
+    class Meta:
+        ordering = ["label"]
+
+    def __str__(self) -> str:
+        return self.label[:80]
+
+
 class JdJobSearchRow(models.Model):
     """单次任务下 PC 搜索导出表一行，字段与 ``pc_search_export.csv`` 列一一对应（内部英文属性名）。"""
 
@@ -171,6 +183,14 @@ class JdJobSearchRow(models.Model):
     seckill_info = models.TextField(blank=True, default="")
     attributes = models.TextField(blank=True, default="")
     leaf_category = models.TextField(blank=True, default="")
+    leaf_category_norm = models.ForeignKey(
+        JdLeafCategoryNorm,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="search_rows",
+    )
+    price_value = models.FloatField(null=True, blank=True, db_index=True)
     platform = models.TextField(blank=True, default="")
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
@@ -185,6 +205,8 @@ class JdJobSearchRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "price_value"]),
         ]
 
     def __str__(self) -> str:
@@ -209,6 +231,7 @@ class JdJobDetailRow(models.Model):
     detail_body_ingredients = models.TextField(blank=True, default="")
     buyer_ranking_line = models.TextField(blank=True, default="")
     buyer_promo_text = models.TextField(blank=True, default="")
+    detail_price_value = models.FloatField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["row_index"]
@@ -220,6 +243,7 @@ class JdJobDetailRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "detail_price_value"]),
         ]
 
     def __str__(self) -> str:
@@ -286,6 +310,14 @@ class JdJobMergedRow(models.Model):
     image = models.TextField(blank=True, default="")
     attributes = models.TextField(blank=True, default="")
     leaf_category = models.TextField(blank=True, default="")
+    leaf_category_norm = models.ForeignKey(
+        JdLeafCategoryNorm,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="merged_rows",
+    )
+    price_value = models.FloatField(null=True, blank=True, db_index=True)
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
     detail_brand = models.TextField(blank=True, default="")
@@ -309,6 +341,8 @@ class JdJobMergedRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "price_value"]),
         ]
 
     def __str__(self) -> str:

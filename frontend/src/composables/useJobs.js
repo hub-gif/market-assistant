@@ -192,12 +192,31 @@ export function reportConfigDefaultsUrl() {
   return '/api/report-config-defaults/'
 }
 
-export function jobDatasetPageUrl(jobId, kind, page = 1, pageSize = 50, skuId = '') {
+/**
+ * @param {Record<string, string | number | undefined> | string} [opts] 筛选参数对象；兼容旧调用：传入字符串视为 comments 的 sku_id
+ */
+export function jobDatasetPageUrl(jobId, kind, page = 1, pageSize = 50, opts = {}) {
+  const o = typeof opts === 'string' ? { skuId: opts } : opts || {}
   const p = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
   })
-  if (skuId) p.set('sku_id', skuId)
+  const sku = o.skuId ?? o.sku_id
+  if (sku) p.set('sku_id', String(sku))
+  if (o.sort) p.set('sort', String(o.sort))
+  if (o.order) p.set('order', String(o.order))
+  const cn = o.categoryNormId ?? o.category_norm_id
+  if (cn !== undefined && cn !== null && String(cn).trim() !== '')
+    p.set('category_norm_id', String(cn).trim())
+  const pmin = o.priceMin ?? o.price_min
+  if (pmin !== undefined && pmin !== null && String(pmin).trim() !== '')
+    p.set('price_min', String(pmin).trim())
+  const pmax = o.priceMax ?? o.price_max
+  if (pmax !== undefined && pmax !== null && String(pmax).trim() !== '')
+    p.set('price_max', String(pmax).trim())
+  const dcq = o.detailCategoryQ ?? o.detail_category_q
+  if (dcq !== undefined && dcq !== null && String(dcq).trim() !== '')
+    p.set('detail_category_q', String(dcq).trim())
   return `/api/jobs/${jobId}/dataset/${kind}/?${p.toString()}`
 }
 

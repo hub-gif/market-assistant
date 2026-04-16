@@ -18,14 +18,31 @@ const emit = defineEmits(['close'])
 
 const paneActive = computed(() => !!(props.job && (props.embedded || props.open)))
 
+const SORT_LABELS = {
+  row_index: '入库顺序',
+  price: '价格',
+  sku_id: 'SKU',
+  title: '标题',
+  leaf_category: '叶类目',
+  detail_category_path: '类目路径',
+  detail_brand: '品牌',
+}
+
 const tab = ref('search')
 const page = ref(1)
 const pageSize = ref(30)
+const pageJumpDraft = ref(1)
 const summary = ref(null)
 const list = ref({ results: [], total: 0, page: 1, page_size: 30 })
 const loading = ref(false)
 const err = ref('')
 const commentSkuFilter = ref('')
+const sortField = ref('row_index')
+const sortOrder = ref('asc')
+const categoryNormId = ref('')
+const priceMin = ref('')
+const priceMax = ref('')
+const detailCategoryQ = ref('')
 const exportPanelOpen = ref(false)
 const exportLoading = ref(false)
 const exportErr = ref('')
@@ -38,6 +55,25 @@ function handleBackdrop(e) {
   if (props.embedded) return
   onBackdrop(e)
 }
+
+const sortOptions = computed(() => {
+  const h = summary.value?.dataset_sort_help
+  let keys = ['row_index']
+  if (h) {
+    if (tab.value === 'search') keys = h.search?.length ? h.search : keys
+    else if (tab.value === 'detail') keys = h.detail?.length ? h.detail : keys
+    else if (tab.value === 'merged') keys = h.merged?.length ? h.merged : keys
+    else keys = h.comments?.length ? h.comments : ['row_index']
+  }
+  return keys.map((k) => ({ value: k, label: SORT_LABELS[k] || k }))
+})
+
+const categoryNormOptions = computed(() => {
+  if (!summary.value) return []
+  if (tab.value === 'search') return summary.value.search_category_options || []
+  if (tab.value === 'merged') return summary.value.merged_category_options || []
+  return []
+})
 
 const displayColumns = computed(() => {
   const s = summary.value
@@ -122,14 +158,31 @@ async function refreshList() {
   err.value = ''
   try {
     await loadSummary()
-    const sku = tab.value === 'comments' ? commentSkuFilter.value.trim() : ''
-    const url = jobDatasetPageUrl(props.job.id, tab.value, page.value, pageSize.value, sku)
+    const opts =
+      tab.value === 'comments'
+        ? { skuId: commentSkuFilter.value.trim() }
+        : {
+            sort: sortField.value,
+            order: sortOrder.value,
+            categoryNormId: categoryNormId.value.trim(),
+            priceMin: priceMin.value,
+            priceMax: priceMax.value,
+            detailCategoryQ: detailCategoryQ.value.trim(),
+          }
+    const url = jobDatasetPageUrl(
+      props.job.id,
+      tab.value,
+      page.value,
+      pageSize.value,
+      opts,
+    )
     const r = await api(url)
     if (!r.ok) {
       err.value = await r.text()
       return
     }
     list.value = await r.json()
+    pageJumpDraft.value = list.value.page || page.value
   } catch (e) {
     err.value = String(e)
   } finally {
@@ -143,6 +196,12 @@ watch(
     if (paneActive.value) {
       tab.value = 'search'
       page.value = 1
+      sortField.value = 'row_index'
+      sortOrder.value = 'asc'
+      categoryNormId.value = ''
+      priceMin.value = ''
+      priceMax.value = ''
+      detailCategoryQ.value = ''
       commentSkuFilter.value = ''
       err.value = ''
       summary.value = null
@@ -155,11 +214,46 @@ watch(
 watch(tab, () => {
   page.value = 1
   exportPanelOpen.value = false
+  sortField.value = 'row_index'
+  sortOrder.value = 'asc'
+  categoryNormId.value = ''
+  priceMin.value = ''
+  priceMax.value = ''
+  detailCategoryQ.value = ''
 })
 
-watch([paneActive, () => props.job?.id, tab, page, commentSkuFilter], () => {
-  if (paneActive.value && props.job) refreshList()
-})
+watch(
+  [
+    sortField,
+    sortOrder,
+    categoryNormId,
+    priceMin,
+    priceMax,
+    detailCategoryQ,
+  ],
+  () => {
+    if (paneActive.value && props.job && tab.value !== 'comments') page.value = 1
+  },
+)
+
+watch(
+  [
+    paneActive,
+    () => props.job?.id,
+    tab,
+    page,
+    commentSkuFilter,
+    sortField,
+    sortOrder,
+    categoryNormId,
+    priceMin,
+    priceMax,
+    detailCategoryQ,
+  ],
+  () => {
+    if (paneActive.value && props.job) refreshList()
+  },
+)
 
 const totalPages = () => {
   const t = list.value.total || 0
@@ -173,6 +267,14 @@ function prevPage() {
 
 function nextPage() {
   if (page.value < totalPages()) page.value += 1
+}
+
+function goToPage() {
+  const tp = totalPages()
+  let n = Math.round(Number(pageJumpDraft.value))
+  if (!Number.isFinite(n)) n = 1
+  page.value = Math.min(Math.max(1, n), tp)
+  pageJumpDraft.value = page.value
 }
 
 const exportPanelTitle = computed(() => {
@@ -314,6 +416,60 @@ async function runExport(format) {
           </template>
         </div>
 
+        <div v-if="tab !== 'comments'" class="toolbar-filters">
+          <label class="filter-item">
+            排序
+            <select v-model="sortField" class="filter-select">
+              <option v-for="o in sortOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+          </label>
+          <label class="filter-item">
+            顺序
+            <select v-model="sortOrder" class="filter-select">
+              <option value="asc">升序</option>
+              <option value="desc">降序</option>
+            </select>
+          </label>
+          <template v-if="tab === 'search' || tab === 'merged'">
+            <label class="filter-item">
+              叶类目
+              <select v-model="categoryNormId" class="filter-select wide">
+                <option value="">全部</option>
+                <option v-for="c in categoryNormOptions" :key="c.id" :value="String(c.id)">
+                  {{ c.label }}
+                </option>
+              </select>
+            </label>
+          </template>
+          <template v-if="tab === 'detail' || tab === 'merged'">
+            <label class="filter-item">
+              类目路径包含
+              <input
+                v-model="detailCategoryQ"
+                type="search"
+                class="filter-input wide"
+                placeholder="模糊匹配商详类目路径"
+                list="detail-cat-dl"
+              />
+              <datalist id="detail-cat-dl">
+                <option
+                  v-for="p in summary?.detail_category_path_options || []"
+                  :key="p"
+                  :value="p"
+                />
+              </datalist>
+            </label>
+          </template>
+          <label class="filter-item">
+            价格 ≥
+            <input v-model="priceMin" type="number" step="any" class="filter-input narrow" placeholder="最低" />
+          </label>
+          <label class="filter-item">
+            价格 ≤
+            <input v-model="priceMax" type="number" step="any" class="filter-input narrow" placeholder="最高" />
+          </label>
+        </div>
+
         <div class="table-block">
           <div v-if="loading" class="state state-fill">加载中…</div>
           <p v-else-if="err" class="state err state-fill">{{ err }}</p>
@@ -371,6 +527,20 @@ async function runExport(format) {
           <span class="ma-muted"
             >第 {{ list.page || page }} / {{ totalPages() }} 页 · 共 {{ list.total ?? 0 }} 条</span
           >
+          <span class="pager-jump">
+            <label class="jump-label"
+              >跳转
+              <input
+                v-model.number="pageJumpDraft"
+                type="number"
+                :min="1"
+                :max="totalPages()"
+                class="jump-input"
+              />
+              页</label
+            >
+            <button type="button" class="ma-btn ma-btn-secondary" @click="goToPage">确定</button>
+          </span>
           <button type="button" class="ma-btn ma-btn-secondary" :disabled="page <= 1" @click="prevPage">
             上一页
           </button>
@@ -563,6 +733,40 @@ async function runExport(format) {
   width: 160px;
   font: inherit;
 }
+.toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.85rem;
+  padding: 0.55rem 1rem 0.65rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: #475569;
+}
+.filter-select,
+.filter-input {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  min-width: 0;
+}
+.filter-select.wide,
+.filter-input.wide {
+  min-width: 12rem;
+  max-width: 22rem;
+}
+.filter-input.narrow {
+  width: 5.5rem;
+}
 /* 高度封顶：数据再长也在表格内滚动，不把整块卡片无限撑高 */
 .table-block {
   flex: 1 1 auto;
@@ -688,6 +892,27 @@ async function runExport(format) {
   padding: 0.65rem 1rem;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
+}
+.pager-jump {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.jump-label {
+  font-size: 0.78rem;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.jump-input {
+  width: 3.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
 }
 .ma-muted {
   color: #64748b;

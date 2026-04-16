@@ -34,10 +34,12 @@ from .models import (
     JdJobDetailRow,
     JdJobMergedRow,
     JdJobSearchRow,
+    JdLeafCategoryNorm,
     JdProduct,
     JdProductSnapshot,
     PipelineJob,
 )
+from .price_parse import effective_list_price_value, float_price_from_cell
 
 logger = logging.getLogger(__name__)
 
@@ -171,11 +173,45 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     search_rows = _read_csv_rows(search_path)
     if not search_rows and search_path.is_file() is False:
         pass
-    s_objs: list[JdJobSearchRow] = []
+    search_kw_list: list[tuple[int, dict[str, str]]] = []
+    leaf_labels: set[str] = set()
     for i, row in enumerate(search_rows):
         _normalize_search_csv_total_sales(row)
         kw = _search_row_kwargs(row)
-        s_objs.append(JdJobSearchRow(job=job, row_index=i, **kw))
+        search_kw_list.append((i, kw))
+        lc = (kw.get("leaf_category") or "").strip()[:512]
+        if lc:
+            leaf_labels.add(lc)
+    norm_map: dict[str, JdLeafCategoryNorm] = {}
+    if leaf_labels:
+        have = set(
+            JdLeafCategoryNorm.objects.filter(label__in=leaf_labels).values_list(
+                "label", flat=True
+            )
+        )
+        missing = [JdLeafCategoryNorm(label=l) for l in leaf_labels if l not in have]
+        if missing:
+            JdLeafCategoryNorm.objects.bulk_create(missing, ignore_conflicts=True)
+        norm_map = {
+            n.label: n
+            for n in JdLeafCategoryNorm.objects.filter(label__in=leaf_labels)
+        }
+    s_objs: list[JdJobSearchRow] = []
+    for i, kw in search_kw_list:
+        lc = (kw.get("leaf_category") or "").strip()[:512]
+        norm = norm_map.get(lc) if lc else None
+        pv = effective_list_price_value(
+            kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
+        )
+        s_objs.append(
+            JdJobSearchRow(
+                job=job,
+                row_index=i,
+                leaf_category_norm=norm,
+                price_value=pv,
+                **kw,
+            )
+        )
     _bulk_create_in_chunks(JdJobSearchRow, s_objs)
     stats["search_rows"] = len(s_objs)
 
@@ -184,7 +220,12 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     d_objs: list[JdJobDetailRow] = []
     for i, row in enumerate(detail_rows):
         kw = _detail_row_kwargs(row)
-        d_objs.append(JdJobDetailRow(job=job, row_index=i, **kw))
+        dpv = float_price_from_cell(kw.get("detail_price_final"))
+        d_objs.append(
+            JdJobDetailRow(
+                job=job, row_index=i, detail_price_value=dpv, **kw
+            )
+        )
     _bulk_create_in_chunks(JdJobDetailRow, d_objs)
     stats["detail_rows"] = len(d_objs)
 
@@ -199,11 +240,47 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
 
     merged_path = run_dir / FILE_MERGED_CSV
     merged_rows = _read_csv_rows(merged_path) if merged_path.is_file() else []
-    m_objs: list[JdJobMergedRow] = []
+    merged_kw_list: list[tuple[int, dict[str, str]]] = []
+    leaf_labels_m: set[str] = set()
     for i, row in enumerate(merged_rows):
         _normalize_merged_csv_total_sales(row)
         kw = _merged_row_kwargs(row)
-        m_objs.append(JdJobMergedRow(job=job, row_index=i, **kw))
+        merged_kw_list.append((i, kw))
+        lc = (kw.get("leaf_category") or "").strip()[:512]
+        if lc:
+            leaf_labels_m.add(lc)
+    norm_map_m: dict[str, JdLeafCategoryNorm] = {}
+    if leaf_labels_m:
+        have_m = set(
+            JdLeafCategoryNorm.objects.filter(label__in=leaf_labels_m).values_list(
+                "label", flat=True
+            )
+        )
+        missing_m = [
+            JdLeafCategoryNorm(label=l) for l in leaf_labels_m if l not in have_m
+        ]
+        if missing_m:
+            JdLeafCategoryNorm.objects.bulk_create(missing_m, ignore_conflicts=True)
+        norm_map_m = {
+            n.label: n
+            for n in JdLeafCategoryNorm.objects.filter(label__in=leaf_labels_m)
+        }
+    m_objs: list[JdJobMergedRow] = []
+    for i, kw in merged_kw_list:
+        lc = (kw.get("leaf_category") or "").strip()[:512]
+        norm = norm_map_m.get(lc) if lc else None
+        pv = effective_list_price_value(
+            kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
+        )
+        m_objs.append(
+            JdJobMergedRow(
+                job=job,
+                row_index=i,
+                leaf_category_norm=norm,
+                price_value=pv,
+                **kw,
+            )
+        )
     _bulk_create_in_chunks(JdJobMergedRow, m_objs)
     stats["merged_table_rows"] = len(m_objs)
 

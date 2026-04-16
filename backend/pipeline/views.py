@@ -17,6 +17,22 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .dataset_api import (
+    DETAIL_SORT_FIELDS,
+    MERGED_SORT_FIELDS,
+    SEARCH_SORT_FIELDS,
+    apply_detail_filters,
+    apply_detail_order,
+    apply_merged_filters,
+    apply_merged_order,
+    apply_search_filters,
+    apply_search_order,
+    category_norm_id_from_request,
+    detail_category_q_from_request,
+    filter_echo,
+    parse_sort_meta,
+    price_bounds_from_request,
+)
 from .dataset_nonempty import (
     comment_columns_for_api,
     detail_columns_for_api,
@@ -50,6 +66,7 @@ from .models import (
     JdJobDetailRow,
     JdJobMergedRow,
     JdJobSearchRow,
+    JdLeafCategoryNorm,
     JdProduct,
     JdProductSnapshot,
     JobStatus,
@@ -739,6 +756,29 @@ def _read_page_params(request) -> tuple[int, int]:
     return page, page_size
 
 
+def _category_norm_options_for_job(job: PipelineJob, RowModel: type) -> list[dict[str, Any]]:
+    ids = (
+        RowModel.objects.filter(job=job, leaf_category_norm_id__isnull=False)
+        .values_list("leaf_category_norm_id", flat=True)
+        .distinct()
+    )
+    return list(
+        JdLeafCategoryNorm.objects.filter(id__in=ids)
+        .order_by("label")
+        .values("id", "label")
+    )
+
+
+def _detail_category_path_options(job: PipelineJob) -> list[str]:
+    return list(
+        JdJobDetailRow.objects.filter(job=job)
+        .exclude(detail_category_path="")
+        .values_list("detail_category_path", flat=True)
+        .distinct()
+        .order_by("detail_category_path")[:400]
+    )
+
+
 class JobDatasetSummaryView(APIView):
     """任务在库中的搜索/详情/评价行数（入库后可用）。"""
 
@@ -757,6 +797,19 @@ class JobDatasetSummaryView(APIView):
                 "detail_columns": detail_columns_for_api(job),
                 "comment_columns": comment_columns_for_api(job),
                 "merged_columns": merged_columns_for_api(job),
+                "search_category_options": _category_norm_options_for_job(
+                    job, JdJobSearchRow
+                ),
+                "merged_category_options": _category_norm_options_for_job(
+                    job, JdJobMergedRow
+                ),
+                "detail_category_path_options": _detail_category_path_options(job),
+                "dataset_sort_help": {
+                    "search": sorted(SEARCH_SORT_FIELDS),
+                    "detail": sorted(DETAIL_SORT_FIELDS),
+                    "merged": sorted(MERGED_SORT_FIELDS),
+                    "comments": ["row_index"],
+                },
             }
         )
 
@@ -765,15 +818,30 @@ class JobDatasetSearchView(APIView):
     def get(self, request, pk: int):
         job = _dataset_job(pk)
         page, page_size = _read_page_params(request)
+        sort, desc = parse_sort_meta(request)
+        sort_eff = sort if sort in SEARCH_SORT_FIELDS else "row_index"
+        cid = category_norm_id_from_request(request)
+        pmin, pmax = price_bounds_from_request(request)
+        dcq = detail_category_q_from_request(request)
         qs = JdJobSearchRow.objects.filter(job=job)
+        qs = apply_search_filters(qs, request)
+        qs = apply_search_order(qs, sort_eff, desc)
         total = qs.count()
         start = (page - 1) * page_size
-        rows = qs.order_by("row_index")[start : start + page_size]
+        rows = qs[start : start + page_size]
         return Response(
             {
                 "total": total,
                 "page": page,
                 "page_size": page_size,
+                "filters": filter_echo(
+                    category_norm_id=cid,
+                    price_min=pmin,
+                    price_max=pmax,
+                    detail_category_q=dcq,
+                    sort=sort_eff,
+                    desc=desc,
+                ),
                 "results": [search_row_to_dict(r) for r in rows],
             }
         )
@@ -783,15 +851,30 @@ class JobDatasetDetailView(APIView):
     def get(self, request, pk: int):
         job = _dataset_job(pk)
         page, page_size = _read_page_params(request)
+        sort, desc = parse_sort_meta(request)
+        sort_eff = sort if sort in DETAIL_SORT_FIELDS else "row_index"
+        cid = category_norm_id_from_request(request)
+        pmin, pmax = price_bounds_from_request(request)
+        dcq = detail_category_q_from_request(request)
         qs = JdJobDetailRow.objects.filter(job=job)
+        qs = apply_detail_filters(qs, request)
+        qs = apply_detail_order(qs, sort_eff, desc)
         total = qs.count()
         start = (page - 1) * page_size
-        rows = qs.order_by("row_index")[start : start + page_size]
+        rows = qs[start : start + page_size]
         return Response(
             {
                 "total": total,
                 "page": page,
                 "page_size": page_size,
+                "filters": filter_echo(
+                    category_norm_id=cid,
+                    price_min=pmin,
+                    price_max=pmax,
+                    detail_category_q=dcq,
+                    sort=sort_eff,
+                    desc=desc,
+                ),
                 "results": [detail_row_to_dict(r) for r in rows],
             }
         )
@@ -823,15 +906,30 @@ class JobDatasetMergedView(APIView):
     def get(self, request, pk: int):
         job = _dataset_job(pk)
         page, page_size = _read_page_params(request)
+        sort, desc = parse_sort_meta(request)
+        sort_eff = sort if sort in MERGED_SORT_FIELDS else "row_index"
+        cid = category_norm_id_from_request(request)
+        pmin, pmax = price_bounds_from_request(request)
+        dcq = detail_category_q_from_request(request)
         qs = JdJobMergedRow.objects.filter(job=job)
+        qs = apply_merged_filters(qs, request)
+        qs = apply_merged_order(qs, sort_eff, desc)
         total = qs.count()
         start = (page - 1) * page_size
-        rows = qs.order_by("row_index")[start : start + page_size]
+        rows = qs[start : start + page_size]
         return Response(
             {
                 "total": total,
                 "page": page,
                 "page_size": page_size,
+                "filters": filter_echo(
+                    category_norm_id=cid,
+                    price_min=pmin,
+                    price_max=pmax,
+                    detail_category_q=dcq,
+                    sort=sort_eff,
+                    desc=desc,
+                ),
                 "results": [merged_row_to_dict(r) for r in rows],
             }
         )

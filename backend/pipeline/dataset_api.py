@@ -1,0 +1,169 @@
+"""库内数据浏览 API：排序、价格与类目筛选（查询参数解析与 QuerySet 变换）。"""
+from __future__ import annotations
+
+from typing import Any
+
+from django.db.models import F, QuerySet
+from django.db.models.expressions import OrderBy
+from rest_framework.request import Request
+
+SEARCH_SORT_FIELDS = frozenset({"row_index", "price", "sku_id", "title", "leaf_category"})
+DETAIL_SORT_FIELDS = frozenset(
+    {"row_index", "price", "sku_id", "detail_category_path", "detail_brand"}
+)
+MERGED_SORT_FIELDS = frozenset(
+    {"row_index", "price", "sku_id", "title", "leaf_category", "detail_category_path"}
+)
+
+
+def _parse_opt_float(val: str | None) -> float | None:
+    if val is None or not str(val).strip():
+        return None
+    try:
+        return float(str(val).strip())
+    except ValueError:
+        return None
+
+
+def parse_sort_meta(request: Request) -> tuple[str, bool]:
+    sort = (request.query_params.get("sort") or "row_index").strip()
+    order = (request.query_params.get("order") or "asc").strip().lower()
+    desc = order == "desc"
+    return sort, desc
+
+
+def price_bounds_from_request(request: Request) -> tuple[float | None, float | None]:
+    return (
+        _parse_opt_float(request.query_params.get("price_min")),
+        _parse_opt_float(request.query_params.get("price_max")),
+    )
+
+
+def category_norm_id_from_request(request: Request) -> int | None:
+    raw = (request.query_params.get("category_norm_id") or "").strip()
+    if raw.isdigit():
+        return int(raw)
+    return None
+
+
+def detail_category_q_from_request(request: Request) -> str:
+    return (request.query_params.get("detail_category_q") or "").strip()
+
+
+def filter_echo(
+    *,
+    category_norm_id: int | None,
+    price_min: float | None,
+    price_max: float | None,
+    detail_category_q: str,
+    sort: str,
+    desc: bool,
+) -> dict[str, Any]:
+    return {
+        "category_norm_id": category_norm_id,
+        "price_min": price_min,
+        "price_max": price_max,
+        "detail_category_q": detail_category_q or None,
+        "sort": sort,
+        "order": "desc" if desc else "asc",
+    }
+
+
+def apply_search_filters(qs: QuerySet, request: Request) -> QuerySet:
+    cid = category_norm_id_from_request(request)
+    if cid is not None:
+        qs = qs.filter(leaf_category_norm_id=cid)
+    pmin, pmax = price_bounds_from_request(request)
+    if pmin is not None:
+        qs = qs.filter(price_value__gte=pmin)
+    if pmax is not None:
+        qs = qs.filter(price_value__lte=pmax)
+    return qs
+
+
+def apply_search_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
+    sort = sort if sort in SEARCH_SORT_FIELDS else "row_index"
+    if sort == "price":
+        return qs.order_by(
+            OrderBy(F("price_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "row_index":
+        return qs.order_by(OrderBy(F("row_index"), descending=desc))
+    field = {
+        "sku_id": "sku_id",
+        "title": "title",
+        "leaf_category": "leaf_category",
+    }[sort]
+    return qs.order_by(
+        OrderBy(F(field), descending=desc, nulls_last=True),
+        "row_index",
+    )
+
+
+def apply_detail_filters(qs: QuerySet, request: Request) -> QuerySet:
+    q = detail_category_q_from_request(request)
+    if q:
+        qs = qs.filter(detail_category_path__icontains=q)
+    pmin, pmax = price_bounds_from_request(request)
+    if pmin is not None:
+        qs = qs.filter(detail_price_value__gte=pmin)
+    if pmax is not None:
+        qs = qs.filter(detail_price_value__lte=pmax)
+    return qs
+
+
+def apply_detail_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
+    sort = sort if sort in DETAIL_SORT_FIELDS else "row_index"
+    if sort == "price":
+        return qs.order_by(
+            OrderBy(F("detail_price_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "row_index":
+        return qs.order_by(OrderBy(F("row_index"), descending=desc))
+    field = {
+        "sku_id": "sku_id",
+        "detail_category_path": "detail_category_path",
+        "detail_brand": "detail_brand",
+    }[sort]
+    return qs.order_by(
+        OrderBy(F(field), descending=desc, nulls_last=True),
+        "row_index",
+    )
+
+
+def apply_merged_filters(qs: QuerySet, request: Request) -> QuerySet:
+    cid = category_norm_id_from_request(request)
+    if cid is not None:
+        qs = qs.filter(leaf_category_norm_id=cid)
+    q = detail_category_q_from_request(request)
+    if q:
+        qs = qs.filter(detail_category_path__icontains=q)
+    pmin, pmax = price_bounds_from_request(request)
+    if pmin is not None:
+        qs = qs.filter(price_value__gte=pmin)
+    if pmax is not None:
+        qs = qs.filter(price_value__lte=pmax)
+    return qs
+
+
+def apply_merged_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
+    sort = sort if sort in MERGED_SORT_FIELDS else "row_index"
+    if sort == "price":
+        return qs.order_by(
+            OrderBy(F("price_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "row_index":
+        return qs.order_by(OrderBy(F("row_index"), descending=desc))
+    field = {
+        "sku_id": "sku_id",
+        "title": "title",
+        "leaf_category": "leaf_category",
+        "detail_category_path": "detail_category_path",
+    }[sort]
+    return qs.order_by(
+        OrderBy(F(field), descending=desc, nulls_last=True),
+        "row_index",
+    )
