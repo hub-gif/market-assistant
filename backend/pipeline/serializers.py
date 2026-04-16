@@ -19,8 +19,11 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
         "llm_comment_sentiment",
         "llm_matrix_group_summaries",
         "llm_price_group_summaries",
+        "llm_promo_group_summaries",
+        "llm_strategy_opportunities",
         "llm_comment_group_summaries",
         "llm_scenario_group_summaries",
+        "llm_group_summaries_chunk_by_matrix",
         "comment_focus_words",
         "comment_scenario_groups",
         "external_market_table_rows",
@@ -44,8 +47,11 @@ def validate_report_config_body(value: dict) -> dict:
     for k in (
         "llm_matrix_group_summaries",
         "llm_price_group_summaries",
+        "llm_promo_group_summaries",
+        "llm_strategy_opportunities",
         "llm_comment_group_summaries",
         "llm_scenario_group_summaries",
+        "llm_group_summaries_chunk_by_matrix",
     ):
         if k in value and value[k] is not None and not isinstance(value[k], bool):
             raise serializers.ValidationError(f"{k} 须为 true 或 false")

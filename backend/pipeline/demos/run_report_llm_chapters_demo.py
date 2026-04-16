@@ -2,16 +2,17 @@
 竞品报告中与大模型相关的块（与 ``pipeline.jd.runner.write_competitor_analysis_for_run_dir`` 同源）：
 
 - §5 后：``generate_matrix_group_summaries_llm``
-- §6 后：``generate_price_group_summaries_llm``
+- §6 后：``generate_price_group_summaries_llm``、``generate_promo_group_summaries_llm``
 - §8.2：``generate_comment_sentiment_analysis_llm``
 - §8末细类评价：``generate_comment_group_summaries_llm``
 - §8.3 右栏后使用场景：``generate_scenario_group_summaries_llm``
+- §9 策略与机会：``generate_strategy_opportunities_llm``（输入为 ``build_competitor_brief`` 摘要）
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
  cd backend
   python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "../data/JD/pipeline_runs/20260413_104252_低GI"
   python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "..." --live
-  python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "..." --live --only matrix,price
+  python -m pipeline.demos.run_report_llm_chapters_demo --run-dir "..." --live --only matrix,price,promo
 """
 from __future__ import annotations
 
@@ -39,7 +40,11 @@ if str(JCR_ROOT) not in sys.path:
 import jd_competitor_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
-from pipeline.jd.runner import get_default_report_config  # noqa: E402
+from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
+from pipeline.jd.runner import (  # noqa: E402
+    get_default_report_config,
+    use_chunked_group_summaries_llm,
+)
 
 
 def _load_run(
@@ -124,7 +129,7 @@ def main() -> None:
         "--only",
         type=str,
         default="",
-        help="逗号分隔子集：sentiment,matrix,price,scenario_groups,comment_groups,report_supplement",
+        help="逗号分隔子集：sentiment,matrix,price,promo,strategy_opp,scenario_groups,comment_groups,report_supplement",
     )
     parser.add_argument(
         "--preview-chars",
@@ -143,6 +148,8 @@ def main() -> None:
         "sentiment",
         "matrix",
         "price",
+        "promo",
+        "strategy_opp",
         "scenario_groups",
         "comment_groups",
         "report_supplement",
@@ -150,8 +157,8 @@ def main() -> None:
     if not only:
         only = all_names
 
-    sku_h = "SKU(skuId)"
-    title_h = "标题(wareName)"
+    sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+    title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
 
     print(
         f"# run_dir={run_dir}\n# keyword={keyword}\n"
@@ -162,12 +169,21 @@ def main() -> None:
 
     from pipeline.llm.generate import (  # noqa: WPS433
         generate_comment_group_summaries_llm,
+        generate_comment_group_summaries_llm_chunked,
         generate_comment_sentiment_analysis_llm,
         generate_competitor_report_markdown_llm,
         generate_matrix_group_summaries_llm,
+        generate_matrix_group_summaries_llm_chunked,
         generate_price_group_summaries_llm,
+        generate_price_group_summaries_llm_chunked,
+        generate_promo_group_summaries_llm,
+        generate_promo_group_summaries_llm_chunked,
+        generate_strategy_opportunities_llm,
         generate_scenario_group_summaries_llm,
+        generate_scenario_group_summaries_llm_chunked,
     )
+
+    chunk_gr = use_chunked_group_summaries_llm(eff_rc)
 
     if "sentiment" in only:
         comment_units = jcr._iter_comment_text_units(comment_rows, merged)
@@ -209,11 +225,18 @@ def main() -> None:
         )
 
         def _mx() -> str:
+            if chunk_gr:
+                return generate_matrix_group_summaries_llm_chunked(
+                    pl_mx, keyword=keyword
+                )
             return generate_matrix_group_summaries_llm(pl_mx, keyword=keyword)
 
         _run_one("§5 细类要点归纳（matrix）", _mx, live=args.live, preview_chars=args.preview_chars)
         if not args.live:
-            print(f"  payload groups={len(pl_mx)}", flush=True)
+            print(
+                f"  payload groups={len(pl_mx)} chunked_by_matrix={chunk_gr}",
+                flush=True,
+            )
 
     if "price" in only:
         pl_pr = jcr.build_price_groups_llm_payload(
@@ -221,11 +244,68 @@ def main() -> None:
         )
 
         def _pr() -> str:
+            if chunk_gr:
+                return generate_price_group_summaries_llm_chunked(
+                    pl_pr, keyword=keyword
+                )
             return generate_price_group_summaries_llm(pl_pr, keyword=keyword)
 
         _run_one("§6 细类价盘归纳（price）", _pr, live=args.live, preview_chars=args.preview_chars)
         if not args.live:
-            print(f"  payload groups={len(pl_pr)}", flush=True)
+            print(
+                f"  payload groups={len(pl_pr)} chunked_by_matrix={chunk_gr}",
+                flush=True,
+            )
+
+    if "promo" in only:
+        pl_po = jcr.build_promo_groups_llm_payload(
+            merged, sku_header=sku_h, title_h=title_h
+        )
+
+        def _po() -> str:
+            if chunk_gr:
+                return generate_promo_group_summaries_llm_chunked(
+                    pl_po, keyword=keyword
+                )
+            return generate_promo_group_summaries_llm(pl_po, keyword=keyword)
+
+        _run_one(
+            "§6 细类促销与活动归纳（promo）",
+            _po,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            print(
+                f"  payload groups={len(pl_po)} chunked_by_matrix={chunk_gr}",
+                flush=True,
+            )
+
+    if "strategy_opp" in only:
+        brief = jcr.build_competitor_brief(
+            run_dir=run_dir,
+            keyword=keyword,
+            merged_rows=merged,
+            search_export_rows=search_rows,
+            comment_rows=comment_rows,
+            meta=meta,
+            report_config=eff_rc,
+        )
+
+        def _st() -> str:
+            return generate_strategy_opportunities_llm(brief, keyword=keyword)
+
+        _run_one(
+            "§9 策略与机会（strategy_opp）",
+            _st,
+            live=args.live,
+            preview_chars=args.preview_chars,
+        )
+        if not args.live:
+            print(
+                f"  brief keys: {len(brief)} top-level fields",
+                flush=True,
+            )
 
     if "scenario_groups" in only:
         _, scen_tuple, _ = jcr.resolve_report_tuning(eff_rc)
@@ -243,6 +323,10 @@ def main() -> None:
         )
 
         def _sg() -> str:
+            if chunk_gr:
+                return generate_scenario_group_summaries_llm_chunked(
+                    pl_sg, keyword=keyword
+                )
             return generate_scenario_group_summaries_llm(pl_sg, keyword=keyword)
 
         _run_one(
@@ -253,7 +337,10 @@ def main() -> None:
         )
         if not args.live:
             n = len((pl_sg or {}).get("groups") or [])
-            print(f"  payload groups={n}", flush=True)
+            print(
+                f"  payload groups={n} chunked_by_matrix={chunk_gr}",
+                flush=True,
+            )
 
     if "comment_groups" in only:
         fb = jcr._consumer_feedback_by_matrix_group(
@@ -274,6 +361,10 @@ def main() -> None:
         )
 
         def _cg() -> str:
+            if chunk_gr:
+                return generate_comment_group_summaries_llm_chunked(
+                    pl_cg, keyword=keyword
+                )
             return generate_comment_group_summaries_llm(pl_cg, keyword=keyword)
 
         _run_one(
@@ -283,7 +374,10 @@ def main() -> None:
             preview_chars=args.preview_chars,
         )
         if not args.live:
-            print(f"  payload groups={len(pl_cg)}", flush=True)
+            print(
+                f"  payload groups={len(pl_cg)} chunked_by_matrix={chunk_gr}",
+                flush=True,
+            )
 
     if "report_supplement" in only:
         brief = jcr.build_competitor_brief(

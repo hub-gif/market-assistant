@@ -709,6 +709,81 @@ def generate_promo_group_summaries_llm(
     return _call_llm(PROMO_GROUPS_SYSTEM, user)
 
 
+def _join_chunked_group_markdown(parts: list[str]) -> str:
+    """按细类多次调用 LLM 后的片段拼接（顺序与 ``groups`` 一致）。"""
+    return "\n\n".join(p.strip() for p in parts if (p or "").strip())
+
+
+def generate_matrix_group_summaries_llm_chunked(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    """与 ``generate_matrix_group_summaries_llm`` 等价输出结构，但**每个矩阵细类单独**请求一次网关。"""
+    clean = [g for g in groups if isinstance(g, dict)]
+    if not clean:
+        return ""
+    parts = [
+        generate_matrix_group_summaries_llm([g], keyword=keyword) for g in clean
+    ]
+    return _join_chunked_group_markdown(parts)
+
+
+def generate_price_group_summaries_llm_chunked(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    clean = [g for g in groups if isinstance(g, dict)]
+    if not clean:
+        return ""
+    parts = [
+        generate_price_group_summaries_llm([g], keyword=keyword) for g in clean
+    ]
+    return _join_chunked_group_markdown(parts)
+
+
+def generate_promo_group_summaries_llm_chunked(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    clean = [g for g in groups if isinstance(g, dict)]
+    if not clean:
+        return ""
+    parts = [
+        generate_promo_group_summaries_llm([g], keyword=keyword) for g in clean
+    ]
+    return _join_chunked_group_markdown(parts)
+
+
+def generate_comment_group_summaries_llm_chunked(
+    groups: list[dict[str, Any]], *, keyword: str
+) -> str:
+    clean = [g for g in groups if isinstance(g, dict)]
+    if not clean:
+        return ""
+    parts = [
+        generate_comment_group_summaries_llm([g], keyword=keyword) for g in clean
+    ]
+    return _join_chunked_group_markdown(parts)
+
+
+def generate_scenario_group_summaries_llm_chunked(
+    payload: dict[str, Any], *, keyword: str
+) -> str:
+    """``scenario_lexicon`` 每轮原样附带，``groups`` 每次只含一个细类。"""
+    groups_in = [g for g in (payload.get("groups") or []) if isinstance(g, dict)]
+    if not groups_in:
+        return ""
+    lex = payload.get("scenario_lexicon")
+    base: dict[str, Any] = {
+        "scenario_lexicon": lex if isinstance(lex, list) else [],
+    }
+    parts = [
+        generate_scenario_group_summaries_llm(
+            {**base, "groups": [g]},
+            keyword=keyword,
+        )
+        for g in groups_in
+    ]
+    return _join_chunked_group_markdown(parts)
+
+
 STRATEGY_OPPORTUNITIES_SYSTEM = """你是 B 端市场与增长顾问。输入 JSON 含 ``keyword`` 与 ``competitor_brief``（与本任务规则报告同源的结构化摘要，可能经裁剪，并含 ``matrix_overview_for_llm``）。
 
 请输出 **Markdown 正文**（不要用 ``` 围栏包裹），将**直接嵌入**宿主文档中**已存在章节标题之下**的小节，读者已知当前处于「策略与机会」相关章节。

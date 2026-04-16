@@ -145,6 +145,23 @@ def _jd_crawler_modules():
     return jcr, kpl
 
 
+def use_chunked_group_summaries_llm(report_config: dict[str, Any] | None) -> bool:
+    """
+    是否按矩阵细类**拆分** §5/§6/§8 等 group 归纳的 LLM 请求（默认开启）。
+
+    关闭方式：``report_config`` 中 ``llm_group_summaries_chunk_by_matrix``: false，
+    或环境变量 ``MA_LLM_GROUP_SUMMARIES_BULK=1``（恢复单次打包调用）。
+    """
+    rc = report_config if isinstance(report_config, dict) else {}
+    if os.environ.get("MA_LLM_GROUP_SUMMARIES_BULK", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        return False
+    return bool(rc.get("llm_group_summaries_chunk_by_matrix", True))
+
+
 def get_default_report_config() -> dict[str, Any]:
     """与 ``jd_competitor_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
@@ -154,6 +171,9 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_comment_group_summaries": True,
         "llm_scenario_group_summaries": True,
         "llm_price_group_summaries": True,
+        "llm_promo_group_summaries": True,
+        "llm_strategy_opportunities": True,
+        "llm_group_summaries_chunk_by_matrix": True,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
             {"label": lbl, "triggers": list(trs)}
@@ -394,12 +414,16 @@ def write_competitor_analysis_for_run_dir(
 
     llm_matrix_md = ""
     llm_price_md = ""
+    llm_promo_md = ""
     llm_scenario_gr_md = ""
     llm_comment_gr_md = ""
+    llm_strategy_opp_md = ""
     matrix_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     price_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    promo_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     scenario_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     comment_gr_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    strategy_opp_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
 
@@ -408,6 +432,7 @@ def write_competitor_analysis_for_run_dir(
 
     skip_mx = _env_on("MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES")
     skip_pr = _env_on("MA_SKIP_LLM_PRICE_GROUP_SUMMARIES")
+    skip_po = _env_on("MA_SKIP_LLM_PROMO_GROUP_SUMMARIES")
     skip_sg = _env_on("MA_SKIP_LLM_SCENARIO_GROUP_SUMMARIES")
     skip_cg = _env_on("MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES")
     want_mx = bool(eff_rc.get("llm_matrix_group_summaries")) or _env_on(
@@ -416,12 +441,21 @@ def write_competitor_analysis_for_run_dir(
     want_pr = bool(eff_rc.get("llm_price_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_PRICE_GROUP_SUMMARIES"
     )
+    want_po = bool(eff_rc.get("llm_promo_group_summaries")) or _env_on(
+        "MA_ENABLE_LLM_PROMO_GROUP_SUMMARIES"
+    )
     want_sg = bool(eff_rc.get("llm_scenario_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_SCENARIO_GROUP_SUMMARIES"
     )
     want_cg = bool(eff_rc.get("llm_comment_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_COMMENT_GROUP_SUMMARIES"
     )
+    skip_st = _env_on("MA_SKIP_LLM_STRATEGY_OPPORTUNITIES")
+    want_st = bool(eff_rc.get("llm_strategy_opportunities")) or _env_on(
+        "MA_ENABLE_LLM_STRATEGY_OPPORTUNITIES"
+    )
+
+    chunk_gr = use_chunked_group_summaries_llm(eff_rc)
 
     if want_mx and not skip_mx and merged_rows:
         pl_mx = jcr.build_matrix_groups_llm_payload(
@@ -430,13 +464,25 @@ def write_competitor_analysis_for_run_dir(
         if pl_mx:
             matrix_llm_rec["attempted"] = True
             try:
-                from ..llm.generate import generate_matrix_group_summaries_llm
+                if chunk_gr:
+                    from ..llm.generate import (
+                        generate_matrix_group_summaries_llm_chunked,
+                    )
 
-                llm_matrix_md = generate_matrix_group_summaries_llm(
-                    pl_mx, keyword=kw
-                )
+                    llm_matrix_md = generate_matrix_group_summaries_llm_chunked(
+                        pl_mx, keyword=kw
+                    )
+                else:
+                    from ..llm.generate import generate_matrix_group_summaries_llm
+
+                    llm_matrix_md = generate_matrix_group_summaries_llm(
+                        pl_mx, keyword=kw
+                    )
                 matrix_llm_rec["ok"] = True
                 matrix_llm_rec["chars"] = len(llm_matrix_md)
+                matrix_llm_rec["chunked_by_matrix"] = chunk_gr
+                if chunk_gr:
+                    matrix_llm_rec["chunk_count"] = len(pl_mx)
             except Exception as e:
                 matrix_llm_rec["ok"] = False
                 matrix_llm_rec["error"] = str(e)
@@ -454,11 +500,25 @@ def write_competitor_analysis_for_run_dir(
         if pl_pr:
             price_llm_rec["attempted"] = True
             try:
-                from ..llm.generate import generate_price_group_summaries_llm
+                if chunk_gr:
+                    from ..llm.generate import (
+                        generate_price_group_summaries_llm_chunked,
+                    )
 
-                llm_price_md = generate_price_group_summaries_llm(pl_pr, keyword=kw)
+                    llm_price_md = generate_price_group_summaries_llm_chunked(
+                        pl_pr, keyword=kw
+                    )
+                else:
+                    from ..llm.generate import generate_price_group_summaries_llm
+
+                    llm_price_md = generate_price_group_summaries_llm(
+                        pl_pr, keyword=kw
+                    )
                 price_llm_rec["ok"] = True
                 price_llm_rec["chars"] = len(llm_price_md)
+                price_llm_rec["chunked_by_matrix"] = chunk_gr
+                if chunk_gr:
+                    price_llm_rec["chunk_count"] = len(pl_pr)
             except Exception as e:
                 price_llm_rec["ok"] = False
                 price_llm_rec["error"] = str(e)
@@ -468,6 +528,42 @@ def write_competitor_analysis_for_run_dir(
         price_llm_rec["skipped"] = "MA_SKIP_LLM_PRICE_GROUP_SUMMARIES"
     elif not want_pr:
         price_llm_rec["skipped"] = "not_enabled"
+
+    if want_po and not skip_po and merged_rows:
+        pl_po = jcr.build_promo_groups_llm_payload(
+            merged_rows, sku_header=sku_h, title_h=title_h
+        )
+        if pl_po:
+            promo_llm_rec["attempted"] = True
+            try:
+                if chunk_gr:
+                    from ..llm.generate import (
+                        generate_promo_group_summaries_llm_chunked,
+                    )
+
+                    llm_promo_md = generate_promo_group_summaries_llm_chunked(
+                        pl_po, keyword=kw
+                    )
+                else:
+                    from ..llm.generate import generate_promo_group_summaries_llm
+
+                    llm_promo_md = generate_promo_group_summaries_llm(
+                        pl_po, keyword=kw
+                    )
+                promo_llm_rec["ok"] = True
+                promo_llm_rec["chars"] = len(llm_promo_md)
+                promo_llm_rec["chunked_by_matrix"] = chunk_gr
+                if chunk_gr:
+                    promo_llm_rec["chunk_count"] = len(pl_po)
+            except Exception as e:
+                promo_llm_rec["ok"] = False
+                promo_llm_rec["error"] = str(e)
+        else:
+            promo_llm_rec["skipped"] = "empty_promo_payload"
+    elif skip_po:
+        promo_llm_rec["skipped"] = "MA_SKIP_LLM_PROMO_GROUP_SUMMARIES"
+    elif not want_po:
+        promo_llm_rec["skipped"] = "not_enabled"
 
     if want_sg and not skip_sg and merged_rows:
         _, scenario_tuple, _ = jcr.resolve_report_tuning(eff_rc)
@@ -486,13 +582,27 @@ def write_competitor_analysis_for_run_dir(
         if pl_sg:
             scenario_gr_llm_rec["attempted"] = True
             try:
-                from ..llm.generate import generate_scenario_group_summaries_llm
+                if chunk_gr:
+                    from ..llm.generate import (
+                        generate_scenario_group_summaries_llm_chunked,
+                    )
 
-                llm_scenario_gr_md = generate_scenario_group_summaries_llm(
-                    pl_sg, keyword=kw
-                )
+                    llm_scenario_gr_md = generate_scenario_group_summaries_llm_chunked(
+                        pl_sg, keyword=kw
+                    )
+                else:
+                    from ..llm.generate import generate_scenario_group_summaries_llm
+
+                    llm_scenario_gr_md = generate_scenario_group_summaries_llm(
+                        pl_sg, keyword=kw
+                    )
                 scenario_gr_llm_rec["ok"] = True
                 scenario_gr_llm_rec["chars"] = len(llm_scenario_gr_md)
+                scenario_gr_llm_rec["chunked_by_matrix"] = chunk_gr
+                if chunk_gr:
+                    scenario_gr_llm_rec["chunk_count"] = len(
+                        (pl_sg.get("groups") or [])
+                    )
             except Exception as e:
                 scenario_gr_llm_rec["ok"] = False
                 scenario_gr_llm_rec["error"] = str(e)
@@ -523,13 +633,25 @@ def write_competitor_analysis_for_run_dir(
         if pl_cg:
             comment_gr_llm_rec["attempted"] = True
             try:
-                from ..llm.generate import generate_comment_group_summaries_llm
+                if chunk_gr:
+                    from ..llm.generate import (
+                        generate_comment_group_summaries_llm_chunked,
+                    )
 
-                llm_comment_gr_md = generate_comment_group_summaries_llm(
-                    pl_cg, keyword=kw
-                )
+                    llm_comment_gr_md = generate_comment_group_summaries_llm_chunked(
+                        pl_cg, keyword=kw
+                    )
+                else:
+                    from ..llm.generate import generate_comment_group_summaries_llm
+
+                    llm_comment_gr_md = generate_comment_group_summaries_llm(
+                        pl_cg, keyword=kw
+                    )
                 comment_gr_llm_rec["ok"] = True
                 comment_gr_llm_rec["chars"] = len(llm_comment_gr_md)
+                comment_gr_llm_rec["chunked_by_matrix"] = chunk_gr
+                if chunk_gr:
+                    comment_gr_llm_rec["chunk_count"] = len(pl_cg)
             except Exception as e:
                 comment_gr_llm_rec["ok"] = False
                 comment_gr_llm_rec["error"] = str(e)
@@ -540,6 +662,24 @@ def write_competitor_analysis_for_run_dir(
     elif not want_cg:
         comment_gr_llm_rec["skipped"] = "not_enabled"
 
+    if want_st and not skip_st and isinstance(brief_final, dict) and brief_final:
+        strategy_opp_llm_rec["attempted"] = True
+        try:
+            from ..llm.generate import generate_strategy_opportunities_llm
+
+            llm_strategy_opp_md = generate_strategy_opportunities_llm(
+                brief_final, keyword=kw
+            )
+            strategy_opp_llm_rec["ok"] = True
+            strategy_opp_llm_rec["chars"] = len(llm_strategy_opp_md)
+        except Exception as e:
+            strategy_opp_llm_rec["ok"] = False
+            strategy_opp_llm_rec["error"] = str(e)
+    elif skip_st:
+        strategy_opp_llm_rec["skipped"] = "MA_SKIP_LLM_STRATEGY_OPPORTUNITIES"
+    elif not want_st:
+        strategy_opp_llm_rec["skipped"] = "not_enabled"
+
     (run_dir / "matrix_groups_llm.json").write_text(
         json.dumps(matrix_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -548,12 +688,20 @@ def write_competitor_analysis_for_run_dir(
         json.dumps(price_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    (run_dir / "promo_groups_llm.json").write_text(
+        json.dumps(promo_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     (run_dir / "comment_groups_llm.json").write_text(
         json.dumps(comment_gr_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     (run_dir / "scenario_groups_llm.json").write_text(
         json.dumps(scenario_gr_llm_rec, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (run_dir / "strategy_opportunities_llm.json").write_text(
+        json.dumps(strategy_opp_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -568,8 +716,10 @@ def write_competitor_analysis_for_run_dir(
         llm_sentiment_section_md=llm_sentiment_md or None,
         llm_matrix_section_md=llm_matrix_md or None,
         llm_price_groups_section_md=llm_price_md or None,
+        llm_promo_groups_section_md=llm_promo_md or None,
         llm_scenario_groups_section_md=llm_scenario_gr_md or None,
         llm_comment_groups_section_md=llm_comment_gr_md or None,
+        llm_strategy_opportunities_section_md=llm_strategy_opp_md or None,
     )
 
     out_md = run_dir / "competitor_analysis.md"
