@@ -24,7 +24,7 @@ const SORT_LABELS = {
   sku_id: 'SKU',
   title: '标题',
   leaf_category: '叶类目',
-  matrix_group_label: '报告细类',
+  matrix_group_label: '类目',
   detail_category_path: '类目路径',
   detail_brand: '品牌',
 }
@@ -40,8 +40,9 @@ const err = ref('')
 const commentSkuFilter = ref('')
 const sortField = ref('row_index')
 const sortOrder = ref('asc')
-/** 与 §5 矩阵一致的细类名（如饼干、米），对应接口参数 report_group */
+/** 类目（§5 矩阵），对应接口参数 report_group */
 const reportGroup = ref('')
+const shopQ = ref('')
 const priceMin = ref('')
 const priceMax = ref('')
 const detailCategoryQ = ref('')
@@ -70,7 +71,7 @@ const sortOptions = computed(() => {
   return keys.map((k) => ({ value: k, label: SORT_LABELS[k] || k }))
 })
 
-const reportGroupOptions = computed(() => summary.value?.report_group_options || [])
+const categoryOptions = computed(() => summary.value?.category_options || [])
 
 const displayColumns = computed(() => {
   const s = summary.value
@@ -162,6 +163,7 @@ async function refreshList() {
             sort: sortField.value,
             order: sortOrder.value,
             reportGroup: reportGroup.value.trim(),
+            shopQ: shopQ.value.trim(),
             priceMin: priceMin.value,
             priceMax: priceMax.value,
             detailCategoryQ: detailCategoryQ.value.trim(),
@@ -196,6 +198,7 @@ watch(
       sortField.value = 'row_index'
       sortOrder.value = 'asc'
       reportGroup.value = ''
+      shopQ.value = ''
       priceMin.value = ''
       priceMax.value = ''
       detailCategoryQ.value = ''
@@ -214,6 +217,7 @@ watch(tab, () => {
   sortField.value = 'row_index'
   sortOrder.value = 'asc'
   reportGroup.value = ''
+  shopQ.value = ''
   priceMin.value = ''
   priceMax.value = ''
   detailCategoryQ.value = ''
@@ -224,6 +228,7 @@ watch(
     sortField,
     sortOrder,
     reportGroup,
+    shopQ,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -243,6 +248,7 @@ watch(
     sortField,
     sortOrder,
     reportGroup,
+    shopQ,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -428,11 +434,20 @@ async function runExport(format) {
             </select>
           </label>
           <label class="filter-item">
-            报告细类（与矩阵一致）
+            类目（§5 矩阵）
             <select v-model="reportGroup" class="filter-select wide">
               <option value="">全部</option>
-              <option v-for="g in reportGroupOptions" :key="g" :value="g">{{ g }}</option>
+              <option v-for="g in categoryOptions" :key="g" :value="g">{{ g }}</option>
             </select>
+          </label>
+          <label class="filter-item">
+            店铺名包含
+            <input
+              v-model="shopQ"
+              type="search"
+              class="filter-input wide"
+              placeholder="模糊匹配店铺名"
+            />
           </label>
           <template v-if="tab === 'detail' || tab === 'merged'">
             <label class="filter-item">

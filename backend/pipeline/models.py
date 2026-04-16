@@ -195,7 +195,7 @@ class JdJobSearchRow(models.Model):
         blank=True,
         default="",
         db_index=True,
-        verbose_name="报告细类",
+        verbose_name="类目",
         help_text="与 §5 矩阵同源：由合并表商详路径解析；可按 SKU 从合并表回填",
     )
     price_value = models.FloatField(null=True, blank=True, db_index=True)
@@ -246,7 +246,7 @@ class JdJobDetailRow(models.Model):
         blank=True,
         default="",
         db_index=True,
-        verbose_name="报告细类",
+        verbose_name="类目",
         help_text="与 §5 矩阵同源：由 detail_category_path 解析",
     )
 
@@ -340,7 +340,7 @@ class JdJobMergedRow(models.Model):
         blank=True,
         default="",
         db_index=True,
-        verbose_name="报告细类",
+        verbose_name="类目",
         help_text="与 §5 矩阵同源：由 detail_category_path 解析",
     )
     price_value = models.FloatField(null=True, blank=True, db_index=True)

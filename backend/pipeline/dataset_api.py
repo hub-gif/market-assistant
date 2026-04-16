@@ -1,4 +1,4 @@
-"""库内数据浏览 API：排序、价格与报告细类筛选（查询参数解析与 QuerySet 变换）。"""
+"""库内数据浏览 API：排序、价格、类目（§5 矩阵）与店铺名筛选。"""
 from __future__ import annotations
 
 from typing import Any
@@ -57,8 +57,13 @@ def price_bounds_from_request(request: Request) -> tuple[float | None, float | N
 
 
 def report_group_from_request(request: Request) -> str:
-    """与 §5 矩阵一致的细类名（如「饼干」「米」）；对应查询参数 ``report_group``。"""
+    """与 §5 矩阵一致的类目名（如饼干、米）；查询参数 ``report_group``。"""
     return (request.query_params.get("report_group") or "").strip()
+
+
+def shop_q_from_request(request: Request) -> str:
+    """店铺名模糊匹配；查询参数 ``shop_q``。"""
+    return (request.query_params.get("shop_q") or "").strip()
 
 
 def detail_category_q_from_request(request: Request) -> str:
@@ -68,6 +73,7 @@ def detail_category_q_from_request(request: Request) -> str:
 def filter_echo(
     *,
     report_group: str,
+    shop_q: str,
     price_min: float | None,
     price_max: float | None,
     detail_category_q: str,
@@ -76,6 +82,7 @@ def filter_echo(
 ) -> dict[str, Any]:
     return {
         "report_group": report_group or None,
+        "shop_q": shop_q or None,
         "price_min": price_min,
         "price_max": price_max,
         "detail_category_q": detail_category_q or None,
@@ -88,6 +95,9 @@ def apply_search_filters(qs: QuerySet, request: Request) -> QuerySet:
     rg = report_group_from_request(request)
     if rg:
         qs = qs.filter(Q(matrix_group_label=rg) | Q(leaf_category=rg))
+    sq = shop_q_from_request(request)
+    if sq:
+        qs = qs.filter(shop_name__icontains=sq)
     pmin, pmax = price_bounds_from_request(request)
     if pmin is not None:
         qs = qs.filter(price_value__gte=pmin)
@@ -121,6 +131,9 @@ def apply_detail_filters(qs: QuerySet, request: Request) -> QuerySet:
     rg = report_group_from_request(request)
     if rg:
         qs = qs.filter(matrix_group_label=rg)
+    sq = shop_q_from_request(request)
+    if sq:
+        qs = qs.filter(detail_shop_name__icontains=sq)
     q = detail_category_q_from_request(request)
     if q:
         qs = qs.filter(detail_category_path__icontains=q)
@@ -157,6 +170,11 @@ def apply_merged_filters(qs: QuerySet, request: Request) -> QuerySet:
     rg = report_group_from_request(request)
     if rg:
         qs = qs.filter(matrix_group_label=rg)
+    sq = shop_q_from_request(request)
+    if sq:
+        qs = qs.filter(
+            Q(shop_name__icontains=sq) | Q(detail_shop_name__icontains=sq)
+        )
     q = detail_category_q_from_request(request)
     if q:
         qs = qs.filter(detail_category_path__icontains=q)

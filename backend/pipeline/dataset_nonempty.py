@@ -14,7 +14,7 @@ from .csv_schema import (
 from .models import JdJobCommentRow, JdJobDetailRow, JdJobMergedRow, JdJobSearchRow, PipelineJob
 from .row_serialize import COMMENT_FIELDS_ORDER, DETAIL_FIELDS_ORDER
 
-MATRIX_GROUP_COLUMN = {"key": "matrix_group_label", "label": "报告细类（§5矩阵）"}
+MATRIX_GROUP_COLUMN = {"key": "matrix_group_label", "label": "类目"}
 
 
 def _is_nonempty(val) -> bool:

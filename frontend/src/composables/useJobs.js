@@ -209,6 +209,9 @@ export function jobDatasetPageUrl(jobId, kind, page = 1, pageSize = 50, opts = {
     o.reportGroup ?? o.report_group ?? o.categoryNormId ?? o.category_norm_id
   if (rg !== undefined && rg !== null && String(rg).trim() !== '')
     p.set('report_group', String(rg).trim())
+  const shopQ = o.shopQ ?? o.shop_q
+  if (shopQ !== undefined && shopQ !== null && String(shopQ).trim() !== '')
+    p.set('shop_q', String(shopQ).trim())
   const pmin = o.priceMin ?? o.price_min
   if (pmin !== undefined && pmin !== null && String(pmin).trim() !== '')
     p.set('price_min', String(pmin).trim())

@@ -122,7 +122,7 @@ def _bulk_create_in_chunks(model, objects: list[Any]) -> None:
 def _sync_search_rows_matrix_labels(
     job: PipelineJob, merged_kw_list: list[tuple[int, dict[str, str]]]
 ) -> None:
-    """按 SKU 将合并表解析出的报告细类回填到搜索行（与 §5 矩阵口径一致）。"""
+    """按 SKU 将合并表解析出的类目回填到搜索行（与 §5 矩阵口径一致）。"""
     sku_to_mg: dict[str, str] = {}
     for _, kw in merged_kw_list:
         sk = (kw.get("sku_id") or "").strip()
