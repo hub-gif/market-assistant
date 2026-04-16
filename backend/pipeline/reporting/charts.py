@@ -256,8 +256,17 @@ def _cleanup_obsolete_report_assets(out_dir: Path) -> None:
                 pass
 
 
-def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
-    """生成扇形/条形 PNG。返回已写入的文件名列表（不含路径）。"""
+def generate_report_charts(
+    run_dir: Path,
+    brief: dict[str, Any],
+    *,
+    report_config: dict[str, Any] | None = None,
+) -> list[str]:
+    """生成扇形/条形 PNG。返回已写入的文件名列表（不含路径）。
+
+    若 ``report_config["chapter8_text_mining_probe"]`` 为真，**不**生成 ``chart_focus_and_scenarios_bar__*.png``
+   （与竞品报告 §8.3 文本挖掘探针互斥，避免无效产出）。
+    """
     _setup_matplotlib_cjk()
     import matplotlib.pyplot as plt
     from matplotlib.ticker import FuncFormatter
@@ -543,76 +552,87 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
             core = "group"
         return f"i{index:02d}_{core}"
 
-    scen_by_slug: dict[str, tuple[list[str], list[float], int]] = {}
-    by_grp = brief.get("usage_scenarios_by_matrix_group") or []
-    if isinstance(by_grp, list):
-        for item in by_grp:
-            if not isinstance(item, dict):
-                continue
-            slug = (item.get("chart_slug") or "").strip()
-            gname = str(item.get("group") or "").strip()[:24]
-            idx = item.get("matrix_group_index")
-            if not slug and gname != "" and isinstance(idx, int):
-                slug = scenario_group_asset_slug(gname, idx)
-            if not slug:
-                continue
-            scen_rows = item.get("scenarios") or []
-            n_unit = int(item.get("effective_text_units") or 0)
-            gpairs: list[tuple[str, float]] = []
-            if isinstance(scen_rows, list):
-                for r in scen_rows:
-                    if not isinstance(r, dict):
-                        continue
-                    lb = str(r.get("scenario") or "").strip()[:48]
-                    c = r.get("count")
-                    if lb and isinstance(c, (int, float)) and c > 0:
-                        gpairs.append((lb, float(c)))
-            gpairs = _merge_labeled_counts_tail(gpairs, max_items=14)
-            if gpairs and n_unit > 0:
-                scen_by_slug[slug] = (
-                    [p[0] for p in gpairs],
-                    [p[1] for p in gpairs],
-                    n_unit,
-                )
+    _skip_focus_scenario_combo = bool(
+        isinstance(report_config, dict)
+        and report_config.get("chapter8_text_mining_probe")
+    )
+    if _skip_focus_scenario_combo:
+        for fp in out_dir.glob("chart_focus_and_scenarios_bar__*.png"):
+            try:
+                fp.unlink()
+            except OSError:
+                pass
+    if not _skip_focus_scenario_combo:
+        scen_by_slug: dict[str, tuple[list[str], list[float], int]] = {}
+        by_grp = brief.get("usage_scenarios_by_matrix_group") or []
+        if isinstance(by_grp, list):
+            for item in by_grp:
+                if not isinstance(item, dict):
+                    continue
+                slug = (item.get("chart_slug") or "").strip()
+                gname = str(item.get("group") or "").strip()[:24]
+                idx = item.get("matrix_group_index")
+                if not slug and gname != "" and isinstance(idx, int):
+                    slug = scenario_group_asset_slug(gname, idx)
+                if not slug:
+                    continue
+                scen_rows = item.get("scenarios") or []
+                n_unit = int(item.get("effective_text_units") or 0)
+                gpairs: list[tuple[str, float]] = []
+                if isinstance(scen_rows, list):
+                    for r in scen_rows:
+                        if not isinstance(r, dict):
+                            continue
+                        lb = str(r.get("scenario") or "").strip()[:48]
+                        c = r.get("count")
+                        if lb and isinstance(c, (int, float)) and c > 0:
+                            gpairs.append((lb, float(c)))
+                gpairs = _merge_labeled_counts_tail(gpairs, max_items=14)
+                if gpairs and n_unit > 0:
+                    scen_by_slug[slug] = (
+                        [p[0] for p in gpairs],
+                        [p[1] for p in gpairs],
+                        n_unit,
+                    )
 
-    fb = brief.get("consumer_feedback_by_matrix_group") or []
-    if isinstance(fb, list):
-        for item in fb:
-            if not isinstance(item, dict):
-                continue
-            slug = (item.get("chart_slug") or "").strip()
-            gname = str(item.get("group") or "").strip()[:24]
-            idx = item.get("matrix_group_index")
-            if not slug and gname != "" and isinstance(idx, int):
-                slug = scenario_group_asset_slug(gname, idx)
-            if not slug:
-                continue
-            hk = item.get("focus_keyword_hits") or []
-            wl: list[str] = []
-            vl: list[float] = []
-            if isinstance(hk, list):
-                for row in hk[:20]:
-                    if not isinstance(row, dict):
-                        continue
-                    w = str(row.get("word") or "").strip()[:32]
-                    c = row.get("count")
-                    if w and isinstance(c, (int, float)) and c > 0:
-                        wl.append(w)
-                        vl.append(float(c))
-            wl = wl[:18]
-            vl = vl[:18]
-            gl, gv, n_scen = scen_by_slug.get(slug, ([], [], 0))
-            n_unit_fb = int(item.get("effective_comment_text_units") or 0)
-            n_texts = n_scen if n_scen > 0 else n_unit_fb
-            save_combo_focus_scenario_bar(
-                gname=gname,
-                slug=slug,
-                wl=wl,
-                vl=vl,
-                gl=gl,
-                gv=gv,
-                n_texts=n_texts,
-            )
+        fb = brief.get("consumer_feedback_by_matrix_group") or []
+        if isinstance(fb, list):
+            for item in fb:
+                if not isinstance(item, dict):
+                    continue
+                slug = (item.get("chart_slug") or "").strip()
+                gname = str(item.get("group") or "").strip()[:24]
+                idx = item.get("matrix_group_index")
+                if not slug and gname != "" and isinstance(idx, int):
+                    slug = scenario_group_asset_slug(gname, idx)
+                if not slug:
+                    continue
+                hk = item.get("focus_keyword_hits") or []
+                wl: list[str] = []
+                vl: list[float] = []
+                if isinstance(hk, list):
+                    for row in hk[:20]:
+                        if not isinstance(row, dict):
+                            continue
+                        w = str(row.get("word") or "").strip()[:32]
+                        c = row.get("count")
+                        if w and isinstance(c, (int, float)) and c > 0:
+                            wl.append(w)
+                            vl.append(float(c))
+                wl = wl[:18]
+                vl = vl[:18]
+                gl, gv, n_scen = scen_by_slug.get(slug, ([], [], 0))
+                n_unit_fb = int(item.get("effective_comment_text_units") or 0)
+                n_texts = n_scen if n_scen > 0 else n_unit_fb
+                save_combo_focus_scenario_bar(
+                    gname=gname,
+                    slug=slug,
+                    wl=wl,
+                    vl=vl,
+                    gl=gl,
+                    gv=gv,
+                    n_texts=n_texts,
+                )
 
     sent = brief.get("comment_sentiment_lexicon") or {}
     if isinstance(sent, dict):

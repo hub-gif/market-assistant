@@ -356,7 +356,7 @@ def write_competitor_analysis_for_run_dir(
     )
     from ..reporting.charts import generate_report_charts
 
-    generate_report_charts(run_dir, brief_final)
+    generate_report_charts(run_dir, brief_final, report_config=eff_rc)
 
     llm_sentiment_md = ""
     sentiment_llm_record: dict[str, Any] = {
