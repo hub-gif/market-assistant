@@ -829,6 +829,29 @@ def _truncate_strategy_narrative(text: str, max_chars: int) -> str:
     )
 
 
+def _llm_context_window_limit() -> int:
+    """与 ``AI_crawler.chat_completion_text`` 使用的上下文上限一致。"""
+    raw = (os.environ.get("LLM_CONTEXT_WINDOW") or os.environ.get("OPENAI_CONTEXT_WINDOW") or "32768").strip()
+    try:
+        return max(4096, int(raw))
+    except ValueError:
+        return 32768
+
+
+def _estimate_chat_input_tokens(system_prompt: str, user_prompt: str) -> int:
+    """与 ``AI_crawler._estimate_chat_input_tokens`` 一致（保守估输入 token）。"""
+    total_chars = len(system_prompt or "") + len(user_prompt or "")
+    return int(total_chars * 0.55) + 512
+
+
+def _strategy_prompt_fits_context(system: str, user: str) -> bool:
+    """若为 False，``chat_completion_text`` 会在发请求前因过长而抛错。"""
+    est = _estimate_chat_input_tokens(system, user)
+    ctx = _llm_context_window_limit()
+    buf = 256
+    return est < ctx - buf - 256
+
+
 def generate_strategy_opportunities_llm(
     brief: dict[str, Any],
     *,
@@ -845,12 +868,20 @@ def generate_strategy_opportunities_llm(
         for k, v in (chapter_llm_narratives or {}).items()
         if isinstance(v, str) and v.strip()
     }
-    _TARGET = 118_000
+    sys_prompt = STRATEGY_OPPORTUNITIES_SYSTEM
+
+    def _user_from_payload(p: dict[str, Any]) -> str:
+        return STRATEGY_OPPORTUNITIES_USER_PREFIX + json.dumps(p, ensure_ascii=False)
+
+    # 按「字符上限」递减尝试；最终以 token 估算为准（与 AI_crawler 一致），避免 JSON 仍超长导致整段失败。
     for cap_brief, cap_narr in (
-        (100_000, 7_000),
-        (72_000, 5_000),
-        (52_000, 3_500),
-        (40_000, 2_500),
+        (48_000, 2_800),
+        (42_000, 2_200),
+        (36_000, 1_700),
+        (30_000, 1_300),
+        (26_000, 950),
+        (22_000, 700),
+        (18_000, 500),
     ):
         compact = compact_brief_for_llm(brief, max_chars=cap_brief)
         narratives = {
@@ -862,13 +893,19 @@ def generate_strategy_opportunities_llm(
         }
         if narratives:
             payload["prior_chapter_llm_narratives"] = narratives
-        raw = json.dumps(payload, ensure_ascii=False)
-        if len(raw) <= _TARGET:
-            user = STRATEGY_OPPORTUNITIES_USER_PREFIX + raw
-            return _call_llm(STRATEGY_OPPORTUNITIES_SYSTEM, user)
-    compact = compact_brief_for_llm(brief, max_chars=40_000)
+        user = _user_from_payload(payload)
+        if _strategy_prompt_fits_context(sys_prompt, user):
+            return _call_llm(sys_prompt, user)
+
+    # 去掉各章节选，仅保留 brief
+    for cap_brief in (40_000, 32_000, 26_000, 20_000, 16_000):
+        compact = compact_brief_for_llm(brief, max_chars=cap_brief)
+        payload = {"keyword": keyword, "competitor_brief": compact}
+        user = _user_from_payload(payload)
+        if _strategy_prompt_fits_context(sys_prompt, user):
+            return _call_llm(sys_prompt, user)
+
+    compact = compact_brief_for_llm(brief, max_chars=14_000)
     payload = {"keyword": keyword, "competitor_brief": compact}
-    user = STRATEGY_OPPORTUNITIES_USER_PREFIX + json.dumps(
-        payload, ensure_ascii=False
-    )
-    return _call_llm(STRATEGY_OPPORTUNITIES_SYSTEM, user)
+    user = _user_from_payload(payload)
+    return _call_llm(sys_prompt, user)
