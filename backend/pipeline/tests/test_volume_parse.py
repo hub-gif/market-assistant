@@ -1,4 +1,4 @@
-"""销量/评价量文案解析（与 reporting.charts._cn_volume_int 口径一致）。"""
+"""销量/评价量文案解析（与 reporting.charts._cn_volume_int 同一套解析规则）。"""
 from __future__ import annotations
 
 from django.test import SimpleTestCase

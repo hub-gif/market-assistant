@@ -223,7 +223,7 @@ def build_strategy_draft_markdown(
         src = _esc(brief.get("price_stats_source")) or "—"
         lines.extend(
             [
-                f"- **统计口径**：{src}，有效价样本 n = {_num(pst.get('n'))}。",
+                f"- **价格来源**：{src}，有效价样本 n = {_num(pst.get('n'))}。",
                 f"- **展示价区间**：{_num(pst.get('min'))} ～ {_num(pst.get('max'))}；**中位数** {_num(pst.get('median'))}。",
                 "",
                 "**定位选项（请勾一条或改写，并写明理由）**",
@@ -321,7 +321,7 @@ def build_strategy_draft_markdown(
             "## 七、风险与待证伪",
             "",
             _risk_line(rk, "关注词/场景是否**以偏概全**？（需原评论抽样）"),
-            _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗口径）"),
+            _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗规则）"),
             _risk_line(rc, "列表集中度与深入样本品牌是否**矛盾**？（需解释渠道差异）"),
             "",
         ]

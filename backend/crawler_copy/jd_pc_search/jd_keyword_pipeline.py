@@ -214,7 +214,7 @@ def _merged_csv_fieldnames() -> list[str]:
 def _normalize_merged_rows_for_export(rows: list[dict[str, str]]) -> None:
     """
     整合表落盘前：搜索侧「榜单类文案」与「榜单排名」去掉 ``榜单/曝光：`` 前缀，
-    与 ``strip_buyer_ranking_line_prefix`` / 入库口径一致。
+    与 ``strip_buyer_ranking_line_prefix`` / 入库规则一致。
     """
     from pipeline.csv_schema import strip_buyer_ranking_line_prefix  # noqa: WPS433
 

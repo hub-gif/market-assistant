@@ -118,7 +118,7 @@ OVERRIDE_PAGE_START: int | None = None
 OVERRIDE_PAGE_TO: int | None = None
 
 # 评价/预览文本中可统计的「低 GI / 控糖」语境词（命中次数供侧写，非严谨 NLP）
-# 可选：第三方市场规模 / 行业增速等（每行四列：指标 | 数值与口径 | 来源 | 年份）。留空则不生成该小节。
+# 可选：第三方市场规模 / 行业增速等（每行四列：指标 | 数值与说明 | 来源 | 年份）。留空则不生成该小节。
 EXTERNAL_MARKET_TABLE_ROWS: tuple[tuple[str, str, str, str], ...] = ()
 
 COMMENT_FOCUS_WORDS: tuple[str, ...] = (
@@ -362,7 +362,7 @@ _PROMO_SUBSTRINGS_IN_COPY: tuple[str, ...] = (
 def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
     """
     从列表或合并行中归纳「标价 vs 券后/到手」及卖点/腰带中的活动话术信号，
-    供 §6.1 与结构化摘要使用（**页面展示口径**，非结算实付）。
+    供 §6.1 与结构化摘要使用（按**页面展示价**字段归纳，非结算实付）。
     """
     n = len(rows)
     with_jd = with_cp = with_both = 0
@@ -448,7 +448,7 @@ def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
     lines: list[str] = [
         "### 6.1 优惠活动与价差信号（页面展示摘录）",
         "",
-        "- **口径**：与上节价量统计**同一批行**；比较的是列表/合并表中的**展示标价**与**展示券后/到手价**（字段见表头），"
+        "- **统计范围**：与上节价量统计**同一批行**；比较的是列表/合并表中的**展示标价**与**展示券后/到手价**（字段见表头），"
         "反映页面呈现的活动与券信息，**不等于**用户结算实付或历史最低价。",
         "",
     ]
@@ -1129,7 +1129,7 @@ def build_comment_sentiment_llm_payload(
     供大模型做正/负向语义归纳：附规则统计、按关键词规则**归类**后的抽样，以及 **sample_reviews_semantic_pool**
    （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
 
-    ``sentiment_bucket_method`` 标明归类依据为子串词表；条形图与 lexicon 仍与此口径一致，
+    ``sentiment_bucket_method`` 标明归类依据为子串词表；条形图与 lexicon 计数方式与之一致，
     但正文归纳应以模型对 ``sample_reviews_semantic_pool`` 的整句理解为准。
     """
     pos_only_texts: list[str] = []
@@ -1996,7 +1996,7 @@ def build_competitor_markdown(
     brands_for_cr = _structure_names_for_pie_counter(brands_s)
     cr1_shop, cr3_shop, top_shop_s, _ = _brand_cr(shops_for_cr)
     cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_for_cr)
-    # §4.3 类目分布：深入合并表口径，与 §5 竞品矩阵一致（非搜索列表行）
+    # §4.3 类目分布：深入合并表（与 §5 竞品矩阵同一细类划分，非搜索列表行）
     cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
 
@@ -2088,7 +2088,7 @@ def build_competitor_markdown(
         n_sku_nop = n_sku - n_sku_pathed
         n_sku_unparsed = n_sku_pathed - n_sku_matrix
         lines.append(
-            f"- **细类分析口径**：**{n_sku_matrix}** 个 SKU 具备可参与 **§5～§8** 的商详 "
+            f"- **细类分析范围**：**{n_sku_matrix}** 个 SKU 具备可参与 **§5～§8** 的商详 "
             f"``detail_category_path``（且路径可解析为可读细类）；另有 **{n_sku_nop}** 个缺该字段、"
             f"**{n_sku_unparsed}** 个有路径但无可读细类段，**未纳入**细类矩阵与按细类评价统计。"
         )
@@ -2207,7 +2207,7 @@ def build_competitor_markdown(
         exec_bullets.append(f"用途/场景（评价自述，可多选）：{frag}（有效文本 **{scen_n_texts}** 条）。")
     if api_rc is not None:
         exec_bullets.append(
-            f"PC 搜索返回的检索结果规模约 **{api_rc:,}**（站内匹配条数量级，见 §3.2；非零售额口径）。"
+            f"PC 搜索返回的检索结果规模约 **{api_rc:,}**（站内匹配条数量级，见 §3.2；**不是**零售额或动销统计）。"
         )
     for b in exec_bullets:
         lines.append(f"- {b}")
@@ -2299,9 +2299,9 @@ def build_competitor_markdown(
             [
                 "### 3.5 外部市场规模与行业信息（运行配置摘录）",
                 "",
-                "以下为本次任务报告调参中维护的**第三方市场摘录**，可与 §3.2 检索规模及 §3.3～3.4 列表参照对照使用；口径与真实性以原出处为准。",
+                "以下为本次任务报告调参中维护的**第三方市场摘录**，可与 §3.2 检索规模及 §3.3～3.4 列表参照对照使用；**指标含义与真实性以原出处为准**。",
                 "",
-                "| 指标 | 数值与口径 | 来源 | 年份 |",
+                "| 指标 | 数值与说明 | 来源 | 年份 |",
                 "| --- | --- | --- | --- |",
             ]
         )
@@ -2390,7 +2390,7 @@ def build_competitor_markdown(
         lines.append("*无店铺字段。*")
     lines.append("")
 
-    lines.extend(["### 4.3 细分类目分布（深入合并表 · 与 §5 矩阵同口径）", ""])
+    lines.extend(["### 4.3 细分类目分布（深入合并表 · 与 §5 矩阵同一细类划分）", ""])
     if cm_structure and n_sku_matrix > 0:
         lines.extend(
             _embed_chart(
@@ -2558,13 +2558,13 @@ def build_competitor_markdown(
             "### 8.1 方法",
             "",
             "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
-            "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 排除口径一致）。",
+            "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 **同一条排除规则**）。",
             "- **正负面粗判（§8.2）**：先以关键词规则与图表做粗分；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**（尤其负向「用户在抱怨什么」），与词频条形图互补。",
             "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。",
             "",
             "### 8.2 评价正负面粗判（关键词规则）",
             "",
-            f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与 §8.1 归因口径一致）。",
+            f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与 §8.1 **归因规则**一致）。",
             f"- **偏正向（仅命中正向词表）**：{sentiment_lex.get('positive_only', 0)} 条；"
             f"**偏负向（仅命中负向词表）**：{sentiment_lex.get('negative_only', 0)} 条；"
             f"**混合（同条兼含正/负词）**：{sentiment_lex.get('mixed_positive_and_negative', 0)} 条；"
@@ -2574,7 +2574,7 @@ def build_competitor_markdown(
     )
     _scope = (sentiment_lex.get("lexeme_scope_note") or "").strip()
     if _scope:
-        lines.append(f"- **词根统计口径**：{_scope}")
+        lines.append(f"- **词根统计说明**：{_scope}")
     lines.extend(["", ""])
     lines.extend(
         _embed_chart(
@@ -2771,7 +2771,7 @@ def build_competitor_brief(
     report_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    与 ``build_competitor_markdown`` 共用统计口径，输出可 JSON 序列化的结构化竞品摘要（**规则驱动**，无 LLM）。
+    与 ``build_competitor_markdown`` 共用**同一套统计规则**，输出可 JSON 序列化的结构化竞品摘要（**规则驱动**，无 LLM）。
     """
     focus_words, scenario_groups, _ext = resolve_report_tuning(report_config)
     sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
@@ -3057,7 +3057,7 @@ def build_competitor_brief(
         "consumer_feedback_by_matrix_group": feedback_by_group,
         "comment_sentiment_lexicon": comment_sentiment_lexicon,
         "notes": [
-            "与在线分析报告各章统计口径一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
+            "与在线分析报告各章**计数规则**一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
             "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
             "评价语气为关键词粗判，非深度学习情感模型。",
             "「集中度」中：最大一家占比、前三名合计占比为小数（如 0.12 表示约 12%），对应列表或深入样本中的相关行。",

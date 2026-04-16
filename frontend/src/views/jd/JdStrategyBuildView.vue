@@ -294,7 +294,7 @@ watch(
         </label>
         <label class="chk">
           <input v-model="decisions.ack_risk_price" type="checkbox" />
-          价格带可能含大促或异常挂价（需核对口径）
+          价格带可能含大促或异常挂价（需核对清洗与计价规则）
         </label>
         <label class="chk">
           <input v-model="decisions.ack_risk_concentration" type="checkbox" />

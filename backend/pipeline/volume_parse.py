@@ -46,5 +46,5 @@ def comment_count_sort_value_from_cell(comment_count: str) -> int | None:
 
 
 def comment_count_sort_value_from_merged(pipeline_comment_count: str) -> int | None:
-    """宽表评价量列（与搜索侧口径类似的文案）。"""
+    """宽表评价量列（与搜索侧列表文案风格类似）。"""
     return comment_count_sort_value_from_cell(pipeline_comment_count)

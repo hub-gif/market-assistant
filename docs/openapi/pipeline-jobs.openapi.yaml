@@ -217,7 +217,7 @@ paths:
   /api/jobs/{id}/competitor-brief/:
     get:
       tags: [jobs]
-      summary: 结构化竞品摘要 JSON（与 Markdown 报告统计口径一致）
+      summary: 结构化竞品摘要 JSON（与 Markdown 报告同一套计数规则）
       parameters:
         - $ref: "#/components/parameters/JobId"
       responses:

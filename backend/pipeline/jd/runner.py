@@ -23,7 +23,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     大模型稿作为 **§8.5** 嵌入在 **第八章末、第九章策略** 之前，与 §8.2～8.3 等具体分析同卷连贯，
     **不再**插在篇首「## 一、」之前。
 
-    注：API「重新生成报告」已不再调用本函数，避免整篇 LLM 与矩阵/图表口径冲突；保留供脚本或将来显式开关复用。
+    注：API「重新生成报告」已不再调用本函数，避免整篇 LLM 与矩阵/图表**数据含义**冲突；保留供脚本或将来显式开关复用。
     """
     body = (rules_md or "").strip()
     sup = (llm_md or "").strip()
@@ -91,7 +91,7 @@ def _safe_dir_segment_for_job(s: str, max_len: int = 48) -> str:
 
 def resolve_pipeline_run_directory_for_job(job: PipelineJob) -> Path:
     """
-    在拉起子进程前固定本次 ``run_dir``（与 ``jd_keyword_pipeline._resolve_pipeline_run_dir`` 同口径）。
+    在拉起子进程前固定本次 ``run_dir``（与 ``jd_keyword_pipeline._resolve_pipeline_run_dir`` **同一规则**）。
     调用方负责 ``mkdir``。
     """
     root = (settings.LOW_GI_PROJECT_ROOT or "").strip()
@@ -771,7 +771,7 @@ def build_competitor_brief_for_job(
     report_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    读取 ``run_dir`` 下合并表 / 搜索导出 / 评价 / meta，返回与 Markdown 报告同口径的 **JSON 结构化摘要**（规则驱动）。
+    读取 ``run_dir`` 下合并表 / 搜索导出 / 评价 / meta，返回与 Markdown 报告**同一套计数规则**的 **JSON 结构化摘要**（规则驱动）。
     ``run_dir`` 须位于 ``LOW_GI_PROJECT_ROOT/data/JD`` 下。
     """
     low_root = (settings.LOW_GI_PROJECT_ROOT or "").strip()

@@ -54,7 +54,7 @@ JD_SEARCH_CSV_HEADERS: dict[str, str] = {
     "original_price": "原价",
     "selling_point": "卖点",
     "comment_sales_floor": "销量楼层",
-    "total_sales": "销量口径",
+    "total_sales": "销量展示",
     "hot_list_rank": "榜单类文案",
     "comment_count": "评价量",
     "shop_name": "店铺名",
@@ -236,7 +236,7 @@ def remap_merged_row_english_detail_keys_to_csv_headers(merged: dict[str, str]) 
 
 def infer_total_sales_from_sales_floor(cell: str) -> str:
     """
-    从「销量楼层(commentSalesFloor)」列文案截取可作 ``销量口径(totalSales)`` 的片段（与列表接口未单独落 totalSales 列时的兜底一致）。
+    从「销量楼层(commentSalesFloor)」列文案截取可作 ``销量展示(totalSales)`` 的片段（与列表接口未单独落 totalSales 列时的兜底一致）。
     """
     t = (cell or "").strip()
     if not t:
@@ -249,7 +249,7 @@ def infer_total_sales_from_sales_floor(cell: str) -> str:
 
 
 def merged_csv_effective_total_sales(row: dict[str, str]) -> str:
-    """合并表一行：优先已有 ``销量口径(totalSales)``，否则从销量楼层推断。"""
+    """合并表一行：优先已有 ``销量展示(totalSales)`` 列，否则从销量楼层推断。"""
     h_ts = MERGED_FIELD_TO_CSV_HEADER["total_sales"]
     h_fl = MERGED_FIELD_TO_CSV_HEADER["comment_sales_floor"]
     direct = str(row.get(h_ts) or "").strip()
@@ -259,7 +259,7 @@ def merged_csv_effective_total_sales(row: dict[str, str]) -> str:
 
 
 def search_csv_effective_total_sales(row: dict[str, str]) -> str:
-    """PC 搜索导出表一行：与 ``merged_csv_effective_total_sales`` 口径一致（中文表头）。"""
+    """PC 搜索导出表一行：与 ``merged_csv_effective_total_sales`` 解析规则一致（中文表头）。"""
     h_ts = JD_SEARCH_CSV_HEADERS["total_sales"]
     h_fl = JD_SEARCH_CSV_HEADERS["comment_sales_floor"]
     direct = str(row.get(h_ts) or "").strip()

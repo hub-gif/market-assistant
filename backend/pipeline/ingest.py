@@ -105,7 +105,7 @@ def _comment_row_kwargs(row: dict[str, str]) -> dict[str, str]:
 
 
 def _normalize_merged_csv_total_sales(row: dict[str, str]) -> None:
-    """列表未写 totalSales 列时，用销量楼层推断，保证入库与快照与报告口径一致。"""
+    """列表未写 totalSales 列时，用销量楼层推断，保证入库与快照与报告计数一致。"""
     h = MERGED_FIELD_TO_CSV_HEADER["total_sales"]
     row[h] = merged_csv_effective_total_sales(row)
 
@@ -127,7 +127,7 @@ def _bulk_create_in_chunks(model, objects: list[Any]) -> None:
 def _sync_search_rows_matrix_labels(
     job: PipelineJob, merged_kw_list: list[tuple[int, dict[str, str]]]
 ) -> None:
-    """按 SKU 将合并表解析出的类目回填到搜索行（与 §5 矩阵口径一致）。"""
+    """按 SKU 将合并表解析出的类目回填到搜索行（与 §5 矩阵**同一细类划分**）。"""
     sku_to_mg: dict[str, str] = {}
     for _, kw in merged_kw_list:
         sk = (kw.get("sku_id") or "").strip()

@@ -108,7 +108,7 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
             [
                 "## 价格（展示价统计）",
                 "",
-                f"- **样本量（条）**：{_num(pst.get('n'))}；**统计口径**：{src}",
+                f"- **样本量（条）**：{_num(pst.get('n'))}；**价格来源**：{src}",
                 f"- **区间**：{_num(pst.get('min'))} ～ {_num(pst.get('max'))}；**中位数**：{_num(pst.get('median'))}",
                 "",
             ]

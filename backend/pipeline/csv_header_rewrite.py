@@ -66,7 +66,7 @@ def build_legacy_header_map() -> dict[str, str]:
         ),
         ("卖点(sellingPoint)", JD_SEARCH_CSV_HEADERS["selling_point"]),
         ("销量楼层(commentSalesFloor)", JD_SEARCH_CSV_HEADERS["comment_sales_floor"]),
-        ("销量口径(totalSales)", JD_SEARCH_CSV_HEADERS["total_sales"]),
+        ("销量展示(totalSales)", JD_SEARCH_CSV_HEADERS["total_sales"]),
         (
             "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
             JD_SEARCH_CSV_HEADERS["hot_list_rank"],

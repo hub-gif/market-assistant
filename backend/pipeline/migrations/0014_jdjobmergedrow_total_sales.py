@@ -1,4 +1,4 @@
-# Generated manually for keyword_pipeline_merged.csv column 销量口径(totalSales).
+# Generated manually for keyword_pipeline_merged.csv column 销量展示(totalSales).
 
 from django.db import migrations, models
 

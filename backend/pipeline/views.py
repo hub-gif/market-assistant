@@ -429,7 +429,7 @@ class JobRegenerateReportView(APIView):
 
 
 class JobCompetitorBriefView(APIView):
-    """单次任务的结构化竞品摘要（JSON，与 ``competitor_analysis.md`` 统计口径一致，规则驱动无 LLM）。"""
+    """单次任务的结构化竞品摘要（JSON，与 ``competitor_analysis.md`` **同一套计数规则**，规则驱动无 LLM）。"""
 
     def get(self, request, pk: int):
         if not (settings.LOW_GI_PROJECT_ROOT or "").strip():

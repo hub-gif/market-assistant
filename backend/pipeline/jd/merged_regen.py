@@ -29,7 +29,7 @@ def _ensure_crawler_detail_path() -> None:
 def write_keyword_pipeline_merged_lean_csv(run_dir: Path) -> tuple[int, Path]:
     """
     读取已有 ``keyword_pipeline_merged.csv``（可缺列），按 lean 宽表列序重写：
-    - ``销量口径`` 与入库一致（``merged_csv_effective_total_sales``）
+    - ``销量展示`` 列与入库一致（``merged_csv_effective_total_sales``）
     - 商详块列优先与 ``detail_ware_export.csv`` 对齐；缺则尝试 ``detail/ware_{sku}_response.json``
     - 「榜单类文案」与「榜单排名」去掉 ``榜单/曝光：`` 前缀
     """
