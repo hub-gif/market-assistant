@@ -24,6 +24,16 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
         "llm_comment_group_summaries",
         "llm_scenario_group_summaries",
         "llm_group_summaries_chunk_by_matrix",
+        "chapter8_text_mining_probe",
+        "chapter8_text_mining_probe_live_llm",
+        "chapter8_text_mining_probe_llm_chunked",
+        "chapter8_text_mining_probe_wordcloud",
+        "chapter8_probe_min_texts",
+        "chapter8_probe_lda_topics",
+        "chapter8_probe_top_k_words",
+        "chapter8_probe_cooc_vocab",
+        "chapter8_probe_cooc_pairs",
+        "chapter8_probe_wordcloud_max",
         "comment_focus_words",
         "comment_scenario_groups",
         "external_market_table_rows",
@@ -52,9 +62,24 @@ def validate_report_config_body(value: dict) -> dict:
         "llm_comment_group_summaries",
         "llm_scenario_group_summaries",
         "llm_group_summaries_chunk_by_matrix",
+        "chapter8_text_mining_probe",
+        "chapter8_text_mining_probe_live_llm",
+        "chapter8_text_mining_probe_llm_chunked",
+        "chapter8_text_mining_probe_wordcloud",
     ):
         if k in value and value[k] is not None and not isinstance(value[k], bool):
             raise serializers.ValidationError(f"{k} 须为 true 或 false")
+    for k in (
+        "chapter8_probe_min_texts",
+        "chapter8_probe_lda_topics",
+        "chapter8_probe_top_k_words",
+        "chapter8_probe_cooc_vocab",
+        "chapter8_probe_cooc_pairs",
+        "chapter8_probe_wordcloud_max",
+    ):
+        if k in value and value[k] is not None:
+            if not isinstance(value[k], int):
+                raise serializers.ValidationError(f"{k} 须为整数")
     raw = json.dumps(value, ensure_ascii=False)
     if len(raw) > 120_000:
         raise serializers.ValidationError("报告配置体积过大")

@@ -2136,8 +2136,10 @@ def build_competitor_markdown(
     llm_scenario_groups_section_md: str | None = None,
     llm_comment_groups_section_md: str | None = None,
     llm_strategy_opportunities_section_md: str | None = None,
+    chapter8_text_mining_probe_section_md: str | None = None,
 ) -> str:
     focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
+    _ch8_probe_sec = (chapter8_text_mining_probe_section_md or "").strip()
     sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     batch = _run_batch_label(run_dir)
@@ -2272,7 +2274,11 @@ def build_competitor_markdown(
             "- **品牌/店铺集中度（第四章）**：有列表全量时按列表行计店铺与品牌占比；无列表导出时按深入 SKU 合并表估算。",
             "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
-            "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见 §8.3。",
+            (
+                "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；§8.3 为 **jieba + TF-IDF / 共现 / LDA** 文本挖掘探针（与 §8.2 条形图口径不同、互补），可选词云与探针专用大模型归纳。"
+                if _ch8_probe_sec
+                else "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见 §8.3。"
+            ),
             "- **细类划分（§5～§8）**：**仅**依据合并表 ``detail_category_path``；该列为空或无法解析出可读细类段的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
             "",
@@ -2726,7 +2732,11 @@ def build_competitor_markdown(
         "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
         "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 **同一条排除规则**）。",
         "- **正负面粗判（§8.2）**：若评价含有效「评分」列则**先按星级**粗分正负与中评，再在对应子集内统计口语短语；无评分时仍按关键词子串；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**，与条形图互补。",
-        "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。",
+        (
+            "- **文本挖掘探针（§8.3）**：本任务已启用 **jieba + sklearn** 的开放词表分析（词频 / TF-IDF / 共现 / LDA，可选词云），与 §8.2 规则词表条形图**口径不同**、**互补**；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
+            if _ch8_probe_sec
+            else "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。"
+        ),
         "",
         _sec82_title,
         "",
@@ -2822,87 +2832,99 @@ def build_competitor_markdown(
             ]
         )
     lines.append("")
-    lines.extend(
-        [
-            "### 8.3 关注词与使用场景（按细类）",
-            "",
-            "每细类一张**左右并列图**（与 ``report_assets/chart_focus_and_scenarios_bar__*.png`` 同源）："
-            "**左**为配置关注词子串命中次数（同一评价可出现多次，为次数而非去重条数）；"
-            "**右**为预设场景词组命中占该细类有效文本比例 %（一条可属多场景；多柱比例可相加 **>** 100%）。"
-            "统计均基于评价正文（或兜底预览）子串规则，**不等于**购买动机调研结论。",
-            "",
-        ]
-    )
-    if not feedback_groups:
-        lines.append("*无评价数据可归组。*")
-        lines.append("")
+    if _ch8_probe_sec:
+        lines.extend(
+            [
+                "### 8.3 文本挖掘探针（jieba / TF-IDF / 共现 / LDA）",
+                "",
+                "> **说明**：与 §8.2 口语短语条形图（规则词表）**口径不同**、**互补**；**不**再输出本章原「关注词 + 场景」左右并列条图；插图路径相对于本批次目录下 ``report_assets/``。",
+                "",
+                _ch8_probe_sec,
+                "",
+            ]
+        )
     else:
-        for gi, (gname, cr_g, texts_g) in enumerate(feedback_groups):
-            n_flat = len(cr_g)
-            lines.append(f"#### {gname}")
+        lines.extend(
+            [
+                "### 8.3 关注词与使用场景（按细类）",
+                "",
+                "每细类一张**左右并列图**（与 ``report_assets/chart_focus_and_scenarios_bar__*.png`` 同源）："
+                "**左**为配置关注词子串命中次数（同一评价可出现多次，为次数而非去重条数）；"
+                "**右**为预设场景词组命中占该细类有效文本比例 %（一条可属多场景；多柱比例可相加 **>** 100%）。"
+                "统计均基于评价正文（或兜底预览）子串规则，**不等于**购买动机调研结论。",
+                "",
+            ]
+        )
+        if not feedback_groups:
+            lines.append("*无评价数据可归组。*")
             lines.append("")
-            lines.append(
-                f"- **本细类逐条评价**：{n_flat} 条；**用于统计的有效文本条数**：{len(texts_g)}。"
-            )
-            lines.append("")
-            hits_g = _group_keyword_hits(cr_g, texts_g, focus_words=focus_words)
-            scen_g, scen_ng = _comment_scenario_counts(texts_g, scenario_groups)
-            has_focus = any(n > 0 for n in hits_g.values()) if hits_g else False
-            has_scen = scen_ng > 0 and any(n > 0 for n in scen_g.values())
-            if scen_ng <= 0:
-                lines.append("*该细类下无可用评价正文。*")
+        else:
+            for gi, (gname, cr_g, texts_g) in enumerate(feedback_groups):
+                n_flat = len(cr_g)
+                lines.append(f"#### {gname}")
                 lines.append("")
-                continue
-            if has_focus or has_scen:
-                cap = (
-                    f"「{_md_cell(gname, 24)}」细类 · 关注词与使用场景（左：关注词命中次数；右：场景占有效文本 %；"
-                    f"有效文本 **{scen_ng}** 条）"
+                lines.append(
+                    f"- **本细类逐条评价**：{n_flat} 条；**用于统计的有效文本条数**：{len(texts_g)}。"
                 )
-                lines.extend(
-                    _embed_chart(
-                        run_dir,
-                        _focus_scenario_combo_bar_filename(gname, gi),
-                        cap,
-                    )
-                )
-            else:
-                lines.append("*该细类无关注词命中且未命中预设场景词组。*")
                 lines.append("")
-            if has_scen:
-                for para in _scenario_summary_bullets(scen_g, scen_ng):
-                    lines.append(para)
+                hits_g = _group_keyword_hits(cr_g, texts_g, focus_words=focus_words)
+                scen_g, scen_ng = _comment_scenario_counts(texts_g, scenario_groups)
+                has_focus = any(n > 0 for n in hits_g.values()) if hits_g else False
+                has_scen = scen_ng > 0 and any(n > 0 for n in scen_g.values())
+                if scen_ng <= 0:
+                    lines.append("*该细类下无可用评价正文。*")
                     lines.append("")
-            elif scen_ng > 0:
-                lines.append("*未命中预设场景词组。*")
-                lines.append("")
+                    continue
+                if has_focus or has_scen:
+                    cap = (
+                        f"「{_md_cell(gname, 24)}」细类 · 关注词与使用场景（左：关注词命中次数；右：场景占有效文本 %；"
+                        f"有效文本 **{scen_ng}** 条）"
+                    )
+                    lines.extend(
+                        _embed_chart(
+                            run_dir,
+                            _focus_scenario_combo_bar_filename(gname, gi),
+                            cap,
+                        )
+                    )
+                else:
+                    lines.append("*该细类无关注词命中且未命中预设场景词组。*")
+                    lines.append("")
+                if has_scen:
+                    for para in _scenario_summary_bullets(scen_g, scen_ng):
+                        lines.append(para)
+                        lines.append("")
+                elif scen_ng > 0:
+                    lines.append("*未命中预设场景词组。*")
+                    lines.append("")
 
-    _llm_sg = (llm_scenario_groups_section_md or "").strip()
-    if _llm_sg:
-        lines.extend(
-            [
-                "",
-                "#### 使用场景要点归纳（大模型，与 §8.3 右栏图表互补）",
-                "",
-                "> **说明**：与 §8.3 **相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
-                "",
-                _llm_sg,
-                "",
-            ]
-        )
+        _llm_sg = (llm_scenario_groups_section_md or "").strip()
+        if _llm_sg:
+            lines.extend(
+                [
+                    "",
+                    "#### 使用场景要点归纳（大模型，与 §8.3 右栏图表互补）",
+                    "",
+                    "> **说明**：与 §8.3 **相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
+                    "",
+                    _llm_sg,
+                    "",
+                ]
+            )
 
-    _llm_cg = (llm_comment_groups_section_md or "").strip()
-    if _llm_cg:
-        lines.extend(
-            [
-                "",
-                "#### 细类评价与关注词要点归纳（大模型，与 §8.3 左栏图表互补）",
-                "",
-                "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与 §8.3 图左栏以正文为准**。",
-                "",
-                _llm_cg,
-                "",
-            ]
-        )
+        _llm_cg = (llm_comment_groups_section_md or "").strip()
+        if _llm_cg:
+            lines.extend(
+                [
+                    "",
+                    "#### 细类评价与关注词要点归纳（大模型，与 §8.3 左栏图表互补）",
+                    "",
+                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与 §8.3 图左栏以正文为准**。",
+                    "",
+                    _llm_cg,
+                    "",
+                ]
+            )
 
     lines.extend(["---", "", "## 九、策略与机会提示（假设清单，待验证）", ""])
     _llm_st = (llm_strategy_opportunities_section_md or "").strip()

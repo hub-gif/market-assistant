@@ -174,6 +174,10 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_promo_group_summaries": True,
         "llm_strategy_opportunities": True,
         "llm_group_summaries_chunk_by_matrix": True,
+        "chapter8_text_mining_probe": False,
+        "chapter8_text_mining_probe_live_llm": True,
+        "chapter8_text_mining_probe_llm_chunked": True,
+        "chapter8_text_mining_probe_wordcloud": True,
         "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
         "comment_scenario_groups": [
             {"label": lbl, "triggers": list(trs)}
@@ -458,6 +462,50 @@ def write_competitor_analysis_for_run_dir(
         "MA_ENABLE_LLM_STRATEGY_OPPORTUNITIES"
     )
 
+    use_ch8_probe = bool(eff_rc.get("chapter8_text_mining_probe"))
+    chapter8_probe_embed_md = ""
+    ch8_probe_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
+    if use_ch8_probe:
+        ch8_probe_rec["attempted"] = True
+        try:
+            from ..demos.chapter8_text_mining_probe import (
+                build_markdown as build_ch8_probe_full_md,
+                markdown_embed_body_for_competitor_report,
+            )
+
+            _rc = eff_rc
+            full_probe = build_ch8_probe_full_md(
+                run_dir,
+                min_texts=int(_rc.get("chapter8_probe_min_texts") or 8),
+                lda_topics_n=int(_rc.get("chapter8_probe_lda_topics") or 4),
+                top_k_words=int(_rc.get("chapter8_probe_top_k_words") or 30),
+                cooc_vocab=int(_rc.get("chapter8_probe_cooc_vocab") or 80),
+                cooc_pairs=int(_rc.get("chapter8_probe_cooc_pairs") or 25),
+                live_llm=bool(_rc.get("chapter8_text_mining_probe_live_llm", True)),
+                llm_chunked=bool(
+                    _rc.get("chapter8_text_mining_probe_llm_chunked", True)
+                ),
+                wordcloud_enabled=bool(
+                    _rc.get("chapter8_text_mining_probe_wordcloud", True)
+                ),
+                wordcloud_max=int(_rc.get("chapter8_probe_wordcloud_max") or 40),
+            )
+            (run_dir / "chapter8_text_mining_probe.md").write_text(
+                full_probe, encoding="utf-8"
+            )
+            chapter8_probe_embed_md = markdown_embed_body_for_competitor_report(
+                full_probe
+            )
+            ch8_probe_rec["ok"] = True
+            ch8_probe_rec["chars_embed"] = len(chapter8_probe_embed_md)
+        except Exception as e:
+            ch8_probe_rec["ok"] = False
+            ch8_probe_rec["error"] = str(e)
+
+    if use_ch8_probe and chapter8_probe_embed_md:
+        want_sg = False
+        want_cg = False
+
     chunk_gr = use_chunked_group_summaries_llm(eff_rc)
 
     if want_mx and not skip_mx and merged_rows:
@@ -707,6 +755,11 @@ def write_competitor_analysis_for_run_dir(
         json.dumps(strategy_opp_llm_rec, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    if use_ch8_probe:
+        (run_dir / "chapter8_text_mining_probe.json").write_text(
+            json.dumps(ch8_probe_rec, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     md = jcr.build_competitor_markdown(
         run_dir=run_dir,
@@ -723,6 +776,7 @@ def write_competitor_analysis_for_run_dir(
         llm_scenario_groups_section_md=llm_scenario_gr_md or None,
         llm_comment_groups_section_md=llm_comment_gr_md or None,
         llm_strategy_opportunities_section_md=llm_strategy_opp_md or None,
+        chapter8_text_mining_probe_section_md=chapter8_probe_embed_md or None,
     )
 
     out_md = run_dir / "competitor_analysis.md"

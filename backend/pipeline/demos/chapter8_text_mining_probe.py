@@ -16,6 +16,8 @@
     python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"...\" --live-llm --llm-chunked
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
+
+嵌入竞品报告：任务 ``report_config`` 中 ``chapter8_text_mining_probe``: true 时，流水线会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **§8.3**，替代原「关注词 + 场景」条图及对应两段大模型；**§8.2 与「大模型深入解读（主题归因…）」保留**。
 """
 from __future__ import annotations
 
@@ -713,6 +715,34 @@ def build_markdown(
     lines.append("")
     lines.append("*（完）*")
     return "\n".join(lines)
+
+
+def markdown_embed_body_for_competitor_report(full_probe_md: str) -> str:
+    """
+    将独立探针稿转为可嵌入 ``build_competitor_markdown`` 的 **§8.3 正文**（不含 ``### 8.3`` 标题行）：
+    从 ``## 8.0 说明`` 起至文末，并把 ``## …`` 降为 ``#### …``，避免与宿主 ``## 八、`` 冲突。
+    """
+    lines = (full_probe_md or "").splitlines()
+    try:
+        start = next(
+            i
+            for i, ln in enumerate(lines)
+            if ln.strip() == "## 8.0 说明" or ln.strip().startswith("## 8.0 说明")
+        )
+    except StopIteration:
+        return (full_probe_md or "").strip()
+    chunk = lines[start:]
+    out: list[str] = []
+    for ln in chunk:
+        if ln.startswith("## ") and not ln.startswith("###"):
+            out.append("#### " + ln[3:])
+        else:
+            out.append(ln)
+    while out and out[-1].strip() in ("*（完）*", ""):
+        out.pop()
+    while out and not out[-1].strip():
+        out.pop()
+    return "\n".join(out).strip()
 
 
 def main() -> None:
