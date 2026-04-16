@@ -1677,13 +1677,26 @@ def _category_mix(
     """
     按「可读细类标签」统计 SKU 分布（与 §5 ``_competitor_matrix_group_key`` 同源）；
     仅含 ``detail_category_path`` 可解析为展示名的行。
+
+    返回 ``most_common(top_k)``，并将未列入 Top K 的款数合并为「（其余细类）」，
+    使各块 SKU 数之和等于有效矩阵 SKU 总数（与扇形图、简报 ``category_mix_top`` 一致）。
     """
     labels: list[str] = []
     for r in rows:
         k = _matrix_group_label_from_detail_path(r)
         if k:
             labels.append(k)
-    return Counter(labels).most_common(top_k)
+    if not labels:
+        return []
+    c = Counter(labels)
+    common = c.most_common(top_k)
+    accounted = sum(v for _, v in common)
+    total = sum(c.values())
+    rest = total - accounted
+    out: list[tuple[str, int]] = list(common)
+    if rest > 0:
+        out.append(("（其余细类）", rest))
+    return out
 
 
 def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
@@ -1943,38 +1956,6 @@ def _lines_4_reading_shop(
     if cr3 is not None:
         lines.append(
             f"- 前三店铺合计约 **{100 * cr3:.1f}%**；若集中度高，可考虑从店铺矩阵、旗舰店/专营店布局等角度拆解竞争。"
-        )
-    lines.append("")
-    return lines
-
-
-def _lines_4_reading_category(
-    cm_structure: list[tuple[str, int]],
-    *,
-    n_merged_sku: int,
-    n_sku_matrix: int,
-) -> list[str]:
-    if not cm_structure or n_sku_matrix <= 0:
-        return []
-    top_lbl, top_c = cm_structure[0]
-    share = top_c / float(n_sku_matrix)
-    lines = [
-        "",
-        "**数据解读（规则摘要）**：",
-        "",
-        f"- **统计口径**：与 **§5 竞品矩阵**相同，均来自深入合并表列 ``detail_category_path`` 解析出的可读细类标签。",
-        f"- **有效总量**：合并表共 **{n_merged_sku}** 个 SKU；其中 **{n_sku_matrix}** 个具备可解析细类标签（**有效细类 SKU**）；"
-        f"**{max(0, n_merged_sku - n_sku_matrix)}** 个无可用路径或无法解析，与 §5 一致**不纳入**本小节分布。",
-        f"- 扇形图与简报包按 SKU 数取 **Top 12** 细类；下表列 **Top 5**。当前「{_md_cell(top_lbl, 40)}」款数最多，"
-        f"约占有效细类 SKU 的 **{100 * share:.1f}%**（{top_c}/{n_sku_matrix}）。",
-        "- 若头部细类占比极高，说明当前关键词下深入样本被少数品类定义；跨品类机会需结合 §5 矩阵再核对。",
-        "",
-        "| 细类标签（Top 5） | SKU 数 | 占有效细类 SKU 数 |",
-        "| --- | ---: | ---: |",
-    ]
-    for lbl, cnt in cm_structure[:5]:
-        lines.append(
-            f"| {_md_cell(lbl, 36)} | {cnt} | {100 * cnt / float(n_sku_matrix):.1f}% |"
         )
     lines.append("")
     return lines
@@ -2415,14 +2396,8 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_category_mix_pie.png",
-                "细类标签分布（扇形图；合并表 ``detail_category_path``，与 §5 同源）",
-            )
-        )
-        lines.extend(
-            _lines_4_reading_category(
-                cm_structure,
-                n_merged_sku=n_sku,
-                n_sku_matrix=n_sku_matrix,
+                "细类标签分布（扇形图；合并表 ``detail_category_path``，与 §5 同源；"
+                "Top 12 以外的细类在数据层并入「（其余细类）」；扇形图内再合并为「其他」）",
             )
         )
         lines.append(
