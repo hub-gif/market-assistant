@@ -22,7 +22,7 @@ def category_token_meaningless(seg: str) -> bool:
 def matrix_display_segment_from_parts(parts: list[str]) -> str | None:
     """
     与历史逻辑一致的主选段；若该段无意义则自右向左找第一段可读文本
-    （避免「仅类目码」或中间段为数字 ID 时整组成品名式乱桶）。
+    （避免「仅类目码」或中间段为数字 ID 时，把路径误解析成无意义的细类展示名）。
     """
     if not parts:
         return None

@@ -112,7 +112,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         fb = jcr._consumer_feedback_by_matrix_group(
             merged_rows=merged,
             comment_rows=[
-                {"sku": "222", "tagCommentContent": "缺路径仍不应进细类桶"},
+                {"sku": "222", "tagCommentContent": "缺路径仍不应计入按细类统计"},
                 {"sku": "111", "tagCommentContent": "有路径进细类"},
             ],
             sku_header=sku_h,

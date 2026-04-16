@@ -1126,10 +1126,10 @@ def build_comment_sentiment_llm_payload(
     shuffle_seed: str = "",
 ) -> dict[str, Any]:
     """
-    供大模型做正/负向语义归纳：附规则统计、关键词分桶抽样，以及 **sample_reviews_semantic_pool**
+    供大模型做正/负向语义归纳：附规则统计、按关键词规则**归类**后的抽样，以及 **sample_reviews_semantic_pool**
    （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
 
-    ``sentiment_bucket_method`` 标明分桶依据为子串词表；条形图与 lexicon 仍与此口径一致，
+    ``sentiment_bucket_method`` 标明归类依据为子串词表；条形图与 lexicon 仍与此口径一致，
     但正文归纳应以模型对 ``sample_reviews_semantic_pool`` 的整句理解为准。
     """
     pos_only_texts: list[str] = []
@@ -1600,7 +1600,7 @@ def _category_token_meaningless(seg: str) -> bool:
 def _matrix_display_segment_from_parts(parts: list[str]) -> str | None:
     """
     与历史逻辑一致的主选段；若该段无意义则自右向左找第一段可读文本
-    （避免「仅类目码」或中间段为数字 ID 时整组成品名式乱桶）。
+    （避免「仅类目码」或中间段为数字 ID 时，把路径误解析成无意义的细类展示名）。
     """
     if not parts:
         return None
@@ -2620,7 +2620,7 @@ def build_competitor_markdown(
                 "",
                 "#### 大模型深入解读（主题归因，与词频统计互补）",
                 "",
-                "> **说明**：基于与上节**同一分桶规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
+                "> **说明**：基于与上节**同一套关键词归类规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
                 "",
                 _llm_s,
             ]
