@@ -1,12 +1,12 @@
 """
 第八章「文本挖掘探针」独立脚本（**不修改**主报告代码）。
 
-流程（按细类分组）：清洗（jieba 分词 + 停用词）→ 词频 / TF-IDF → 共现对 → LDA 主题
+流程（按细类分组）：清洗（jieba 分词 + 停用词）→ **词云图（可选）** → 词频 / TF-IDF → 共现对 → LDA 主题
 → 规则化叙事小结 → 可选 LLM 解读（需 ``--live-llm`` 且配置好 ``AI_crawler``）。
 
 依赖（请自行安装）::
 
-    pip install jieba scikit-learn numpy
+    pip install jieba scikit-learn numpy wordcloud matplotlib
 
 用法（在 ``backend`` 目录下）::
 
@@ -62,6 +62,19 @@ except ImportError as e:
     )
     sys.exit(1)
 
+try:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt  # noqa: WPS433
+    from wordcloud import WordCloud  # noqa: WPS433
+
+    _WORDCLOUD_AVAILABLE = True
+except ImportError:
+    plt = None  # type: ignore[assignment]
+    WordCloud = None  # type: ignore[assignment]
+    _WORDCLOUD_AVAILABLE = False
+
 
 # 精简中文停用词（可换外部文件）；与业务无关，仅用于探针
 _STOP_BASIC: frozenset[str] = frozenset(
@@ -70,6 +83,85 @@ _STOP_BASIC: frozenset[str] = frozenset(
     非常 真的 比较 特别 感觉 觉得 认为 看到 收到 东西 商品 产品 卖家 买家 店铺 京东 物流 快递 包装 评价 评论 购买 买 卖 收到 天 次 个 款 种 条 块
     """.split()
 )
+
+
+def _is_noise_token(w: str) -> bool:
+    if len(w) < 2:
+        return True
+    if w in ("ldquo", "rdquo", "nbsp", "mdash"):
+        return True
+    if re.match(r"^[a-z]{1,8}$", w) and w not in ("gi",):
+        return True
+    return False
+
+
+def _word_freq_from_cut_docs(cut_docs: list[str]) -> dict[str, int]:
+    c: Counter[str] = Counter()
+    for line in cut_docs:
+        for w in line.split():
+            if _is_noise_token(w):
+                continue
+            c[w] += 1
+    return dict(c)
+
+
+def _font_path_chinese() -> str | None:
+    windir = os.environ.get("WINDIR", r"C:\Windows")
+    candidates = [
+        Path(windir) / "Fonts" / "msyh.ttc",
+        Path(windir) / "Fonts" / "msyhbd.ttc",
+        Path(windir) / "Fonts" / "simhei.ttf",
+        Path(windir) / "Fonts" / "simsun.ttc",
+        Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+    ]
+    for p in candidates:
+        try:
+            if p.is_file():
+                return str(p)
+        except OSError:
+            continue
+    return None
+
+
+def _slug_safe(gname: str) -> str:
+    s = re.sub(r'[<>:"/\\|?*]', "_", (gname or "").strip())
+    return s[:80] if len(s) > 80 else s
+
+
+def _save_wordcloud_png(
+    freq: dict[str, int],
+    out_path: Path,
+    *,
+    font_path: str | None,
+) -> str:
+    """写入 PNG；成功返回空串，失败返回错误说明。"""
+    if not _WORDCLOUD_AVAILABLE or WordCloud is None or plt is None:
+        return "wordcloud/matplotlib 未安装"
+    if not freq:
+        return "词频为空"
+    try:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        wc = WordCloud(
+            font_path=font_path,
+            width=960,
+            height=540,
+            background_color="white",
+            max_words=220,
+            relative_scaling=0.35,
+            colormap="viridis",
+            prefer_horizontal=0.88,
+            min_font_size=10,
+        ).generate_from_frequencies(freq)
+        fig, ax = plt.subplots(figsize=(10.5, 6), dpi=120)
+        ax.imshow(wc, interpolation="bilinear")
+        ax.axis("off")
+        fig.tight_layout(pad=0)
+        fig.savefig(out_path, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+    except Exception as e:
+        return str(e)
+    return ""
 
 
 def _load_run(
@@ -301,6 +393,8 @@ def build_markdown(
     cooc_pairs: int,
     live_llm: bool,
     max_llm_groups: int,
+    wordcloud_enabled: bool,
+    wordcloud_max: int,
 ) -> str:
     kw, merged, comments = _load_run(run_dir)
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
@@ -322,15 +416,32 @@ def build_markdown(
         "",
         "## 8.0 说明",
         "",
-        "本稿为**独立探针**，流程参考「清洗 → 词频/TF-IDF → 共现 → LDA → 叙事小结 →（可选）LLM」。"
+        "本稿为**独立探针**，流程参考「清洗 → 词云（可选）→ 词频/TF-IDF → 共现 → LDA → 叙事小结 →（可选）LLM」。"
         "与线上一致的部分：**细类划分与 SKU 归因**复用 ``jd_competitor_report._consumer_feedback_by_matrix_group``；"
         "其余为 **jieba + sklearn** 的开放词表分析，**不替代**正式报告中的规则统计。",
         "",
         "---",
         "",
     ]
+    if wordcloud_enabled and not _WORDCLOUD_AVAILABLE:
+        lines.extend(
+            [
+                "> **词云**：当前环境未安装 ``wordcloud`` / ``matplotlib``，已跳过出图。"
+                "请执行：``pip install wordcloud matplotlib``。",
+                "",
+            ]
+        )
+    elif wordcloud_enabled and not _font_path_chinese():
+        lines.extend(
+            [
+                "> **词云字体**：未检测到常见中文字体路径，词云可能出现方框；"
+                "Windows 可确认 ``C:\\Windows\\Fonts\\msyh.ttc`` 是否存在。",
+                "",
+            ]
+        )
 
     llm_used = 0
+    wc_n = 0
     for gname, _cr_rows, texts in groups:
         n_raw = len([t for t in texts if (t or "").strip()])
         if n_raw < min_texts:
@@ -366,6 +477,28 @@ def build_markdown(
         lda_t, lda_err = _lda_topics(cut_docs, lda_topics_n, 12)
 
         lines.extend([f"## {gname}", ""])
+        if (
+            wordcloud_enabled
+            and _WORDCLOUD_AVAILABLE
+            and wc_n < wordcloud_max
+        ):
+            freq_wc = _word_freq_from_cut_docs(cut_docs)
+            fn = f"wordcloud_probe__{wc_n:02d}_{_slug_safe(gname)}.png"
+            img_path = run_dir.resolve() / "report_assets" / fn
+            err_wc = _save_wordcloud_png(
+                freq_wc,
+                img_path,
+                font_path=_font_path_chinese(),
+            )
+            if not err_wc:
+                lines.append(
+                    f"![词云（本分词词频权重；探针）](report_assets/{fn})"
+                )
+                lines.append("")
+                wc_n += 1
+            else:
+                lines.append(f"> 词云未生成：{err_wc}")
+                lines.append("")
         lines.append(_narrative_stub(
             n_raw,
             len(cut_docs),
@@ -422,6 +555,17 @@ def main() -> None:
         default=1,
         help="最多对几个细类调用 LLM（避免费用与时间）",
     )
+    ap.add_argument(
+        "--no-wordcloud",
+        action="store_true",
+        help="不生成词云 PNG（默认生成，需 wordcloud+matplotlib）",
+    )
+    ap.add_argument(
+        "--wordcloud-max",
+        type=int,
+        default=40,
+        help="最多为多少个细类各出一张词云（防文件过多）",
+    )
     args = ap.parse_args()
 
     md = build_markdown(
@@ -433,6 +577,8 @@ def main() -> None:
         cooc_pairs=args.cooc_pairs,
         live_llm=args.live_llm,
         max_llm_groups=max(0, args.max_llm_groups),
+        wordcloud_enabled=not args.no_wordcloud,
+        wordcloud_max=max(0, args.wordcloud_max),
     )
     out = args.out or (args.run_dir.resolve() / "chapter8_text_mining_probe.md")
     out.write_text(md, encoding="utf-8")
