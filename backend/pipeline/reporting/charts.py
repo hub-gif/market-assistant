@@ -616,7 +616,12 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
 
     sent = brief.get("comment_sentiment_lexicon") or {}
     if isinstance(sent, dict):
-        pie_labs = ["偏正向", "偏负向", "正负混合", "中性/空"]
+        _score_mode = (sent.get("method") or "") == "score_then_lexeme"
+        pie_labs = (
+            ["偏正向(4～5星)", "偏负向(1～2星)", "关键词混合", "中性/空"]
+            if _score_mode
+            else ["偏正向", "偏负向", "正负混合", "中性/空"]
+        )
         pie_vals = [
             float(sent.get("positive_only") or 0),
             float(sent.get("negative_only") or 0),
@@ -642,7 +647,11 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         save_bar_h(
             plx,
             pvx,
-            "正向/混合语境 · 正向口语短语命中条数",
+            (
+                "4～5星语境 · 正向口语短语命中条数"
+                if _score_mode
+                else "正向/混合语境 · 正向口语短语命中条数"
+            ),
             "chart_positive_lexemes_bar.png",
             "条数",
         )
@@ -652,7 +661,11 @@ def generate_report_charts(run_dir: Path, brief: dict[str, Any]) -> list[str]:
         save_bar_h(
             nlx,
             nvx,
-            "负向/混合语境 · 负向口语短语命中条数",
+            (
+                "1～2星语境 · 负向口语短语命中条数"
+                if _score_mode
+                else "负向/混合语境 · 负向口语短语命中条数"
+            ),
             "chart_negative_lexemes_bar.png",
             "条数",
         )

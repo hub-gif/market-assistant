@@ -60,6 +60,33 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(pl.get("sentiment_bucket_method"), "keyword_substring_heuristic")
         self.assertGreaterEqual(len(pl["sample_reviews_semantic_pool"]), 1)
 
+    def test_comment_sentiment_score_then_lexeme(self) -> None:
+        root = Path(settings.CRAWLER_JD_ROOT).resolve()
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+        import jd_competitor_report as jcr  # noqa: WPS433
+
+        texts = ["很好吃", "太差了", "一般般"]
+        scores = [5, 1, 3]
+        lex = jcr._comment_sentiment_lexicon(texts, scores)
+        self.assertEqual(lex.get("method"), "score_then_lexeme")
+        self.assertEqual(lex.get("positive_only"), 1)
+        self.assertEqual(lex.get("negative_only"), 1)
+        self.assertEqual(lex.get("neutral_or_empty"), 1)
+        pl = jcr.build_comment_sentiment_llm_payload(texts, scores=scores)
+        self.assertEqual(pl.get("sentiment_bucket_method"), "score_then_lexeme")
+
+    def test_comment_sentiment_all_scores_missing_falls_back_keyword(self) -> None:
+        root = Path(settings.CRAWLER_JD_ROOT).resolve()
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+        import jd_competitor_report as jcr  # noqa: WPS433
+
+        texts = ["好吃推荐", "差评"]
+        scores = [None, None]
+        lex = jcr._comment_sentiment_lexicon(texts, scores)
+        self.assertEqual(lex.get("method"), "keyword_lexicon")
+
     def test_custom_focus_words_in_report_config(self) -> None:
         root = Path(settings.CRAWLER_JD_ROOT).resolve()
         if str(root) not in sys.path:

@@ -369,7 +369,9 @@ def write_competitor_analysis_for_run_dir(
     )
     want_sent = bool(eff_rc.get("llm_comment_sentiment")) or env_on
     if want_sent and not skip_sent:
-        comment_units = jcr._iter_comment_text_units(comment_rows, merged_rows)
+        comment_units, comment_scores = jcr._iter_comment_text_units_and_scores(
+            comment_rows, merged_rows
+        )
         if len(comment_units) >= 2:
             sentiment_llm_record["attempted"] = True
             try:
@@ -385,6 +387,7 @@ def write_competitor_analysis_for_run_dir(
                     attr_units = list(comment_units)
                 pl = jcr.build_comment_sentiment_llm_payload(
                     comment_units,
+                    scores=comment_scores,
                     attributed_texts=attr_units,
                     max_samples_positive=16,
                     max_samples_negative=30,

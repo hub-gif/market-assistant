@@ -186,7 +186,9 @@ def main() -> None:
     chunk_gr = use_chunked_group_summaries_llm(eff_rc)
 
     if "sentiment" in only:
-        comment_units = jcr._iter_comment_text_units(comment_rows, merged)
+        comment_units, comment_scores = jcr._iter_comment_text_units_and_scores(
+            comment_rows, merged
+        )
         attr_units = jcr._comment_lines_with_product_context(
             comment_rows,
             merged,
@@ -199,6 +201,7 @@ def main() -> None:
         def _sent() -> str:
             pl = jcr.build_comment_sentiment_llm_payload(
                 comment_units,
+                scores=comment_scores,
                 attributed_texts=attr_units,
                 semantic_pool_max=40,
                 shuffle_seed=keyword,

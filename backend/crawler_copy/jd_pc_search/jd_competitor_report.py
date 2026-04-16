@@ -103,6 +103,11 @@ _COMMENT_FUZZ_KEYS: tuple[str, ...] = (
 
 _COMMENT_CSV_SKU = COMMENT_CSV_COLUMNS[0]
 _COMMENT_CSV_BODY = COMMENT_CSV_COLUMNS[3]
+_COMMENT_CSV_SCORE = COMMENT_CSV_COLUMNS[7]  # 「评分」→ commentScore
+
+# 评价星级与 §8.2 分桶：先按评分筛正负，再在对应子集内统计口语短语（无评分时回退关键词）
+_COMMENT_SCORE_NEG_MAX = 2  # 1～2 星 → 偏负向
+_COMMENT_SCORE_POS_MIN = 4  # 4～5 星 → 偏正向（3 星为中评，归入中性）
 
 # ---------------------------------------------------------------------------
 # 运行配置（按需改这里）
@@ -561,18 +566,38 @@ def _merge_comment_previews(merged_rows: list[dict[str, str]]) -> str:
     return "\n".join(parts)
 
 
-def _iter_comment_text_units(
+def _parse_comment_score(val: Any) -> int | None:
+    """解析 ``commentScore`` /「评分」列；期望京东 1～5 星，非法或空返回 None。"""
+    s = str(val or "").strip()
+    if not s:
+        return None
+    m = re.match(r"^\s*(\d+(?:\.\d+)?)", s)
+    if not m:
+        return None
+    try:
+        x = float(m.group(1))
+    except ValueError:
+        return None
+    if x < 1 or x > 5:
+        return None
+    return int(round(x))
+
+
+def _iter_comment_text_units_and_scores(
     comment_rows: list[dict[str, str]],
     merged_rows: list[dict[str, str]],
-) -> list[str]:
-    """逐条评价正文；无 flat 评论时用合并表 comment_preview 按行兜底。"""
-    out: list[str] = []
+) -> tuple[list[str], list[int | None]]:
+    """逐条评价正文与同序评分（无则为 None）；无 flat 评论时用合并表 comment_preview 按行兜底（评分均为 None）。"""
+    texts: list[str] = []
+    scores: list[int | None] = []
     for row in comment_rows:
         t = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
-        if t:
-            out.append(t)
-    if out:
-        return out
+        if not t:
+            continue
+        texts.append(t)
+        scores.append(_parse_comment_score(_cell(row, _COMMENT_CSV_SCORE, "commentScore")))
+    if texts:
+        return texts, scores
     for row in merged_rows:
         p = _cell(
             row,
@@ -580,8 +605,18 @@ def _iter_comment_text_units(
             "comment_preview",
         )
         if p:
-            out.append(p)
-    return out
+            texts.append(p)
+            scores.append(None)
+    return texts, scores
+
+
+def _iter_comment_text_units(
+    comment_rows: list[dict[str, str]],
+    merged_rows: list[dict[str, str]],
+) -> list[str]:
+    """逐条评价正文；无 flat 评论时用合并表 comment_preview 按行兜底。"""
+    texts, _ = _iter_comment_text_units_and_scores(comment_rows, merged_rows)
+    return texts
 
 
 _POS_LEX = (
@@ -732,38 +767,133 @@ def _lexeme_hits_in_texts(
     return [{"word": w, "texts_matched": n} for w, n in c.most_common(18)]
 
 
-def _comment_sentiment_lexicon(texts: list[str]) -> dict[str, Any]:
+def _keyword_sentiment_quadrant(stripped: str) -> str:
+    """``pos_only`` | ``neg_only`` | ``mixed`` | ``neutral``（空文本为 neutral）。"""
+    if not stripped:
+        return "neutral"
+    hp = any(k in stripped for k in _POS_CLASS)
+    hn = any(k in stripped for k in _NEG_CLASS)
+    if hp and hn:
+        return "mixed"
+    if hp:
+        return "pos_only"
+    if hn:
+        return "neg_only"
+    return "neutral"
+
+
+def _sentiment_quadrant_for_row(
+    stripped: str,
+    score: int | None,
+    *,
+    use_score_column: bool,
+) -> str:
+    if not stripped:
+        return "neutral"
+    if use_score_column and score is not None:
+        if score <= _COMMENT_SCORE_NEG_MAX:
+            return "neg_only"
+        if score >= _COMMENT_SCORE_POS_MIN:
+            return "pos_only"
+        return "neutral"
+    return _keyword_sentiment_quadrant(stripped)
+
+
+def _include_in_positive_lexeme_corpus(
+    stripped: str,
+    score: int | None,
+    *,
+    use_score_column: bool,
+) -> bool:
+    """口语短语正向统计语境：评分模式下为 4～5 星；否则为命中正向词（含原「混合」条）。"""
+    if not stripped:
+        return False
+    if use_score_column and score is not None:
+        return score >= _COMMENT_SCORE_POS_MIN
+    hp = any(k in stripped for k in _POS_CLASS)
+    return hp
+
+
+def _include_in_negative_lexeme_corpus(
+    stripped: str,
+    score: int | None,
+    *,
+    use_score_column: bool,
+) -> bool:
+    """口语短语负向统计语境：评分模式下为 1～2 星；否则为命中负向词（含原「混合」条）。"""
+    if not stripped:
+        return False
+    if use_score_column and score is not None:
+        return score <= _COMMENT_SCORE_NEG_MAX
+    hn = any(k in stripped for k in _NEG_CLASS)
+    return hn
+
+
+def _comment_sentiment_lexicon(
+    texts: list[str],
+    scores: list[int | None] | None = None,
+) -> dict[str, Any]:
     """
-    基于预设词表对每条文本做正/负向粗判（非深度学习）；同条同时含正负词时计为「混合」。
-    短语级词频仅在对应语境下统计（条形图用 ``_POS_LEX_HITS`` / ``_NEG_LEX_HITS``）。
+    正/负向粗判（非深度学习）：
+
+    - 若 ``scores`` 与 ``texts`` 等长且**至少有一条非空评分**，则**先按 1～5 星分桶**，再在对应子集内统计
+      正向/负向口语短语（条形图）；无评分或非法评分的行仍按**关键词子串**粗判。
+    - 否则：与旧版一致，**仅关键词**划分四象限与短语语境。
     """
+    use_score_column = bool(
+        scores is not None
+        and len(scores) == len(texts)
+        and any(s is not None for s in scores)
+    )
     pos_only = neg_only = mixed = neutral = 0
     corpus_pos_mixed: list[str] = []
     corpus_neg_mixed: list[str] = []
-    for t in texts:
+    for i, t in enumerate(texts):
         s = (t or "").strip()
+        sc: int | None = None
+        if use_score_column:
+            sc = scores[i] if scores is not None and i < len(scores) else None
         if not s:
             neutral += 1
             continue
-        hp = any(k in s for k in _POS_CLASS)
-        hn = any(k in s for k in _NEG_CLASS)
-        if hp and hn:
-            mixed += 1
-            corpus_pos_mixed.append(s)
-            corpus_neg_mixed.append(s)
-        elif hp:
+        quad = _sentiment_quadrant_for_row(s, sc, use_score_column=use_score_column)
+        if quad == "pos_only":
             pos_only += 1
-            corpus_pos_mixed.append(s)
-        elif hn:
+        elif quad == "neg_only":
             neg_only += 1
-            corpus_neg_mixed.append(s)
+        elif quad == "mixed":
+            mixed += 1
         else:
             neutral += 1
+        if _include_in_positive_lexeme_corpus(s, sc, use_score_column=use_score_column):
+            corpus_pos_mixed.append(s)
+        if _include_in_negative_lexeme_corpus(s, sc, use_score_column=use_score_column):
+            corpus_neg_mixed.append(s)
     total = len(texts)
     pos_lex = _lexeme_hits_in_texts(corpus_pos_mixed, _POS_LEX_HITS)
     neg_lex = _lexeme_hits_in_texts(corpus_neg_mixed, _NEG_LEX_HITS)
+    method = "score_then_lexeme" if use_score_column else "keyword_lexicon"
+    base_note = (
+        "「正向短语」与「负向短语」条形图统计的是预设口语片段在**对应语境**下的命中条数，"
+        "每条每短语最多计 1 次；非分词模型。"
+    )
+    if use_score_column:
+        scope_extra = (
+            "当前批次启用了**评分列**：四象限以星级为主（1～2 星偏负、4～5 星偏正、3 星为中评、空文本为中性）；"
+            "「正向口语短语」仅在 **4～5 星** 评价条内统计；「负向口语短语」仅在 **1～2 星** 评价条内统计；"
+            "无评分行仍按关键词子串归入四象限并参与短语语境。"
+            "条形图不是全文情感或某维度的完整满意度；未收录说法仍可能出现在关注词与语义池。"
+        )
+    else:
+        scope_extra = (
+            "「正向短语」仅在命中正向词表的评价条内统计（含关键词混合条）；"
+            "「负向短语」仅在命中负向词表的评价条内统计（含关键词混合条）。"
+            "条形图表示的是「预设短语命中条数」，不是全文情感或某维度（如包装、物流）的完整满意度；"
+            "若用户用「盒子不错」「没压坏」等未收录说法，仍可能落在关注词「包装」子串与语义池原文中。"
+            "预设表无法覆盖全部说法（如「一袋就一点点」），须结合语义池原文。"
+        )
     return {
-        "method": "keyword_lexicon",
+        "method": method,
         "text_units": total,
         "positive_only": pos_only,
         "negative_only": neg_only,
@@ -773,14 +903,7 @@ def _comment_sentiment_lexicon(texts: list[str]) -> dict[str, Any]:
         "negative_lexicon_sample": list(_NEG_LEX[:10]) + list(_NEG_LEXEME_DETAIL[:5]),
         "positive_tone_lexeme_hits": pos_lex,
         "negative_tone_lexeme_hits": neg_lex,
-        "lexeme_scope_note": (
-            "「正向短语」仅在命中正向词表的评价条内统计（含混合条）；"
-            "「负向短语」仅在命中负向词表的评价条内统计（含混合条）；每条每短语最多计 1 次；"
-            "统计的是预设口语片段，非分词模型。"
-            "条形图表示的是「预设短语命中条数」，不是全文情感或某维度（如包装、物流）的完整满意度；"
-            "若用户用「盒子不错」「没压坏」等未收录说法，仍可能落在关注词「包装」子串与语义池原文中，条形图偏低不代表该维度无人提及。"
-            "预设表无法覆盖全部说法（如「一袋就一点点」），条形图条数低不代表用户未在别处表述同类不满，须结合语义池原文。"
-        ),
+        "lexeme_scope_note": base_note + scope_extra,
     }
 
 
@@ -1144,6 +1267,7 @@ def build_scenario_groups_llm_payload(
 def build_comment_sentiment_llm_payload(
     texts: list[str],
     *,
+    scores: list[int | None] | None = None,
     attributed_texts: list[str] | None = None,
     max_samples_positive: int = 16,
     max_samples_negative: int = 30,
@@ -1153,12 +1277,17 @@ def build_comment_sentiment_llm_payload(
     shuffle_seed: str = "",
 ) -> dict[str, Any]:
     """
-    供大模型做正/负向语义归纳：附规则统计、按关键词规则**归类**后的抽样，以及 **sample_reviews_semantic_pool**
-   （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
+    供大模型做正/负向语义归纳：附规则统计、按**评分优先或关键词**归类后的抽样，以及 **sample_reviews_semantic_pool**
+    （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
 
-    ``sentiment_bucket_method`` 标明归类依据为子串词表；条形图与 lexicon 计数方式与之一致，
-    但正文归纳应以模型对 ``sample_reviews_semantic_pool`` 的整句理解为准。
+    ``sentiment_bucket_method``：有有效评分列时为 ``score_then_lexeme``，否则为 ``keyword_substring_heuristic``；
+    条形图与 ``comment_sentiment_lexicon`` 计数方式与之一致，正文归纳仍以整句语义为准。
     """
+    use_score_column = bool(
+        scores is not None
+        and len(scores) == len(texts)
+        and any(s is not None for s in scores)
+    )
     pos_only_texts: list[str] = []
     neg_only_texts: list[str] = []
     mixed_texts: list[str] = []
@@ -1180,13 +1309,13 @@ def build_comment_sentiment_llm_payload(
         if disp and disp not in seen_unique:
             seen_unique.add(disp)
             all_unique_disp.append(disp)
-        hp = any(k in s for k in _POS_CLASS)
-        hn = any(k in s for k in _NEG_CLASS)
-        if hp and hn:
+        sc = scores[i] if use_score_column and scores is not None else None
+        quad = _sentiment_quadrant_for_row(s, sc, use_score_column=use_score_column)
+        if quad == "mixed":
             mixed_texts.append(disp)
-        elif hp:
+        elif quad == "pos_only":
             pos_only_texts.append(disp)
-        elif hn:
+        elif quad == "neg_only":
             neg_only_texts.append(disp)
 
     def _semantic_pool(seq: list[str], cap: int) -> list[str]:
@@ -1225,16 +1354,19 @@ def build_comment_sentiment_llm_payload(
                 break
         return out
 
-    lex = _comment_sentiment_lexicon(texts)
+    lex = _comment_sentiment_lexicon(texts, scores)
     pos_h = lex.get("positive_tone_lexeme_hits") or []
     neg_h = lex.get("negative_tone_lexeme_hits") or []
     pos_h_top = [x for x in pos_h[:12] if isinstance(x, dict)]
     neg_h_top = [x for x in neg_h[:12] if isinstance(x, dict)]
+    bucket_method = (
+        "score_then_lexeme" if use_score_column else "keyword_substring_heuristic"
+    )
     return {
         "comment_sentiment_lexicon": lex,
         "positive_lexeme_hits_top": pos_h_top,
         "negative_lexeme_hits_top": neg_h_top,
-        "sentiment_bucket_method": "keyword_substring_heuristic",
+        "sentiment_bucket_method": bucket_method,
         "sample_reviews_semantic_pool": semantic_pool,
         "sample_reviews_positive_biased": _sample(pos_only_texts, max_samples_positive),
         "sample_reviews_negative_biased": _sample(neg_only_texts, max_samples_negative),
@@ -2071,8 +2203,10 @@ def build_competitor_markdown(
             if n:
                 hits[w] += n
 
-    comment_texts = _iter_comment_text_units(comment_rows, merged_rows)
-    sentiment_lex = _comment_sentiment_lexicon(comment_texts)
+    comment_texts, comment_scores = _iter_comment_text_units_and_scores(
+        comment_rows, merged_rows
+    )
+    sentiment_lex = _comment_sentiment_lexicon(comment_texts, comment_scores)
     scen_counts, scen_n_texts = _comment_scenario_counts(
         comment_texts, scenario_groups
     )
@@ -2576,29 +2710,56 @@ def build_competitor_markdown(
             ]
         )
 
-    lines.extend(
+    _sm_score = sentiment_lex.get("method") == "score_then_lexeme"
+    _sec82_title = (
+        "### 8.2 评价正负面粗判（评分优先 + 关键词回退）"
+        if _sm_score
+        else "### 8.2 评价正负面粗判（关键词规则）"
+    )
+    _sec82_block: list[str] = [
+        "---",
+        "",
+        "## 八、消费者反馈与用户画像（按细分类目）",
+        "",
+        "### 8.1 方法",
+        "",
+        "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
+        "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 **同一条排除规则**）。",
+        "- **正负面粗判（§8.2）**：若评价含有效「评分」列则**先按星级**粗分正负与中评，再在对应子集内统计口语短语；无评分时仍按关键词子串；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**，与条形图互补。",
+        "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。",
+        "",
+        _sec82_title,
+        "",
+        f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与 §8.1 **归因规则**一致）。",
+    ]
+    if _sm_score:
+        _sec82_block.append(
+            "- **四象限口径**：本批存在有效「评分」时——**1～2 星**计为偏负向，**4～5 星**计为偏正向，**3 星**计为中评，**空文本**计为中性；"
+            "无评分的条仍按关键词子串划分；「混合」仅在**无评分**且同条兼含正/负关键词时出现。"
+        )
+    _sec82_block.extend(
         [
-            "---",
-            "",
-            "## 八、消费者反馈与用户画像（按细分类目）",
-            "",
-            "### 8.1 方法",
-            "",
-            "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
-            "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 **同一条排除规则**）。",
-            "- **正负面粗判（§8.2）**：先以关键词规则与图表做粗分；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**（尤其负向「用户在抱怨什么」），与词频条形图互补。",
-            "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。",
-            "",
-            "### 8.2 评价正负面粗判（关键词规则）",
-            "",
-            f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与 §8.1 **归因规则**一致）。",
-            f"- **偏正向（仅命中正向词表）**：{sentiment_lex.get('positive_only', 0)} 条；"
-            f"**偏负向（仅命中负向词表）**：{sentiment_lex.get('negative_only', 0)} 条；"
-            f"**混合（同条兼含正/负词）**：{sentiment_lex.get('mixed_positive_and_negative', 0)} 条；"
-            f"**中性或空文本**：{sentiment_lex.get('neutral_or_empty', 0)} 条。",
-            "- **说明**：词表为方向性粗判，讽刺、省略与错别字会导致误判；正式结论请**人工抽样**阅读原文。",
+            f"- **偏正向**：{sentiment_lex.get('positive_only', 0)} 条"
+            + ("（主要为 4～5 星）" if _sm_score else "（仅命中正向词表）")
+            + "；"
+            f"**偏负向**：{sentiment_lex.get('negative_only', 0)} 条"
+            + ("（主要为 1～2 星）" if _sm_score else "（仅命中负向词表）")
+            + "；"
+            f"**混合**：{sentiment_lex.get('mixed_positive_and_negative', 0)} 条"
+            + ("（无评分且同条兼含正/负关键词）" if _sm_score else "（同条兼含正/负词）")
+            + "；"
+            f"**中性或空文本**：{sentiment_lex.get('neutral_or_empty', 0)} 条"
+            + ("（含 3 星中评及无关键词命中）" if _sm_score else "")
+            + "。",
+            "- **说明**："
+            + (
+                "星级与正文可能不一致（如五星长文吐槽）；口语短语条形图仅在对应星级子集内统计；正式结论请**人工抽样**阅读原文。"
+                if _sm_score
+                else "词表为方向性粗判，讽刺、省略与错别字会导致误判；正式结论请**人工抽样**阅读原文。"
+            ),
         ]
     )
+    lines.extend(_sec82_block)
     _scope = (sentiment_lex.get("lexeme_scope_note") or "").strip()
     if _scope:
         lines.append(f"- **词根统计说明**：{_scope}")
@@ -2614,14 +2775,22 @@ def build_competitor_markdown(
         _embed_chart(
             run_dir,
             "chart_positive_lexemes_bar.png",
-            "正向评价里**最常出现的口语短语**（在偏正向或混合评价条内统计；条形图）",
+            (
+                "正向评价里**最常出现的口语短语**（在 **4～5 星** 评价条内统计；条形图）"
+                if _sm_score
+                else "正向评价里**最常出现的口语短语**（在偏正向或混合评价条内统计；条形图）"
+            ),
         )
     )
     lines.extend(
         _embed_chart(
             run_dir,
             "chart_negative_lexemes_bar.png",
-            "负向评价里**最常出现的口语短语**（在偏负向或混合评价条内统计；条形图）",
+            (
+                "负向评价里**最常出现的口语短语**（在 **1～2 星** 评价条内统计；条形图）"
+                if _sm_score
+                else "负向评价里**最常出现的口语短语**（在偏负向或混合评价条内统计；条形图）"
+            ),
         )
     )
     pos_h = sentiment_lex.get("positive_tone_lexeme_hits") or []
@@ -2647,7 +2816,7 @@ def build_competitor_markdown(
                 "",
                 "#### 大模型深入解读（主题归因，与词频统计互补）",
                 "",
-                "> **说明**：基于与上节**同一套关键词归类规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
+                "> **说明**：基于与上节**同一套评分优先或关键词归类规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
                 "",
                 _llm_s,
             ]
@@ -2863,8 +3032,12 @@ def build_competitor_brief(
             if n:
                 hits[w] += n
 
-    comment_texts = _iter_comment_text_units(comment_rows, merged_rows)
-    comment_sentiment_lexicon = _comment_sentiment_lexicon(comment_texts)
+    comment_texts, comment_scores = _iter_comment_text_units_and_scores(
+        comment_rows, merged_rows
+    )
+    comment_sentiment_lexicon = _comment_sentiment_lexicon(
+        comment_texts, comment_scores
+    )
     scen_counts, scen_n_texts = _comment_scenario_counts(
         comment_texts, scenario_groups
     )

@@ -116,8 +116,8 @@ SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON
 
 - ``comment_sentiment_lexicon``：子串词表统计（与报告条形图**同一计数方式**，**仅作定量参考**；子串命中≠说话人态度）。
 - ``positive_lexeme_hits_top`` / ``negative_lexeme_hits_top``：短语级命中摘要（同源）。
-- ``sentiment_bucket_method``：恒为 ``keyword_substring_heuristic``；``sample_reviews_positive_biased`` / ``negative`` / ``mixed_tone`` 是按该词表**机械归类**的抽样，**可能与整句真实褒贬不一致**（例如「软硬适中」曾被误归负向）。
-- **``sample_reviews_semantic_pool``**（若有）：本批评价经去重后的**随机/洗牌抽样**，覆盖未命中任一关键词的句子。**归纳正/负向体验、引用「」短引文时，优先以此池与上述各列表中的原文为准，自行结合语境理解**：转折、对比（如「没那么甜」「软硬适中」）、先抑后扬/先扬后抑整句态度；**不得以子串是否命中负面词来断言该句为抱怨**。
+- ``sentiment_bucket_method``：``score_then_lexeme`` 表示**先按 1～5 星分桶**（无评分行再按关键词）；``keyword_substring_heuristic`` 表示**仅关键词**分桶；与条形图一致。``sample_reviews_positive_biased`` / ``negative`` / ``mixed_tone`` 按该规则**机械归类**的抽样，**可能与整句真实褒贬不一致**（例如「软硬适中」曾被误归负向）。
+- **``sample_reviews_semantic_pool``**（若有）：本批评价经去重后的**随机/洗牌抽样**（来自全部有效条，不限于某一象限）。**归纳正/负向体验、引用「」短引文时，优先以此池与上述各列表中的原文为准，自行结合语境理解**：转折、对比（如「没那么甜」「软硬适中」）、先抑后扬/先扬后抑整句态度；**不得以子串是否命中负面词来断言该句为抱怨**。
 
 每条样本通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头，表示 **§5 细类、SKU、品名、店铺**；写归纳与「」引文时须能还原「哪家店、哪条 SKU、哪款品名」，或保留前缀，**禁止**无指代地写「用户普遍…」。
 
