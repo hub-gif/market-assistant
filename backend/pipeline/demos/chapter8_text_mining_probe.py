@@ -2,7 +2,7 @@
 第八章「文本挖掘探针」独立脚本（**不修改**主报告代码）。
 
 流程（按细类分组）：清洗（jieba 分词 + 停用词）→ **词云图（可选）** → 词频 / TF-IDF → 共现对 → LDA 主题
-→ 规则化叙事小结 → 可选 LLM 解读（需 ``--live-llm`` 且配置好 ``AI_crawler``）。
+→ 规则化叙事小结 → 文末可选 **细类 LLM 归纳**（与正式报告 ``generate_comment_group_summaries_llm`` / ``llm_comment_group_summaries`` 同源，非 §8.2 情感）。
 
 依赖（请自行安装）::
 
@@ -12,7 +12,8 @@
 
     python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"../data/JD/pipeline_runs/20260413_104252_低GI\"
     python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"...\" --out chapter8_probe.md
-    python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"...\" --live-llm --max-llm-groups 2
+    python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"...\" --live-llm
+    python -m pipeline.demos.chapter8_text_mining_probe --run-dir \"...\" --live-llm --llm-chunked
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
 """
@@ -348,39 +349,70 @@ def _narrative_stub(
     return "\n".join(lines)
 
 
-def _maybe_llm_block(
-    texts: list[str],
-    scores: list[int | None] | None,
+def _effective_focus_words(run_dir: Path) -> tuple[str, ...]:
+    """与 ``runner.write_competitor_analysis_for_run_dir`` 一致：优先 ``effective_report_config.json``。"""
+    p = run_dir / "effective_report_config.json"
+    if p.is_file():
+        try:
+            eff = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            eff = None
+        if isinstance(eff, dict):
+            fw_src = eff.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
+            fw_tuple = tuple(
+                str(x).strip() for x in fw_src if str(x).strip()
+            ) or jcr.COMMENT_FOCUS_WORDS
+            return fw_tuple
+    return jcr.COMMENT_FOCUS_WORDS
+
+
+def _run_comment_groups_llm_section(
+    *,
+    run_dir: Path,
     keyword: str,
-    live: bool,
+    merged_rows: list[dict[str, str]],
+    comment_rows: list[dict[str, str]],
+    llm_chunked: bool,
 ) -> str:
-    if not live:
+    """
+    与正式报告 **§8 末** 一致：``build_comment_groups_llm_payload`` +
+    ``generate_comment_group_summaries_llm``（或 chunked 变体）。
+    """
+    sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+    title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
+    fb = jcr._consumer_feedback_by_matrix_group(
+        merged_rows=merged_rows,
+        comment_rows=comment_rows,
+        sku_header=sku_h,
+    )
+    fw = _effective_focus_words(run_dir)
+    pl = jcr.build_comment_groups_llm_payload(
+        feedback_groups=fb,
+        focus_words=fw,
+        merged_rows=merged_rows,
+        sku_header=sku_h,
+        title_h=title_h,
+    )
+    if not pl:
         return (
-            "> **LLM 解读**：未启用（请加 ``--live-llm``；需本机 ``AI_crawler`` 等与大模型调用环境可用）。"
+            "> **细类 LLM 归纳**：payload 为空（无可用评价分组或全部被过滤），跳过。"
         )
     try:
-        from pipeline.llm.generate import generate_comment_sentiment_analysis_llm  # noqa: WPS433
+        if llm_chunked:
+            from pipeline.llm.generate import (  # noqa: WPS433
+                generate_comment_group_summaries_llm_chunked,
+            )
+
+            body = generate_comment_group_summaries_llm_chunked(pl, keyword=keyword)
+        else:
+            from pipeline.llm.generate import (  # noqa: WPS433
+                generate_comment_group_summaries_llm,
+            )
+
+            body = generate_comment_group_summaries_llm(pl, keyword=keyword)
     except Exception as e:
-        return f"> **LLM 解读**：导入失败：{e}"
-    if len(texts) < 2:
-        return "> **LLM 解读**：有效评论不足 2 条，跳过。"
-    try:
-        pl = jcr.build_comment_sentiment_llm_payload(
-            texts,
-            scores=scores,
-            max_samples_positive=10,
-            max_samples_negative=12,
-            max_samples_mixed=6,
-            semantic_pool_max=24,
-            max_chars_per_review=320,
-            shuffle_seed=keyword or "probe",
-        )
-        pl["keyword"] = keyword
-        pl["probe_note"] = "chapter8_text_mining_probe 脚本生成，非生产流水线。"
-        body = generate_comment_sentiment_analysis_llm(pl)
-    except Exception as e:
-        return f"> **LLM 解读**调用失败：{e}"
-    return "#### LLM 深入解读（探针）\n\n" + body.strip()
+        return f"> **细类 LLM 归纳**调用失败：{e}"
+    return body.strip()
 
 
 def build_markdown(
@@ -392,7 +424,7 @@ def build_markdown(
     cooc_vocab: int,
     cooc_pairs: int,
     live_llm: bool,
-    max_llm_groups: int,
+    llm_chunked: bool,
     wordcloud_enabled: bool,
     wordcloud_max: int,
 ) -> str:
@@ -403,9 +435,6 @@ def build_markdown(
         comment_rows=comments,
         sku_header=sku_h,
     )
-    # 与正文同序评分，便于 LLM payload
-    all_texts, all_scores = jcr._iter_comment_text_units_and_scores(comments, merged)
-    text_to_score: dict[str, int | None] = dict(zip(all_texts, all_scores))
 
     lines: list[str] = [
         "# 八、消费者反馈与用户画像（文本挖掘探针 · 实验稿）",
@@ -416,7 +445,8 @@ def build_markdown(
         "",
         "## 8.0 说明",
         "",
-        "本稿为**独立探针**，流程参考「清洗 → 词云（可选）→ 词频/TF-IDF → 共现 → LDA → 叙事小结 →（可选）LLM」。"
+        "本稿为**独立探针**，流程参考「清洗 → 词云（可选）→ 词频/TF-IDF → 共现 → LDA → 叙事小结」；"
+        "文末可选 **细类 LLM 归纳**（与正式 ``llm_comment_group_summaries`` / ``generate_comment_group_summaries_llm`` 同源）。"
         "与线上一致的部分：**细类划分与 SKU 归因**复用 ``jd_competitor_report._consumer_feedback_by_matrix_group``；"
         "其余为 **jieba + sklearn** 的开放词表分析，**不替代**正式报告中的规则统计。",
         "",
@@ -440,7 +470,6 @@ def build_markdown(
             ]
         )
 
-    llm_used = 0
     wc_n = 0
     for gname, _cr_rows, texts in groups:
         n_raw = len([t for t in texts if (t or "").strip()])
@@ -510,15 +539,34 @@ def build_markdown(
         ))
         lines.extend(["", "---", ""])
 
-        if live_llm and llm_used < max_llm_groups:
-            sub_scores = [text_to_score.get(t) for t in texts]
-            block = _maybe_llm_block(texts, sub_scores, kw, live=True)
-            lines.append(block)
-            lines.extend(["", "---", ""])
-            llm_used += 1
-    if not live_llm:
-        lines.append("")
-        lines.append(_maybe_llm_block([], None, kw, live=False))
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## 细类评论要点归纳（大模型 · 与正式报告 §8 末同源）",
+            "",
+            "> 输入为 ``build_comment_groups_llm_payload``：关注词子串命中、有效文本行、带 SKU/品名/店铺前缀的评价摘录；"
+            "模型为 ``COMMENT_GROUPS_SYSTEM``（与 ``generate_comment_group_summaries_llm`` 一致）。"
+            "上方 jieba / TF-IDF / LDA / 词云为**独立探针**，**未**注入本段 payload。",
+            "",
+        ]
+    )
+    if live_llm:
+        lines.append(
+            _run_comment_groups_llm_section(
+                run_dir=run_dir,
+                keyword=kw,
+                merged_rows=merged,
+                comment_rows=comments,
+                llm_chunked=llm_chunked,
+            )
+        )
+    else:
+        lines.append(
+            "> **细类 LLM 归纳**：未启用。请使用 ``--live-llm``（需 ``AI_crawler`` 等可用）；"
+            "细类很多、单次 JSON 易超上下文时可加 ``--llm-chunked``（逐细类调用后拼接）。"
+        )
 
     lines.append("")
     lines.append("*（完）*")
@@ -547,13 +595,15 @@ def main() -> None:
     ap.add_argument(
         "--live-llm",
         action="store_true",
-        help="对前若干个细类调用 §8.2 同款 LLM（需环境可用）",
+        help=(
+            "文末调用与正式管线一致的细类归纳："
+            "``generate_comment_group_summaries_llm``（需 AI_crawler 等可用）"
+        ),
     )
     ap.add_argument(
-        "--max-llm-groups",
-        type=int,
-        default=1,
-        help="最多对几个细类调用 LLM（避免费用与时间）",
+        "--llm-chunked",
+        action="store_true",
+        help="细类逐条调用 ``generate_comment_group_summaries_llm_chunked``，防上下文过长",
     )
     ap.add_argument(
         "--no-wordcloud",
@@ -576,7 +626,7 @@ def main() -> None:
         cooc_vocab=args.cooc_vocab,
         cooc_pairs=args.cooc_pairs,
         live_llm=args.live_llm,
-        max_llm_groups=max(0, args.max_llm_groups),
+        llm_chunked=args.llm_chunked,
         wordcloud_enabled=not args.no_wordcloud,
         wordcloud_max=max(0, args.wordcloud_max),
     )
