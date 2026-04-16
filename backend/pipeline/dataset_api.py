@@ -8,7 +8,16 @@ from django.db.models.expressions import OrderBy
 from rest_framework.request import Request
 
 SEARCH_SORT_FIELDS = frozenset(
-    {"row_index", "price", "sku_id", "title", "leaf_category", "matrix_group_label"}
+    {
+        "row_index",
+        "price",
+        "sku_id",
+        "title",
+        "leaf_category",
+        "matrix_group_label",
+        "total_sales",
+        "comment_count",
+    }
 )
 DETAIL_SORT_FIELDS = frozenset(
     {
@@ -29,6 +38,8 @@ MERGED_SORT_FIELDS = frozenset(
         "leaf_category",
         "detail_category_path",
         "matrix_group_label",
+        "total_sales",
+        "comment_count",
     }
 )
 
@@ -113,6 +124,16 @@ def apply_search_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
             OrderBy(F("price_value"), descending=desc, nulls_last=True),
             "row_index",
         )
+    if sort == "total_sales":
+        return qs.order_by(
+            OrderBy(F("sales_sort_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "comment_count":
+        return qs.order_by(
+            OrderBy(F("comment_count_sort_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
     if sort == "row_index":
         return qs.order_by(OrderBy(F("row_index"), descending=desc))
     field = {
@@ -189,6 +210,16 @@ def apply_merged_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
     if sort == "price":
         return qs.order_by(
             OrderBy(F("price_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "total_sales":
+        return qs.order_by(
+            OrderBy(F("sales_sort_value"), descending=desc, nulls_last=True),
+            "row_index",
+        )
+    if sort == "comment_count":
+        return qs.order_by(
+            OrderBy(F("comment_count_sort_value"), descending=desc, nulls_last=True),
             "row_index",
         )
     if sort == "row_index":

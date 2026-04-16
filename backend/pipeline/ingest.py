@@ -40,6 +40,11 @@ from .models import (
     PipelineJob,
 )
 from .price_parse import effective_list_price_value, float_price_from_cell
+from .volume_parse import (
+    comment_count_sort_value_from_cell,
+    comment_count_sort_value_from_merged,
+    sales_sort_value_from_search_cells,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -210,12 +215,18 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
         pv = effective_list_price_value(
             kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
         )
+        sv = sales_sort_value_from_search_cells(
+            kw.get("total_sales"), kw.get("comment_sales_floor")
+        )
+        cv = comment_count_sort_value_from_cell(kw.get("comment_count"))
         s_objs.append(
             JdJobSearchRow(
                 job=job,
                 row_index=i,
                 matrix_group_label="",
                 price_value=pv,
+                sales_sort_value=sv,
+                comment_count_sort_value=cv,
                 **kw,
             )
         )
@@ -263,12 +274,20 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
         pv = effective_list_price_value(
             kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
         )
+        msv = sales_sort_value_from_search_cells(
+            kw.get("total_sales"), kw.get("comment_sales_floor")
+        )
+        mcv = comment_count_sort_value_from_merged(
+            kw.get("pipeline_comment_count")
+        )
         m_objs.append(
             JdJobMergedRow(
                 job=job,
                 row_index=i,
                 matrix_group_label=mg,
                 price_value=pv,
+                sales_sort_value=msv,
+                comment_count_sort_value=mcv,
                 **kw,
             )
         )

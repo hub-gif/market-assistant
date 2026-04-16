@@ -199,6 +199,18 @@ class JdJobSearchRow(models.Model):
         help_text="与 §5 矩阵同源：由合并表商详路径解析；可按 SKU 从合并表回填",
     )
     price_value = models.FloatField(null=True, blank=True, db_index=True)
+    sales_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 total_sales / 销量楼层解析，供排序",
+    )
+    comment_count_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从评价量文案解析，供排序",
+    )
     platform = models.TextField(blank=True, default="")
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
@@ -216,6 +228,8 @@ class JdJobSearchRow(models.Model):
             models.Index(fields=["job", "leaf_category_norm"]),
             models.Index(fields=["job", "matrix_group_label"]),
             models.Index(fields=["job", "price_value"]),
+            models.Index(fields=["job", "sales_sort_value"]),
+            models.Index(fields=["job", "comment_count_sort_value"]),
         ]
 
     def __str__(self) -> str:
@@ -344,6 +358,18 @@ class JdJobMergedRow(models.Model):
         help_text="与 §5 矩阵同源：由 detail_category_path 解析",
     )
     price_value = models.FloatField(null=True, blank=True, db_index=True)
+    sales_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 total_sales / 销量楼层解析，供排序",
+    )
+    comment_count_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 pipeline_comment_count 解析，供排序",
+    )
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
     detail_brand = models.TextField(blank=True, default="")
@@ -370,6 +396,8 @@ class JdJobMergedRow(models.Model):
             models.Index(fields=["job", "leaf_category_norm"]),
             models.Index(fields=["job", "matrix_group_label"]),
             models.Index(fields=["job", "price_value"]),
+            models.Index(fields=["job", "sales_sort_value"]),
+            models.Index(fields=["job", "comment_count_sort_value"]),
         ]
 
     def __str__(self) -> str:

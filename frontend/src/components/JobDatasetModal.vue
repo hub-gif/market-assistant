@@ -27,6 +27,8 @@ const SORT_LABELS = {
   matrix_group_label: '类目',
   detail_category_path: '类目路径',
   detail_brand: '品牌',
+  total_sales: '销量（解析排序）',
+  comment_count: '评价量（解析排序）',
 }
 
 const tab = ref('search')
