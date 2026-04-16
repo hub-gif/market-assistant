@@ -27,11 +27,11 @@ from .dataset_api import (
     apply_merged_order,
     apply_search_filters,
     apply_search_order,
-    category_norm_id_from_request,
     detail_category_q_from_request,
     filter_echo,
     parse_sort_meta,
     price_bounds_from_request,
+    report_group_from_request,
 )
 from .dataset_nonempty import (
     comment_columns_for_api,
@@ -66,7 +66,6 @@ from .models import (
     JdJobDetailRow,
     JdJobMergedRow,
     JdJobSearchRow,
-    JdLeafCategoryNorm,
     JdProduct,
     JdProductSnapshot,
     JobStatus,
@@ -756,17 +755,15 @@ def _read_page_params(request) -> tuple[int, int]:
     return page, page_size
 
 
-def _category_norm_options_for_job(job: PipelineJob, RowModel: type) -> list[dict[str, Any]]:
-    ids = (
-        RowModel.objects.filter(job=job, leaf_category_norm_id__isnull=False)
-        .values_list("leaf_category_norm_id", flat=True)
+def _report_group_options_for_job(job: PipelineJob) -> list[str]:
+    """与 §5 矩阵一致的细类名列表（来自合并表 ``detail_category_path`` 解析）。"""
+    qs = (
+        JdJobMergedRow.objects.filter(job=job)
+        .exclude(matrix_group_label="")
+        .values_list("matrix_group_label", flat=True)
         .distinct()
     )
-    return list(
-        JdLeafCategoryNorm.objects.filter(id__in=ids)
-        .order_by("label")
-        .values("id", "label")
-    )
+    return sorted({str(x) for x in qs if x})
 
 
 def _detail_category_path_options(job: PipelineJob) -> list[str]:
@@ -797,12 +794,7 @@ class JobDatasetSummaryView(APIView):
                 "detail_columns": detail_columns_for_api(job),
                 "comment_columns": comment_columns_for_api(job),
                 "merged_columns": merged_columns_for_api(job),
-                "search_category_options": _category_norm_options_for_job(
-                    job, JdJobSearchRow
-                ),
-                "merged_category_options": _category_norm_options_for_job(
-                    job, JdJobMergedRow
-                ),
+                "report_group_options": _report_group_options_for_job(job),
                 "detail_category_path_options": _detail_category_path_options(job),
                 "dataset_sort_help": {
                     "search": sorted(SEARCH_SORT_FIELDS),
@@ -820,7 +812,7 @@ class JobDatasetSearchView(APIView):
         page, page_size = _read_page_params(request)
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in SEARCH_SORT_FIELDS else "row_index"
-        cid = category_norm_id_from_request(request)
+        rg = report_group_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobSearchRow.objects.filter(job=job)
@@ -835,7 +827,7 @@ class JobDatasetSearchView(APIView):
                 "page": page,
                 "page_size": page_size,
                 "filters": filter_echo(
-                    category_norm_id=cid,
+                    report_group=rg,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,
@@ -853,7 +845,7 @@ class JobDatasetDetailView(APIView):
         page, page_size = _read_page_params(request)
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in DETAIL_SORT_FIELDS else "row_index"
-        cid = category_norm_id_from_request(request)
+        rg = report_group_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobDetailRow.objects.filter(job=job)
@@ -868,7 +860,7 @@ class JobDatasetDetailView(APIView):
                 "page": page,
                 "page_size": page_size,
                 "filters": filter_echo(
-                    category_norm_id=cid,
+                    report_group=rg,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,
@@ -908,7 +900,7 @@ class JobDatasetMergedView(APIView):
         page, page_size = _read_page_params(request)
         sort, desc = parse_sort_meta(request)
         sort_eff = sort if sort in MERGED_SORT_FIELDS else "row_index"
-        cid = category_norm_id_from_request(request)
+        rg = report_group_from_request(request)
         pmin, pmax = price_bounds_from_request(request)
         dcq = detail_category_q_from_request(request)
         qs = JdJobMergedRow.objects.filter(job=job)
@@ -923,7 +915,7 @@ class JobDatasetMergedView(APIView):
                 "page": page,
                 "page_size": page_size,
                 "filters": filter_echo(
-                    category_norm_id=cid,
+                    report_group=rg,
                     price_min=pmin,
                     price_max=pmax,
                     detail_category_q=dcq,

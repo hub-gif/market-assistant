@@ -190,6 +190,14 @@ class JdJobSearchRow(models.Model):
         on_delete=models.SET_NULL,
         related_name="search_rows",
     )
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="报告细类",
+        help_text="与 §5 矩阵同源：由合并表商详路径解析；可按 SKU 从合并表回填",
+    )
     price_value = models.FloatField(null=True, blank=True, db_index=True)
     platform = models.TextField(blank=True, default="")
     keyword = models.TextField(blank=True, default="")
@@ -206,6 +214,7 @@ class JdJobSearchRow(models.Model):
         indexes = [
             models.Index(fields=["job", "sku_id"]),
             models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "matrix_group_label"]),
             models.Index(fields=["job", "price_value"]),
         ]
 
@@ -232,6 +241,14 @@ class JdJobDetailRow(models.Model):
     buyer_ranking_line = models.TextField(blank=True, default="")
     buyer_promo_text = models.TextField(blank=True, default="")
     detail_price_value = models.FloatField(null=True, blank=True, db_index=True)
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="报告细类",
+        help_text="与 §5 矩阵同源：由 detail_category_path 解析",
+    )
 
     class Meta:
         ordering = ["row_index"]
@@ -244,6 +261,7 @@ class JdJobDetailRow(models.Model):
         indexes = [
             models.Index(fields=["job", "sku_id"]),
             models.Index(fields=["job", "detail_price_value"]),
+            models.Index(fields=["job", "matrix_group_label"]),
         ]
 
     def __str__(self) -> str:
@@ -317,6 +335,14 @@ class JdJobMergedRow(models.Model):
         on_delete=models.SET_NULL,
         related_name="merged_rows",
     )
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="报告细类",
+        help_text="与 §5 矩阵同源：由 detail_category_path 解析",
+    )
     price_value = models.FloatField(null=True, blank=True, db_index=True)
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
@@ -342,6 +368,7 @@ class JdJobMergedRow(models.Model):
         indexes = [
             models.Index(fields=["job", "sku_id"]),
             models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "matrix_group_label"]),
             models.Index(fields=["job", "price_value"]),
         ]
 

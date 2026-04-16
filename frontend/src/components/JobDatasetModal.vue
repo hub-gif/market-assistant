@@ -24,6 +24,7 @@ const SORT_LABELS = {
   sku_id: 'SKU',
   title: '标题',
   leaf_category: '叶类目',
+  matrix_group_label: '报告细类',
   detail_category_path: '类目路径',
   detail_brand: '品牌',
 }
@@ -39,7 +40,8 @@ const err = ref('')
 const commentSkuFilter = ref('')
 const sortField = ref('row_index')
 const sortOrder = ref('asc')
-const categoryNormId = ref('')
+/** 与 §5 矩阵一致的细类名（如饼干、米），对应接口参数 report_group */
+const reportGroup = ref('')
 const priceMin = ref('')
 const priceMax = ref('')
 const detailCategoryQ = ref('')
@@ -68,12 +70,7 @@ const sortOptions = computed(() => {
   return keys.map((k) => ({ value: k, label: SORT_LABELS[k] || k }))
 })
 
-const categoryNormOptions = computed(() => {
-  if (!summary.value) return []
-  if (tab.value === 'search') return summary.value.search_category_options || []
-  if (tab.value === 'merged') return summary.value.merged_category_options || []
-  return []
-})
+const reportGroupOptions = computed(() => summary.value?.report_group_options || [])
 
 const displayColumns = computed(() => {
   const s = summary.value
@@ -164,7 +161,7 @@ async function refreshList() {
         : {
             sort: sortField.value,
             order: sortOrder.value,
-            categoryNormId: categoryNormId.value.trim(),
+            reportGroup: reportGroup.value.trim(),
             priceMin: priceMin.value,
             priceMax: priceMax.value,
             detailCategoryQ: detailCategoryQ.value.trim(),
@@ -198,7 +195,7 @@ watch(
       page.value = 1
       sortField.value = 'row_index'
       sortOrder.value = 'asc'
-      categoryNormId.value = ''
+      reportGroup.value = ''
       priceMin.value = ''
       priceMax.value = ''
       detailCategoryQ.value = ''
@@ -216,7 +213,7 @@ watch(tab, () => {
   exportPanelOpen.value = false
   sortField.value = 'row_index'
   sortOrder.value = 'asc'
-  categoryNormId.value = ''
+  reportGroup.value = ''
   priceMin.value = ''
   priceMax.value = ''
   detailCategoryQ.value = ''
@@ -226,7 +223,7 @@ watch(
   [
     sortField,
     sortOrder,
-    categoryNormId,
+    reportGroup,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -245,7 +242,7 @@ watch(
     commentSkuFilter,
     sortField,
     sortOrder,
-    categoryNormId,
+    reportGroup,
     priceMin,
     priceMax,
     detailCategoryQ,
@@ -430,17 +427,13 @@ async function runExport(format) {
               <option value="desc">降序</option>
             </select>
           </label>
-          <template v-if="tab === 'search' || tab === 'merged'">
-            <label class="filter-item">
-              叶类目
-              <select v-model="categoryNormId" class="filter-select wide">
-                <option value="">全部</option>
-                <option v-for="c in categoryNormOptions" :key="c.id" :value="String(c.id)">
-                  {{ c.label }}
-                </option>
-              </select>
-            </label>
-          </template>
+          <label class="filter-item">
+            报告细类（与矩阵一致）
+            <select v-model="reportGroup" class="filter-select wide">
+              <option value="">全部</option>
+              <option v-for="g in reportGroupOptions" :key="g" :value="g">{{ g }}</option>
+            </select>
+          </label>
           <template v-if="tab === 'detail' || tab === 'merged'">
             <label class="filter-item">
               类目路径包含

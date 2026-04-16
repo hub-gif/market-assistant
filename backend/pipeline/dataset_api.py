@@ -1,18 +1,35 @@
-"""库内数据浏览 API：排序、价格与类目筛选（查询参数解析与 QuerySet 变换）。"""
+"""库内数据浏览 API：排序、价格与报告细类筛选（查询参数解析与 QuerySet 变换）。"""
 from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import F, QuerySet
+from django.db.models import F, Q, QuerySet
 from django.db.models.expressions import OrderBy
 from rest_framework.request import Request
 
-SEARCH_SORT_FIELDS = frozenset({"row_index", "price", "sku_id", "title", "leaf_category"})
+SEARCH_SORT_FIELDS = frozenset(
+    {"row_index", "price", "sku_id", "title", "leaf_category", "matrix_group_label"}
+)
 DETAIL_SORT_FIELDS = frozenset(
-    {"row_index", "price", "sku_id", "detail_category_path", "detail_brand"}
+    {
+        "row_index",
+        "price",
+        "sku_id",
+        "detail_category_path",
+        "detail_brand",
+        "matrix_group_label",
+    }
 )
 MERGED_SORT_FIELDS = frozenset(
-    {"row_index", "price", "sku_id", "title", "leaf_category", "detail_category_path"}
+    {
+        "row_index",
+        "price",
+        "sku_id",
+        "title",
+        "leaf_category",
+        "detail_category_path",
+        "matrix_group_label",
+    }
 )
 
 
@@ -39,11 +56,9 @@ def price_bounds_from_request(request: Request) -> tuple[float | None, float | N
     )
 
 
-def category_norm_id_from_request(request: Request) -> int | None:
-    raw = (request.query_params.get("category_norm_id") or "").strip()
-    if raw.isdigit():
-        return int(raw)
-    return None
+def report_group_from_request(request: Request) -> str:
+    """与 §5 矩阵一致的细类名（如「饼干」「米」）；对应查询参数 ``report_group``。"""
+    return (request.query_params.get("report_group") or "").strip()
 
 
 def detail_category_q_from_request(request: Request) -> str:
@@ -52,7 +67,7 @@ def detail_category_q_from_request(request: Request) -> str:
 
 def filter_echo(
     *,
-    category_norm_id: int | None,
+    report_group: str,
     price_min: float | None,
     price_max: float | None,
     detail_category_q: str,
@@ -60,7 +75,7 @@ def filter_echo(
     desc: bool,
 ) -> dict[str, Any]:
     return {
-        "category_norm_id": category_norm_id,
+        "report_group": report_group or None,
         "price_min": price_min,
         "price_max": price_max,
         "detail_category_q": detail_category_q or None,
@@ -70,9 +85,9 @@ def filter_echo(
 
 
 def apply_search_filters(qs: QuerySet, request: Request) -> QuerySet:
-    cid = category_norm_id_from_request(request)
-    if cid is not None:
-        qs = qs.filter(leaf_category_norm_id=cid)
+    rg = report_group_from_request(request)
+    if rg:
+        qs = qs.filter(Q(matrix_group_label=rg) | Q(leaf_category=rg))
     pmin, pmax = price_bounds_from_request(request)
     if pmin is not None:
         qs = qs.filter(price_value__gte=pmin)
@@ -94,6 +109,7 @@ def apply_search_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
         "sku_id": "sku_id",
         "title": "title",
         "leaf_category": "leaf_category",
+        "matrix_group_label": "matrix_group_label",
     }[sort]
     return qs.order_by(
         OrderBy(F(field), descending=desc, nulls_last=True),
@@ -102,6 +118,9 @@ def apply_search_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
 
 
 def apply_detail_filters(qs: QuerySet, request: Request) -> QuerySet:
+    rg = report_group_from_request(request)
+    if rg:
+        qs = qs.filter(matrix_group_label=rg)
     q = detail_category_q_from_request(request)
     if q:
         qs = qs.filter(detail_category_path__icontains=q)
@@ -126,6 +145,7 @@ def apply_detail_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
         "sku_id": "sku_id",
         "detail_category_path": "detail_category_path",
         "detail_brand": "detail_brand",
+        "matrix_group_label": "matrix_group_label",
     }[sort]
     return qs.order_by(
         OrderBy(F(field), descending=desc, nulls_last=True),
@@ -134,9 +154,9 @@ def apply_detail_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
 
 
 def apply_merged_filters(qs: QuerySet, request: Request) -> QuerySet:
-    cid = category_norm_id_from_request(request)
-    if cid is not None:
-        qs = qs.filter(leaf_category_norm_id=cid)
+    rg = report_group_from_request(request)
+    if rg:
+        qs = qs.filter(matrix_group_label=rg)
     q = detail_category_q_from_request(request)
     if q:
         qs = qs.filter(detail_category_path__icontains=q)
@@ -162,6 +182,7 @@ def apply_merged_order(qs: QuerySet, sort: str, desc: bool) -> QuerySet:
         "title": "title",
         "leaf_category": "leaf_category",
         "detail_category_path": "detail_category_path",
+        "matrix_group_label": "matrix_group_label",
     }[sort]
     return qs.order_by(
         OrderBy(F(field), descending=desc, nulls_last=True),

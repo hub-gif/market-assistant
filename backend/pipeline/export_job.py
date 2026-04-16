@@ -16,6 +16,7 @@ from .csv_schema import (
     MERGED_FIELD_TO_CSV_HEADER,
 )
 from .dataset_nonempty import (
+    MATRIX_GROUP_COLUMN,
     comment_export_headers,
     detail_export_headers,
     merged_export_headers,
@@ -34,20 +35,30 @@ from .row_serialize import (
 )
 
 
-def _search_row_csv_dict(r: JdJobSearchRow, internal_keys: list[str]) -> dict[str, Any]:
+def _search_row_csv_dict(
+    r: JdJobSearchRow, internal_keys: list[str], headers: list[str]
+) -> dict[str, Any]:
     d = search_row_to_dict(r)
     out: dict[str, Any] = {"id": d["id"], "row_index": d["row_index"]}
     for k in internal_keys:
         out[JD_SEARCH_CSV_HEADERS[k]] = d.get(k, "")
+    zh = MATRIX_GROUP_COLUMN["label"]
+    if zh in headers:
+        out[zh] = d.get("matrix_group_label", "")
     return out
 
 
-def _detail_row_csv_dict(r: JdJobDetailRow, csv_cols: list[str]) -> dict[str, Any]:
+def _detail_row_csv_dict(
+    r: JdJobDetailRow, csv_cols: list[str], headers: list[str]
+) -> dict[str, Any]:
     d = detail_row_to_dict(r)
     out: dict[str, Any] = {"id": d["id"], "row_index": d["row_index"]}
     for col in csv_cols:
         fn = DETAIL_CSV_TO_FIELD[col]
         out[col] = d.get(fn, "")
+    zh = MATRIX_GROUP_COLUMN["label"]
+    if zh in headers:
+        out[zh] = d.get("matrix_group_label", "")
     return out
 
 
@@ -60,11 +71,16 @@ def _comment_row_csv_dict(r: JdJobCommentRow, csv_cols: list[str]) -> dict[str, 
     return out
 
 
-def _merged_row_csv_dict(r: JdJobMergedRow, internal_keys: list[str]) -> dict[str, Any]:
+def _merged_row_csv_dict(
+    r: JdJobMergedRow, internal_keys: list[str], headers: list[str]
+) -> dict[str, Any]:
     d = merged_row_to_dict(r)
     out: dict[str, Any] = {"id": d["id"], "row_index": d["row_index"]}
     for k in internal_keys:
         out[MERGED_FIELD_TO_CSV_HEADER[k]] = d.get(k, "")
+    zh = MATRIX_GROUP_COLUMN["label"]
+    if zh in headers:
+        out[zh] = d.get("matrix_group_label", "")
     return out
 
 
@@ -98,20 +114,30 @@ def _prune_merged_dict(d: dict[str, Any], fields: list[str]) -> dict[str, Any]:
 
 def _rows_as_list_search(job: PipelineJob) -> list[dict[str, Any]]:
     keys = nonempty_search_keys_for_job(job)
+    extra_mg = JdJobSearchRow.objects.filter(job=job).exclude(matrix_group_label="").exists()
     qs = JdJobSearchRow.objects.filter(job=job)
-    return [
-        _prune_search_dict(search_row_to_dict(obj), keys)
-        for obj in qs.order_by("row_index").iterator(chunk_size=400)
-    ]
+    out: list[dict[str, Any]] = []
+    for obj in qs.order_by("row_index").iterator(chunk_size=400):
+        d = search_row_to_dict(obj)
+        row = _prune_search_dict(d, keys)
+        if extra_mg:
+            row["matrix_group_label"] = d.get("matrix_group_label", "")
+        out.append(row)
+    return out
 
 
 def _rows_as_list_detail(job: PipelineJob) -> list[dict[str, Any]]:
     fields = nonempty_detail_fields_for_job(job)
+    extra_mg = JdJobDetailRow.objects.filter(job=job).exclude(matrix_group_label="").exists()
     qs = JdJobDetailRow.objects.filter(job=job)
-    return [
-        _prune_detail_dict(detail_row_to_dict(obj), fields)
-        for obj in qs.order_by("row_index").iterator(chunk_size=400)
-    ]
+    out: list[dict[str, Any]] = []
+    for obj in qs.order_by("row_index").iterator(chunk_size=400):
+        d = detail_row_to_dict(obj)
+        row = _prune_detail_dict(d, fields)
+        if extra_mg:
+            row["matrix_group_label"] = d.get("matrix_group_label", "")
+        out.append(row)
+    return out
 
 
 def _rows_as_list_comment(job: PipelineJob) -> list[dict[str, Any]]:
@@ -125,11 +151,16 @@ def _rows_as_list_comment(job: PipelineJob) -> list[dict[str, Any]]:
 
 def _rows_as_list_merged(job: PipelineJob) -> list[dict[str, Any]]:
     fields = nonempty_merged_fields_for_job(job)
+    extra_mg = JdJobMergedRow.objects.filter(job=job).exclude(matrix_group_label="").exists()
     qs = JdJobMergedRow.objects.filter(job=job)
-    return [
-        _prune_merged_dict(merged_row_to_dict(obj), fields)
-        for obj in qs.order_by("row_index").iterator(chunk_size=400)
-    ]
+    out: list[dict[str, Any]] = []
+    for obj in qs.order_by("row_index").iterator(chunk_size=400):
+        d = merged_row_to_dict(obj)
+        row = _prune_merged_dict(d, fields)
+        if extra_mg:
+            row["matrix_group_label"] = d.get("matrix_group_label", "")
+        out.append(row)
+    return out
 
 
 def build_json_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
@@ -178,18 +209,21 @@ def _write_csv_from_qs(
 def build_csv_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
     if kind == "search":
         sk = nonempty_search_keys_for_job(job)
+        headers = search_export_headers(job)
         text = _write_csv_from_qs(
             qs=JdJobSearchRow.objects.filter(job=job),
-            headers=search_export_headers(job),
-            row_fn=lambda o, _sk=sk: _search_row_csv_dict(o, _sk),
+            headers=headers,
+            row_fn=lambda o, _sk=sk, _h=headers: _search_row_csv_dict(o, _sk, _h),
         )
         name = f"job_{job.id}_search.csv"
     elif kind == "detail":
-        dcols = [c for c in detail_export_headers(job) if c not in ("id", "row_index")]
+        headers = detail_export_headers(job)
+        zh = MATRIX_GROUP_COLUMN["label"]
+        dcols = [c for c in headers if c not in ("id", "row_index", zh)]
         text = _write_csv_from_qs(
             qs=JdJobDetailRow.objects.filter(job=job),
-            headers=detail_export_headers(job),
-            row_fn=lambda o, _dc=dcols: _detail_row_csv_dict(o, _dc),
+            headers=headers,
+            row_fn=lambda o, _dc=dcols, _h=headers: _detail_row_csv_dict(o, _dc, _h),
         )
         name = f"job_{job.id}_detail.csv"
     elif kind == "comments":
@@ -202,22 +236,28 @@ def build_csv_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
         name = f"job_{job.id}_comments.csv"
     elif kind == "all":
         sk = nonempty_search_keys_for_job(job)
-        dcols = [c for c in detail_export_headers(job) if c not in ("id", "row_index")]
+        sheaders = search_export_headers(job)
+        dheaders = detail_export_headers(job)
+        zh = MATRIX_GROUP_COLUMN["label"]
+        dcols = [c for c in dheaders if c not in ("id", "row_index", zh)]
         ccols = [c for c in comment_export_headers(job) if c not in ("id", "row_index")]
         mk = nonempty_merged_fields_for_job(job)
+        mheaders = merged_export_headers(job)
         parts = [
             "# search",
             _write_csv_from_qs(
                 qs=JdJobSearchRow.objects.filter(job=job),
-                headers=search_export_headers(job),
-                row_fn=lambda o, _sk=sk: _search_row_csv_dict(o, _sk),
+                headers=sheaders,
+                row_fn=lambda o, _sk=sk, _h=sheaders: _search_row_csv_dict(o, _sk, _h),
             ),
             "",
             "# detail",
             _write_csv_from_qs(
                 qs=JdJobDetailRow.objects.filter(job=job),
-                headers=detail_export_headers(job),
-                row_fn=lambda o, _dc=dcols: _detail_row_csv_dict(o, _dc),
+                headers=dheaders,
+                row_fn=lambda o, _dc=dcols, _h=dheaders: _detail_row_csv_dict(
+                    o, _dc, _h
+                ),
             ),
             "",
             "# comments",
@@ -230,18 +270,19 @@ def build_csv_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
             "# merged",
             _write_csv_from_qs(
                 qs=JdJobMergedRow.objects.filter(job=job),
-                headers=merged_export_headers(job),
-                row_fn=lambda o, _mk=mk: _merged_row_csv_dict(o, _mk),
+                headers=mheaders,
+                row_fn=lambda o, _mk=mk, _h=mheaders: _merged_row_csv_dict(o, _mk, _h),
             ),
         ]
         text = "\n".join(parts)
         name = f"job_{job.id}_all.csv"
     elif kind == "merged":
         mk = nonempty_merged_fields_for_job(job)
+        headers = merged_export_headers(job)
         text = _write_csv_from_qs(
             qs=JdJobMergedRow.objects.filter(job=job),
-            headers=merged_export_headers(job),
-            row_fn=lambda o, _mk=mk: _merged_row_csv_dict(o, _mk),
+            headers=headers,
+            row_fn=lambda o, _mk=mk, _h=headers: _merged_row_csv_dict(o, _mk, _h),
         )
         name = f"job_{job.id}_merged.csv"
     else:
@@ -262,22 +303,25 @@ def build_xlsx_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
         ws = wb.active
         ws.title = "search"[:31]
         sk = nonempty_search_keys_for_job(job)
+        sheaders = search_export_headers(job)
         _append_sheet(
             ws,
-            search_export_headers(job),
+            sheaders,
             JdJobSearchRow.objects.filter(job=job),
-            lambda o, _sk=sk: _search_row_csv_dict(o, _sk),
+            lambda o, _sk=sk, _h=sheaders: _search_row_csv_dict(o, _sk, _h),
         )
         name = f"job_{job.id}_search.xlsx"
     elif kind == "detail":
         ws = wb.active
         ws.title = "detail"[:31]
-        dcols = [c for c in detail_export_headers(job) if c not in ("id", "row_index")]
+        dheaders = detail_export_headers(job)
+        zh = MATRIX_GROUP_COLUMN["label"]
+        dcols = [c for c in dheaders if c not in ("id", "row_index", zh)]
         _append_sheet(
             ws,
-            detail_export_headers(job),
+            dheaders,
             JdJobDetailRow.objects.filter(job=job),
-            lambda o, _dc=dcols: _detail_row_csv_dict(o, _dc),
+            lambda o, _dc=dcols, _h=dheaders: _detail_row_csv_dict(o, _dc, _h),
         )
         name = f"job_{job.id}_detail.xlsx"
     elif kind == "comments":
@@ -293,23 +337,27 @@ def build_xlsx_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
         name = f"job_{job.id}_comments.xlsx"
     elif kind == "all":
         sk = nonempty_search_keys_for_job(job)
-        dcols = [c for c in detail_export_headers(job) if c not in ("id", "row_index")]
+        sheaders = search_export_headers(job)
+        dheaders = detail_export_headers(job)
+        zh = MATRIX_GROUP_COLUMN["label"]
+        dcols = [c for c in dheaders if c not in ("id", "row_index", zh)]
         ccols = [c for c in comment_export_headers(job) if c not in ("id", "row_index")]
         mk = nonempty_merged_fields_for_job(job)
+        mheaders = merged_export_headers(job)
         ws1 = wb.active
         ws1.title = "search"[:31]
         _append_sheet(
             ws1,
-            search_export_headers(job),
+            sheaders,
             JdJobSearchRow.objects.filter(job=job),
-            lambda o, _sk=sk: _search_row_csv_dict(o, _sk),
+            lambda o, _sk=sk, _h=sheaders: _search_row_csv_dict(o, _sk, _h),
         )
         ws2 = wb.create_sheet("detail"[:31])
         _append_sheet(
             ws2,
-            detail_export_headers(job),
+            dheaders,
             JdJobDetailRow.objects.filter(job=job),
-            lambda o, _dc=dcols: _detail_row_csv_dict(o, _dc),
+            lambda o, _dc=dcols, _h=dheaders: _detail_row_csv_dict(o, _dc, _h),
         )
         ws3 = wb.create_sheet("comments"[:31])
         _append_sheet(
@@ -321,20 +369,21 @@ def build_xlsx_bytes(*, job: PipelineJob, kind: str) -> tuple[bytes, str]:
         ws4 = wb.create_sheet("merged"[:31])
         _append_sheet(
             ws4,
-            merged_export_headers(job),
+            mheaders,
             JdJobMergedRow.objects.filter(job=job),
-            lambda o, _mk=mk: _merged_row_csv_dict(o, _mk),
+            lambda o, _mk=mk, _h=mheaders: _merged_row_csv_dict(o, _mk, _h),
         )
         name = f"job_{job.id}_all.xlsx"
     elif kind == "merged":
         mk = nonempty_merged_fields_for_job(job)
         ws = wb.active
         ws.title = "merged"[:31]
+        mheaders = merged_export_headers(job)
         _append_sheet(
             ws,
-            merged_export_headers(job),
+            mheaders,
             JdJobMergedRow.objects.filter(job=job),
-            lambda o, _mk=mk: _merged_row_csv_dict(o, _mk),
+            lambda o, _mk=mk, _h=mheaders: _merged_row_csv_dict(o, _mk, _h),
         )
         name = f"job_{job.id}_merged.xlsx"
     else:

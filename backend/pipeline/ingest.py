@@ -29,12 +29,12 @@ from .csv_schema import (
     search_csv_effective_total_sales,
     strip_buyer_ranking_line_prefix,
 )
+from .matrix_group_label import matrix_group_label_from_detail_path
 from .models import (
     JdJobCommentRow,
     JdJobDetailRow,
     JdJobMergedRow,
     JdJobSearchRow,
-    JdLeafCategoryNorm,
     JdProduct,
     JdProductSnapshot,
     PipelineJob,
@@ -119,6 +119,33 @@ def _bulk_create_in_chunks(model, objects: list[Any]) -> None:
         model.objects.bulk_create(objects[i : i + BULK_CHUNK])
 
 
+def _sync_search_rows_matrix_labels(
+    job: PipelineJob, merged_kw_list: list[tuple[int, dict[str, str]]]
+) -> None:
+    """按 SKU 将合并表解析出的报告细类回填到搜索行（与 §5 矩阵口径一致）。"""
+    sku_to_mg: dict[str, str] = {}
+    for _, kw in merged_kw_list:
+        sk = (kw.get("sku_id") or "").strip()
+        if not sk:
+            continue
+        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
+        if mg:
+            sku_to_mg[sk] = mg
+    if not sku_to_mg:
+        return
+    chunk: list[JdJobSearchRow] = []
+    for r in JdJobSearchRow.objects.filter(job=job).iterator(chunk_size=400):
+        sk = (r.sku_id or "").strip()
+        if sk and sk in sku_to_mg:
+            r.matrix_group_label = sku_to_mg[sk]
+            chunk.append(r)
+        if len(chunk) >= 400:
+            JdJobSearchRow.objects.bulk_update(chunk, ["matrix_group_label"])
+            chunk.clear()
+    if chunk:
+        JdJobSearchRow.objects.bulk_update(chunk, ["matrix_group_label"])
+
+
 def _run_dir(job: PipelineJob) -> Path:
     return Path(job.run_dir or "").expanduser().resolve()
 
@@ -174,32 +201,12 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     if not search_rows and search_path.is_file() is False:
         pass
     search_kw_list: list[tuple[int, dict[str, str]]] = []
-    leaf_labels: set[str] = set()
     for i, row in enumerate(search_rows):
         _normalize_search_csv_total_sales(row)
         kw = _search_row_kwargs(row)
         search_kw_list.append((i, kw))
-        lc = (kw.get("leaf_category") or "").strip()[:512]
-        if lc:
-            leaf_labels.add(lc)
-    norm_map: dict[str, JdLeafCategoryNorm] = {}
-    if leaf_labels:
-        have = set(
-            JdLeafCategoryNorm.objects.filter(label__in=leaf_labels).values_list(
-                "label", flat=True
-            )
-        )
-        missing = [JdLeafCategoryNorm(label=l) for l in leaf_labels if l not in have]
-        if missing:
-            JdLeafCategoryNorm.objects.bulk_create(missing, ignore_conflicts=True)
-        norm_map = {
-            n.label: n
-            for n in JdLeafCategoryNorm.objects.filter(label__in=leaf_labels)
-        }
     s_objs: list[JdJobSearchRow] = []
     for i, kw in search_kw_list:
-        lc = (kw.get("leaf_category") or "").strip()[:512]
-        norm = norm_map.get(lc) if lc else None
         pv = effective_list_price_value(
             kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
         )
@@ -207,7 +214,7 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
             JdJobSearchRow(
                 job=job,
                 row_index=i,
-                leaf_category_norm=norm,
+                matrix_group_label="",
                 price_value=pv,
                 **kw,
             )
@@ -221,9 +228,14 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     for i, row in enumerate(detail_rows):
         kw = _detail_row_kwargs(row)
         dpv = float_price_from_cell(kw.get("detail_price_final"))
+        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
         d_objs.append(
             JdJobDetailRow(
-                job=job, row_index=i, detail_price_value=dpv, **kw
+                job=job,
+                row_index=i,
+                matrix_group_label=mg,
+                detail_price_value=dpv,
+                **kw,
             )
         )
     _bulk_create_in_chunks(JdJobDetailRow, d_objs)
@@ -241,34 +253,13 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     merged_path = run_dir / FILE_MERGED_CSV
     merged_rows = _read_csv_rows(merged_path) if merged_path.is_file() else []
     merged_kw_list: list[tuple[int, dict[str, str]]] = []
-    leaf_labels_m: set[str] = set()
     for i, row in enumerate(merged_rows):
         _normalize_merged_csv_total_sales(row)
         kw = _merged_row_kwargs(row)
         merged_kw_list.append((i, kw))
-        lc = (kw.get("leaf_category") or "").strip()[:512]
-        if lc:
-            leaf_labels_m.add(lc)
-    norm_map_m: dict[str, JdLeafCategoryNorm] = {}
-    if leaf_labels_m:
-        have_m = set(
-            JdLeafCategoryNorm.objects.filter(label__in=leaf_labels_m).values_list(
-                "label", flat=True
-            )
-        )
-        missing_m = [
-            JdLeafCategoryNorm(label=l) for l in leaf_labels_m if l not in have_m
-        ]
-        if missing_m:
-            JdLeafCategoryNorm.objects.bulk_create(missing_m, ignore_conflicts=True)
-        norm_map_m = {
-            n.label: n
-            for n in JdLeafCategoryNorm.objects.filter(label__in=leaf_labels_m)
-        }
     m_objs: list[JdJobMergedRow] = []
     for i, kw in merged_kw_list:
-        lc = (kw.get("leaf_category") or "").strip()[:512]
-        norm = norm_map_m.get(lc) if lc else None
+        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
         pv = effective_list_price_value(
             kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
         )
@@ -276,13 +267,14 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
             JdJobMergedRow(
                 job=job,
                 row_index=i,
-                leaf_category_norm=norm,
+                matrix_group_label=mg,
                 price_value=pv,
                 **kw,
             )
         )
     _bulk_create_in_chunks(JdJobMergedRow, m_objs)
     stats["merged_table_rows"] = len(m_objs)
+    _sync_search_rows_matrix_labels(job, merged_kw_list)
 
     return stats
 

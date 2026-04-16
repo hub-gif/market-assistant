@@ -14,6 +14,8 @@ from .csv_schema import (
 from .models import JdJobCommentRow, JdJobDetailRow, JdJobMergedRow, JdJobSearchRow, PipelineJob
 from .row_serialize import COMMENT_FIELDS_ORDER, DETAIL_FIELDS_ORDER
 
+MATRIX_GROUP_COLUMN = {"key": "matrix_group_label", "label": "报告细类（§5矩阵）"}
+
 
 def _is_nonempty(val) -> bool:
     if val is None:
@@ -62,7 +64,13 @@ def nonempty_merged_fields_for_job(job: PipelineJob) -> list[str]:
 
 
 def search_columns_for_api(job: PipelineJob) -> list[dict[str, str]]:
-    return [{"key": k, "label": JD_SEARCH_CSV_HEADERS[k]} for k in nonempty_search_keys_for_job(job)]
+    cols = [
+        {"key": k, "label": JD_SEARCH_CSV_HEADERS[k]}
+        for k in nonempty_search_keys_for_job(job)
+    ]
+    if JdJobSearchRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        cols.append(dict(MATRIX_GROUP_COLUMN))
+    return cols
 
 
 def _detail_field_to_csv_col(field: str) -> str:
@@ -73,10 +81,13 @@ def _detail_field_to_csv_col(field: str) -> str:
 
 
 def detail_columns_for_api(job: PipelineJob) -> list[dict[str, str]]:
-    return [
+    cols = [
         {"key": f, "label": _detail_field_to_csv_col(f)}
         for f in nonempty_detail_fields_for_job(job)
     ]
+    if JdJobDetailRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        cols.append(dict(MATRIX_GROUP_COLUMN))
+    return cols
 
 
 def _comment_field_to_csv_col(field: str) -> str:
@@ -94,21 +105,30 @@ def comment_columns_for_api(job: PipelineJob) -> list[dict[str, str]]:
 
 
 def merged_columns_for_api(job: PipelineJob) -> list[dict[str, str]]:
-    return [
+    cols = [
         {"key": k, "label": MERGED_FIELD_TO_CSV_HEADER[k]}
         for k in nonempty_merged_fields_for_job(job)
     ]
+    if JdJobMergedRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        cols.append(dict(MATRIX_GROUP_COLUMN))
+    return cols
 
 
 def search_export_headers(job: PipelineJob) -> list[str]:
     keys = nonempty_search_keys_for_job(job)
-    return ["id", "row_index"] + [JD_SEARCH_CSV_HEADERS[k] for k in keys]
+    h = ["id", "row_index"] + [JD_SEARCH_CSV_HEADERS[k] for k in keys]
+    if JdJobSearchRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        h.append(MATRIX_GROUP_COLUMN["label"])
+    return h
 
 
 def detail_export_headers(job: PipelineJob) -> list[str]:
     fields = set(nonempty_detail_fields_for_job(job))
     cols = [c for c in DETAIL_CSV_COLUMNS if DETAIL_CSV_TO_FIELD[c] in fields]
-    return ["id", "row_index"] + cols
+    h = ["id", "row_index"] + cols
+    if JdJobDetailRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        h.append(MATRIX_GROUP_COLUMN["label"])
+    return h
 
 
 def comment_export_headers(job: PipelineJob) -> list[str]:
@@ -119,4 +139,7 @@ def comment_export_headers(job: PipelineJob) -> list[str]:
 
 def merged_export_headers(job: PipelineJob) -> list[str]:
     keys = nonempty_merged_fields_for_job(job)
-    return ["id", "row_index"] + [MERGED_FIELD_TO_CSV_HEADER[k] for k in keys]
+    h = ["id", "row_index"] + [MERGED_FIELD_TO_CSV_HEADER[k] for k in keys]
+    if JdJobMergedRow.objects.filter(job=job).exclude(matrix_group_label="").exists():
+        h.append(MATRIX_GROUP_COLUMN["label"])
+    return h

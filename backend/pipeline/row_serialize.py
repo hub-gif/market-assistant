@@ -22,6 +22,7 @@ def search_row_to_dict(r: JdJobSearchRow) -> dict[str, Any]:
     out: dict[str, Any] = {"id": r.id, "row_index": r.row_index}
     for k in JD_SEARCH_INTERNAL_KEYS:
         out[k] = getattr(r, k) or ""
+    out["matrix_group_label"] = r.matrix_group_label or ""
     return out
 
 
@@ -29,6 +30,7 @@ def detail_row_to_dict(r: JdJobDetailRow) -> dict[str, Any]:
     out: dict[str, Any] = {"id": r.id, "row_index": r.row_index}
     for k in DETAIL_FIELDS_ORDER:
         out[k] = getattr(r, k) or ""
+    out["matrix_group_label"] = r.matrix_group_label or ""
     return out
 
 
@@ -43,4 +45,5 @@ def merged_row_to_dict(r: JdJobMergedRow) -> dict[str, Any]:
     out: dict[str, Any] = {"id": r.id, "row_index": r.row_index}
     for k in MERGED_FIELDS_ORDER:
         out[k] = getattr(r, k) or ""
+    out["matrix_group_label"] = r.matrix_group_label or ""
     return out
