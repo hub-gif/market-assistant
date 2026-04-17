@@ -30,12 +30,10 @@ PC 搜索导出 CSV、评价扁平 CSV、详情汇总 CSV（``detail_ware_export
 
 from __future__ import annotations
 
-import csv
 import json
 import random
 import sys
 import time
-from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -142,10 +140,6 @@ for _p in (_SEARCH_DIR, _COMMENT_DIR, _DETAIL_DIR):
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
-from pipeline.csv_schema import (  # noqa: E402
-    MERGED_CSV_COLUMNS,
-    remap_merged_row_english_detail_keys_to_csv_headers,
-)
 
 from collect_pc_search_items import (  # noqa: E402
     SearchCollectionCancelled,
@@ -180,56 +174,18 @@ from jd_h5_item_comment_requests import (  # noqa: E402
 )
 from jd_h5_search_requests import (  # noqa: E402
     CSV_FIELDS,
-    JD_EXPORT_COLUMN_HEADERS,
     jd_row_to_export,
 )
-
-
-_SKU_CSV_HEADER = JD_EXPORT_COLUMN_HEADERS["sku_id"]
-
-_MERGED_EXTRA_FIELDS = (
-    ["pipeline_keyword"]
-    + list(WARE_BUSINESS_MERGE_FIELDNAMES)
-    + ["comment_count", "comment_preview"]
+from jd_pipeline_export import (  # noqa: E402
+    SKU_CSV_HEADER,
+    comment_fields_from_rows,
+    dedupe_comment_rows,
+    finalize_merged_row_for_disk,
+    write_detail_ware_csv,
+    write_merged_csv,
+    write_pc_search_export_csv,
+    write_run_meta_json,
 )
-
-
-def _finalize_merged_row_for_disk(merged: dict[str, str]) -> None:
-    """英文内部键 → 中文 CSV 列名；评论摘要列名。"""
-    remap_merged_row_english_detail_keys_to_csv_headers(merged)
-    if "comment_count" in merged:
-        merged["评论条数"] = str(merged.pop("comment_count") or "")
-    if "comment_preview" in merged:
-        merged["评价摘要"] = str(merged.pop("comment_preview") or "")
-
-
-def _merged_csv_fieldnames() -> list[str]:
-    if (MERGED_CSV_MODE or "lean").strip().lower() == "full":
-        return list(CSV_FIELDS) + [
-            f for f in _MERGED_EXTRA_FIELDS if f not in CSV_FIELDS
-        ]
-    return list(MERGED_CSV_COLUMNS)
-
-
-def _normalize_merged_rows_for_export(rows: list[dict[str, str]]) -> None:
-    """
-    整合表落盘前：搜索侧「榜单类文案」与「榜单排名」去掉 ``榜单/曝光：`` 前缀，
-    与 ``strip_buyer_ranking_line_prefix`` / 入库规则一致。
-    """
-    from pipeline.csv_schema import strip_buyer_ranking_line_prefix  # noqa: WPS433
-
-    hot_key = "榜单类文案"
-    rank_key = "榜单排名"
-    for merged in rows:
-        if merged.get(hot_key):
-            merged[hot_key] = strip_buyer_ranking_line_prefix(merged[hot_key])
-        merged[rank_key] = strip_buyer_ranking_line_prefix(merged.get(rank_key) or "")
-
-
-def _detail_ware_csv_fieldnames() -> list[str]:
-    if (DETAIL_WARE_CSV_MODE or "lean").strip().lower() == "full":
-        return list(WARE_PARSED_CSV_FIELDNAMES)
-    return list(DETAIL_WARE_LEAN_CSV_FIELDNAMES)
 
 
 def _sleep_range(spec: str, label: str) -> None:
@@ -242,33 +198,6 @@ def _sleep_range(spec: str, label: str) -> None:
     t = random.uniform(lo, hi)
     print(f"[流水线] {label} 等待 {t:.1f}s", file=sys.stderr)
     time.sleep(t)
-
-
-def _dedupe_comment_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """按 commentId 去重（跨首屏 + 多页列表）。"""
-    seen: set[str] = set()
-    out: list[dict[str, Any]] = []
-    for r in rows:
-        cid = str(r.get("commentId") or "").strip()
-        if cid:
-            if cid in seen:
-                continue
-            seen.add(cid)
-        out.append(r)
-    return out
-
-
-def _comment_fields_from_rows(rows: list[dict[str, Any]]) -> dict[str, str]:
-    previews: list[str] = []
-    for r in rows[:8]:
-        t = str(r.get("tagCommentContent") or "").strip()
-        if t:
-            previews.append(t[:400])
-    joined = " | ".join(previews)[:4000]
-    return {
-        "comment_count": str(len(rows)),
-        "comment_preview": joined,
-    }
 
 
 def _loads_json(text: str) -> Any:
@@ -479,7 +408,7 @@ def main(keyword: str | None = None) -> Path:
         skus_ordered: list[str] = []
         seen: set[str] = set()
         for row in export_rows_for_skus:
-            sid = str(row.get(_SKU_CSV_HEADER) or "").strip()
+            sid = str(row.get(SKU_CSV_HEADER) or "").strip()
             if not sid or sid in seen:
                 continue
             seen.add(sid)
@@ -496,13 +425,7 @@ def main(keyword: str | None = None) -> Path:
             stop_pipeline = True
 
         search_csv_path = run_dir / FILE_PC_SEARCH_CSV
-        sbuf = StringIO()
-        sw = csv.DictWriter(
-            sbuf, fieldnames=list(CSV_FIELDS), extrasaction="ignore"
-        )
-        sw.writeheader()
-        sw.writerows(rows_for_search_csv)
-        search_csv_path.write_text("\ufeff" + sbuf.getvalue(), encoding="utf-8")
+        write_pc_search_export_csv(search_csv_path, rows_for_search_csv)
         print(
             f"[流水线] 已写 PC 搜索导出 {search_csv_path}",
             file=sys.stderr,
@@ -535,7 +458,7 @@ def main(keyword: str | None = None) -> Path:
                 (
                     r
                     for r in export_rows_full
-                    if str(r.get(_SKU_CSV_HEADER) or "").strip() == sku
+                    if str(r.get(SKU_CSV_HEADER) or "").strip() == sku
                 ),
                 {},
             )
@@ -682,7 +605,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
-                _finalize_merged_row_for_disk(merged)
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -692,7 +615,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
-                _finalize_merged_row_for_disk(merged)
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -706,7 +629,7 @@ def main(keyword: str | None = None) -> Path:
             except SystemExit:
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
-                _finalize_merged_row_for_disk(merged)
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 continue
 
@@ -714,7 +637,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
-                _finalize_merged_row_for_disk(merged)
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -813,8 +736,8 @@ def main(keyword: str | None = None) -> Path:
                             "firstCommentGuid，仅保留首屏评价",
                             file=sys.stderr,
                         )
-                comment_rows = _dedupe_comment_rows(comment_rows)
-                merged.update(_comment_fields_from_rows(comment_rows))
+                comment_rows = dedupe_comment_rows(comment_rows)
+                merged.update(comment_fields_from_rows(comment_rows))
                 all_comment_rows.extend(comment_rows)
             except Exception as e:
                 print(
@@ -824,7 +747,7 @@ def main(keyword: str | None = None) -> Path:
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
 
-            _finalize_merged_row_for_disk(merged)
+            finalize_merged_row_for_disk(merged)
             merged_rows.append(merged)
             print(f"[流水线] [{idx + 1}/{len(skus_ordered)}] sku={sku} OK", file=sys.stderr)
             if stop_pipeline:
@@ -841,33 +764,26 @@ def main(keyword: str | None = None) -> Path:
         browser.close()
 
     out_path = run_dir / FILE_MERGED_CSV
-    fieldnames = _merged_csv_fieldnames()
-    _normalize_merged_rows_for_export(merged_rows)
-    buf = StringIO()
-    w = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
-    w.writeheader()
-    w.writerows(merged_rows)
-    out_path.write_text("\ufeff" + buf.getvalue(), encoding="utf-8")
+    _, merged_col_count = write_merged_csv(
+        out_path,
+        merged_rows,
+        merged_csv_mode=MERGED_CSV_MODE,
+    )
     print(
         f"[流水线] 已写合并表 {out_path} 共 {len(merged_rows)} 行 "
-        f"（MERGED_CSV_MODE={MERGED_CSV_MODE!r}，{len(fieldnames)} 列）",
+        f"（MERGED_CSV_MODE={MERGED_CSV_MODE!r}，{merged_col_count} 列）",
         file=sys.stderr,
     )
 
     detail_csv_path = run_dir / FILE_DETAIL_WARE_CSV
-    detail_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    detail_fn = _detail_ware_csv_fieldnames()
-    with detail_csv_path.open("w", encoding="utf-8-sig", newline="") as dcf:
-        dw = csv.DictWriter(
-            dcf,
-            fieldnames=detail_fn,
-            extrasaction="ignore",
-        )
-        dw.writeheader()
-        dw.writerows(detail_csv_rows)
+    _, detail_col_count = write_detail_ware_csv(
+        detail_csv_path,
+        detail_csv_rows,
+        detail_ware_csv_mode=DETAIL_WARE_CSV_MODE,
+    )
     print(
         f"[流水线] 已写详情扁平表 {detail_csv_path} 共 {len(detail_csv_rows)} 行 "
-        f"（DETAIL_WARE_CSV_MODE={DETAIL_WARE_CSV_MODE!r}，{len(detail_fn)} 列）",
+        f"（DETAIL_WARE_CSV_MODE={DETAIL_WARE_CSV_MODE!r}，{detail_col_count} 列）",
         file=sys.stderr,
     )
 
@@ -916,19 +832,16 @@ def main(keyword: str | None = None) -> Path:
         "pc_search_export_rows_full": len(export_rows_full),
         "merged_rows": len(merged_rows),
         "merged_csv_mode": (MERGED_CSV_MODE or "lean").strip().lower(),
-        "merged_csv_column_count": len(fieldnames),
+        "merged_csv_column_count": merged_col_count,
         "detail_ware_csv_mode": (DETAIL_WARE_CSV_MODE or "lean").strip().lower(),
-        "detail_ware_csv_column_count": len(detail_fn),
+        "detail_ware_csv_column_count": detail_col_count,
         "comment_flat_rows": len(all_comment_rows),
         "detail_ware_csv_rows": len(detail_csv_rows),
         "buyer_offer_profiles_dir": DIR_BUYER_OFFER_PROFILES,
         "with_comment_list": bool(WITH_COMMENT_LIST),
         "list_pages": (LIST_PAGES or "").strip(),
     }
-    (run_dir / FILE_RUN_META_JSON).write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_run_meta_json(run_dir / FILE_RUN_META_JSON, meta)
     if stop_pipeline:
         print("[流水线] 已按请求终止（已写出当前进度）", file=sys.stderr)
         raise PipelineCancelled(run_dir)
