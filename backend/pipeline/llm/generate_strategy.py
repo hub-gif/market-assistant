@@ -12,17 +12,24 @@ from ..reporting.strategy_draft import (
 )
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
 
-STRATEGY_SYSTEM = """你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」润色为可读的策略 Markdown。
+STRATEGY_SYSTEM = """你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」写成**短、可执行**的策略 Markdown 成稿。
 
-**规则**：
-- 输入 JSON 含 `rules_draft_markdown`（规则引擎生成的底稿，与同任务数据一致）、`structured_brief`（摘要子集）、`strategy_decisions`、`business_notes` 等；可选 `report_strategy_excerpt`（与同任务宿主报告**第九章**「策略与机会」正文同源，来自已落盘产物）。
-- **与报告第九章对齐（硬性，当 `report_strategy_excerpt` 非空时）**：润色后的全文在**战略方向与主要判断**上须与该节选**一致**，不得写出与之**明显矛盾**的结论（如定价档位、差异化主线、主要风险判断）；若 `business_notes` 或 `strategy_decisions` 与节选冲突，须在正文适当位置简短说明「与报告第九章策略归纳不一致之处见业务备注」类表述，且**不得**把节选与 `structured_brief` 中均未出现的数字当作既定事实。
-- **当 `report_strategy_excerpt` 为空或仅为占位说明**：表示报告侧未生成或未重跑第九章大模型正文，仅依据 `rules_draft_markdown` 与 `structured_brief` 润色，**不得编造**与可能存在的报告第九章结论。
-- **不得编造**输入中不存在的销量、占比、价格数字；若底稿与摘要中有数字，须保持一致；表述集中度时用「第一大……份额」「前三家合计」等中文，**不要用** CR1、CR3 等缩写；
-- 若 `structured_brief` 含 `matrix_overview_for_llm` 或矩阵相关字段，策略中应**呼应**细分类目分组与竞品矩阵结论，不得无故删光矩阵相关建议；
-- 可调整段落衔接、标题层级、列表与表格呈现，使更易读；可补充「建议」「待业务确认」类表述，但不虚构竞品名称或数据；
-- **仅输出** Markdown 正文（不要 ``` 围栏包裹全文）；
-- **输出完整性**：须收束各小节与全文，勿在句子或列表中途戛然而止。"""
+**输入**：`rules_draft_markdown`（规则骨架，与同任务数据一致）、`structured_brief`（摘要子集）、`strategy_decisions`、`business_notes`；可选 `report_strategy_excerpt`（与同任务宿主报告**第九章**「策略与机会」正文同源）。
+
+**决策边界（硬性）**：
+- **业务已在 `strategy_decisions` 中填写的项**（角色、时间、成功标准、战场一句话、定位勾选、竞争倾向、四柱、目标客群/对标/资源备注等）视为**已定决策**：成稿须**落实为具体执行句**，**不得**改写成相反结论或再要求用户「请选择」。
+- **表单中为空或占位（如 *待填*、*骨架占位*）的项**：由你结合 `structured_brief`、`report_strategy_excerpt`（若非空）与数据摘录**补全为可执行表述**；补全须与数据方向一致，**不得**编造输入中不存在的销量、GMV、未给出的价格或占比。
+- **成稿阶段禁止**：再写一轮「请业务决策」「待确认后再定」「假设：待验证」等**二次决策话术**；不确定性用一句带过即可（如「需下周用原评论抽样核对」），勿重复堆砌。
+
+**与报告第九章对齐（当 `report_strategy_excerpt` 非空时）**：战略方向与主要判断须与该节选**一致**，不得明显矛盾；若 `business_notes` 或表单与节选冲突，正文中简短点明「与报告第九章归纳差异见业务备注」，且**不得**把节选与 `structured_brief` 均未出现的数字当作事实。
+
+**当 `report_strategy_excerpt` 为空**：仅依据底稿与摘要润色，**不得编造**报告第九章结论。
+
+**数据**：不得编造销量、占比、价格数字；底稿与摘要中的数字须保持一致；集中度用「第一大……份额」「前三家合计」等中文，**不要用** CR1、CR3。
+
+**矩阵**：若 `structured_brief` 含矩阵相关字段，须**呼应**细分类目与竞品矩阵结论，不得无故删光。
+
+**输出**：仅 Markdown 正文（不要 ``` 围栏）；须收束各小节与全文，勿中途截断。"""
 
 STRATEGY_USER_PREFIX = """请基于以下 JSON 输出最终策略稿（Markdown）。\n\n"""
 
@@ -93,8 +100,8 @@ def generate_strategy_draft_markdown_llm(
         }
         if report_uses_chapter8_text_mining_probe(report_config):
             payload["structured_brief_omission_note"] = (
-                "已启用第八章文本挖掘：本 JSON 中的 structured_brief 已省略关注词/场景子串计数字段，"
-                "避免与当前报告正文口径冲突；请依规则底稿第五节说明与报告 §8 自拟假设，勿逐条编造子串命中列表。"
+                "已启用第八章文本挖掘：structured_brief 已省略关注词/场景子串计数字段，避免与报告正文口径冲突。"
+                "请依报告 §8 与摘要其他字段，将底稿第五节写成具体执行要点（需求焦点、场景、传播），勿逐条编造子串命中列表。"
             )
         raw = json.dumps(payload, ensure_ascii=False)
         if len(raw) > 500_000:

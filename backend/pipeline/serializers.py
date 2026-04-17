@@ -438,6 +438,15 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
     pillar_comm = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
     )
+    audience_segment = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=500, trim_whitespace=False
+    )
+    competitor_reference = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
+    )
+    resource_notes = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=1000, trim_whitespace=False
+    )
     ack_risk_keywords = serializers.BooleanField(required=False, default=False)
     ack_risk_price = serializers.BooleanField(required=False, default=False)
     ack_risk_concentration = serializers.BooleanField(required=False, default=False)

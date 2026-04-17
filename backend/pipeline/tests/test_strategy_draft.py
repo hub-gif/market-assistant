@@ -26,7 +26,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("任务 ID**：99", md)
         self.assertIn("假设A", md)
         self.assertIn("重点：华东", md)
-        self.assertIn("战略背景与目标", md)
+        self.assertIn("目标与边界", md)
         self.assertIn("市场策略制定草稿", md)
 
     def test_strategy_decisions_merge(self) -> None:
@@ -52,9 +52,9 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("- [ ] **贴顶**", md)
         self.assertIn("侧翼切入", md)
         self.assertIn("| 产品 | 做低糖配方 |", md)
-        self.assertIn("- [x] 关注词/场景是否**以偏概全**", md)
+        self.assertIn("- [x] 关注词/场景统计是否以偏概全", md)
         self.assertIn("- [ ] 价格带是否含大促", md)
-        self.assertIn("- [x] 列表集中度与深入样本品牌是否**矛盾**", md)
+        self.assertIn("- [x] 列表集中度与深入样本品牌是否不一致", md)
 
     def test_chapter8_probe_omits_focus_scenario_count_bullets(self) -> None:
         brief = {
@@ -76,8 +76,8 @@ class StrategyDraftTests(SimpleTestCase):
             report_config={"chapter8_text_mining_probe": True},
         )
         self.assertIn("文本挖掘", md)
-        self.assertNotIn("假设**：用户决策中「口感」", md)
-        self.assertNotIn("场景命题**：「控糖", md)
+        self.assertNotIn("子串统计命中约 **501**", md)
+        self.assertNotIn("场景「控糖", md)
 
     def test_legacy_report_shows_focus_scenario_bullets(self) -> None:
         brief = {
@@ -98,5 +98,5 @@ class StrategyDraftTests(SimpleTestCase):
             brief=brief,
             report_config={"chapter8_text_mining_probe": False},
         )
-        self.assertIn("假设**：用户决策中「口感」", md)
-        self.assertIn("场景命题**：「控糖/血糖相关」", md)
+        self.assertIn("「口感」：子串统计命中约 **501** 次", md)
+        self.assertIn("场景「控糖/血糖相关」：约 **305** 条", md)

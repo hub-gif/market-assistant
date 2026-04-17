@@ -549,6 +549,18 @@ components:
         pillar_comm:
           type: string
           maxLength: 800
+        audience_segment:
+          type: string
+          maxLength: 500
+          description: 目标客群一句话（可选）
+        competitor_reference:
+          type: string
+          maxLength: 800
+          description: 主要对标品牌或价位带（可选）
+        resource_notes:
+          type: string
+          maxLength: 1000
+          description: 资源与预算量级备注（可选）
         ack_risk_keywords:
           type: boolean
           default: false

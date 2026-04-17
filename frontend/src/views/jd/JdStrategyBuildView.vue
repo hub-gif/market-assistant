@@ -48,6 +48,9 @@ const decisions = reactive({
   pillar_price: '',
   pillar_channel: '',
   pillar_comm: '',
+  audience_segment: '',
+  competitor_reference: '',
+  resource_notes: '',
   ack_risk_keywords: false,
   ack_risk_price: false,
   ack_risk_concentration: false,
@@ -89,6 +92,9 @@ function buildPayload() {
     pillar_price: decisions.pillar_price,
     pillar_channel: decisions.pillar_channel,
     pillar_comm: decisions.pillar_comm,
+    audience_segment: decisions.audience_segment,
+    competitor_reference: decisions.competitor_reference,
+    resource_notes: decisions.resource_notes,
     ack_risk_keywords: decisions.ack_risk_keywords,
     ack_risk_price: decisions.ack_risk_price,
     ack_risk_concentration: decisions.ack_risk_concentration,
@@ -176,7 +182,7 @@ watch(
       <p class="hint-top">
         选择<strong>已成功</strong>任务，在下方填空与勾选。<strong>默认</strong>使用大模型在规则底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。若需更快、不调用智能服务，可勾选「本次仅生成规则稿」。策略配置与「分析报告生成」页的<strong>报告配置</strong>相互独立。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>。提交后跳转到
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
-        。未填项在文稿中仍保留占位提示。
+        。<strong>决策在本页完成</strong>：已填项会写入底稿并由大模型落实为执行句；未填项由大模型结合数据补全。成稿不再重复「请再选」式表述。
       </p>
 
       <div class="toolbar">
@@ -225,6 +231,30 @@ watch(
         <label class="fld fld-block">
           <span>非目标</span>
           <textarea v-model="decisions.non_goals" rows="2" placeholder="明确不做什么（可选）" />
+        </label>
+        <label class="fld fld-block">
+          <span>目标客群</span>
+          <input
+            v-model="decisions.audience_segment"
+            type="text"
+            placeholder="一句话：为谁、什么场景（可选）"
+          />
+        </label>
+        <label class="fld fld-block">
+          <span>主要对标</span>
+          <input
+            v-model="decisions.competitor_reference"
+            type="text"
+            placeholder="品牌或价位带参照（可选）"
+          />
+        </label>
+        <label class="fld fld-block">
+          <span>资源与预算备注</span>
+          <textarea
+            v-model="decisions.resource_notes"
+            rows="2"
+            placeholder="人力、投放、产能等量级（可选）"
+          />
         </label>
       </fieldset>
 
