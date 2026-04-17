@@ -1,8 +1,8 @@
 """
-第八章「文本挖掘探针」独立脚本（**不修改**主报告代码）。
+第八章「评论文本补充分析」独立脚本（**不修改**主报告核心逻辑）。
 
-流程（按细类分组）：清洗（jieba 分词 + 停用词）→ **词云图（可选）** → 词频 / TF-IDF → 共现对 → LDA 主题
-→ 规则化叙事小结 → 文末可选 **探针专用 LLM**（结构化 JSON + ``PROBE_TEXT_MINING_SYSTEM`` + ``_call_llm``；**非** ``COMMENT_GROUPS_SYSTEM``、**非** §8.2 情感）。
+流程（按细类分组）：清洗（中文分词 + 停用词）→ **词云图（可选）** → 词频 / 关键词突出度 → 词对共现 → 主题归纳
+→ 规则化叙事小结 → 文末可选 **专用 LLM**（结构化 JSON + ``PROBE_TEXT_MINING_SYSTEM`` + ``_call_llm``；**非** ``COMMENT_GROUPS_SYSTEM``、**非**第八章第二节情感）。
 
 依赖（请自行安装）::
 
@@ -17,7 +17,7 @@
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
 
-嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **§8.3**，替代原「关注词 + 场景」条图及对应两段大模型；**§8.2 与「大模型深入解读（主题归因…）」保留**。
+嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **第八章第三节**，替代原「关注词 + 场景」条图及对应两段大模型；**第八章第二节与「大模型深入解读（主题归因…）」保留**。
 """
 from __future__ import annotations
 
@@ -91,30 +91,30 @@ _STOP_BASIC: frozenset[str] = frozenset(
     """.split()
 )
 
-# --- 文本挖掘探针 · 专用 LLM（与正式报告 ``COMMENT_GROUPS_SYSTEM`` / §8.2 均不同）---
+# --- 评论文本补充分析 · 专用 LLM（与正式报告 ``COMMENT_GROUPS_SYSTEM`` / 第八章第二节均不同）---
 PROBE_TEXT_MINING_SYSTEM = """你是用户研究与文本挖掘方向的助手。
 
-输入 JSON 为「第八章文本挖掘探针」的**专用**结果（``schema_version``=1），**不是**正式竞品报告里的关注词规则统计、也不是 §8.2 情感 Lexicon。其中的数字与词表来自 **jieba 分词 + sklearn（TF-IDF / 共现 / LDA）**，与业务侧子串计数**口径不同**。
+输入 JSON 为「第八章第三节评论文本补充分析」的**专用**结果（``schema_version``=1），**不是**正式竞品报告里的关注词规则统计、也不是第八章第二节情感 Lexicon。其中的数字与词表来自**中文分词 + 统计工具**（词频、关键词突出度、共现、主题归纳），与业务侧子串计数**口径不同**。
 
 每个 ``groups`` 元素含：
 - ``probe_status``：``ok`` 表示该细类已完成分词与统计；``skipped`` 表示样本过少等未下钻。
 - ``word_freq_top`` / ``tfidf_top`` / ``cooccurrence_top``：统计型特征（开放词表）。
-- ``lda``：无监督主题词；**仅为探索**，同一词可出现在多主题，**禁止**当作严格品类或固定标签。
-- ``focus_hit_lines`` / ``sample_text_snippets``：与正式管线摘取方式**类似**，仅用于**对照语境**；若与 TF-IDF 焦点冲突，以**整句原文**为准，并在段末或「使用注意」中可点明「统计与语义可能不一致」。
+- ``lda``：无监督自动归纳的主题词；**仅为探索**，同一词可出现在多主题，**禁止**当作严格品类或固定标签。
+- ``focus_hit_lines`` / ``sample_text_snippets``：与正式管线摘取方式**类似**，仅用于**对照语境**；若与关键词突出度焦点冲突，以**整句原文**为准，并在段末或「使用注意」中可点明「统计与语义可能不一致」。
 
 **任务**：对 ``groups`` 中**每一项**输出对应 Markdown（**顺序与输入一致**）：
 - 对 ``probe_status == "ok"``：以 ``#### `` + 与该条 ``group`` 字段**完全一致**的细类名作为小节标题（勿用 ``##`` 一级标题）；每段约 **100～260 字**。
-- 内容须包含：①用 **1～2 句**概括该细类评论**主要讨论焦点**（综合词频与 TF-IDF，**不要罗列具体数字**）；② **1～2 句**说明共现词对**暗示**哪些维度常一起出现（**非因果**）；③若 ``lda.topics`` 非空，**1～2 句**说明主题粗分侧重点，并**明确** LDA 无监督、**不**与矩阵细类一一对应；④用 **1～2 句**体现 ``sample_text_snippets`` / ``focus_hit_lines`` 中的**用户语气与关切**（以**转述**为主）；若必须引用原文，**全小节合计**仅 **一处**极短引号内容（**≤40 字**，**不要**输出 ``【细类…SKU…店铺…】`` 等长前缀）；若无可用摘录则写明；⑤ **使用场景（仅从评论推断）**：用 **0～2 句**概括**何时、何地、何人、如何搭配**等（如早餐、加餐、控糖人群、配牛奶等）——**只能**依据本细类 ``word_freq``/``tfidf``/``cooccurrence``/``lda`` 与摘录中**已出现或可合理概括**的信息；**禁止**套用正式报告「场景分组」或其它外部场景分类；若统计与摘录中**均无**场景线索，**一句**写明「评论中未体现清晰使用场景」即可。
+- 内容须包含：①用 **1～2 句**概括该细类评论**主要讨论焦点**（综合词频与关键词突出度，**不要罗列具体数字**）；② **1～2 句**说明共现词对**暗示**哪些维度常一起出现（**非因果**）；③若 ``lda.topics`` 非空，**1～2 句**说明主题粗分侧重点，并**明确**算法无监督、**不**与矩阵细类一一对应；④用 **1～2 句**体现 ``sample_text_snippets`` / ``focus_hit_lines`` 中的**用户语气与关切**（以**转述**为主）；若必须引用原文，**全小节合计**仅 **一处**极短引号内容（**≤40 字**，**不要**输出 ``【细类…SKU…店铺…】`` 等长前缀）；若无可用摘录则写明；⑤ **使用场景（仅从评论推断）**：用 **0～2 句**概括**何时、何地、何人、如何搭配**等（如早餐、加餐、控糖人群、配牛奶等）——**只能**依据本细类 ``word_freq``/``tfidf``/``cooccurrence``/``lda`` 与摘录中**已出现或可合理概括**的信息；**禁止**套用正式报告「场景分组」或其它外部场景分类；若统计与摘录中**均无**场景线索，**一句**写明「评论中未体现清晰使用场景」即可。
 - 对 ``probe_status == "skipped"``：该小节仅 **一句**说明原因。
 
-**禁止**：编造数据中未出现的品牌、价格、医学功效或疗效承诺；不要把 ``keyword`` 监测词写进「用户原话」；不要输出 Markdown 表格；不要声称本段与「正式报告 §8 末」完全同源——本任务为**探针解读**。**禁止**把输入里的 ``sample_text_snippets`` / ``focus_hit_lines`` **逐条罗列**、**多条整段复制**到输出（那不是归纳，是重复贴评论）。
+**禁止**：编造数据中未出现的品牌、价格、医学功效或疗效承诺；不要把 ``keyword`` 监测词写进「用户原话」；不要输出 Markdown 表格；不要声称本段与「正式报告第八章末」完全同源——本任务为**补充分析解读**。**禁止**把输入里的 ``sample_text_snippets`` / ``focus_hit_lines`` **逐条罗列**、**多条整段复制**到输出（那不是归纳，是重复贴评论）。
 
-全文末可另起一段 **「使用注意」**（简短）：点明开放词表统计与人工阅读差异、LDA 局限、小样本细类不可靠。
+全文末可另起一段 **「使用注意」**（简短）：点明开放词表统计与人工阅读差异、主题归纳局限、小样本细类不可靠。
 
 总字数约 **800～4500 字**（细类多则偏长）。仅输出正文 Markdown，不要用代码围栏包裹全文。"""
 
 PROBE_TEXT_MINING_USER_PREFIX = (
-    "请根据以下 JSON 撰写「文本挖掘探针」解读正文（Markdown）。\n\n"
+    "请根据以下 JSON 撰写「评论文本补充分析」解读正文（Markdown）。\n\n"
 )
 
 
@@ -350,7 +350,7 @@ def _narrative_stub(
         )
         + "。",
         "",
-        "**TF-IDF 加权 Top**（相对区分度）："
+        "**关键词突出度 Top**（相对区分度）："
         + (
             "、".join(f"「{w}」({s:.3f})" for w, s in tfidf_top[:12])
             if tfidf_top
@@ -368,10 +368,10 @@ def _narrative_stub(
         "",
     ]
     if lda_note:
-        lines.append(f"*LDA：{lda_note}*")
+        lines.append(f"*主题归纳：{lda_note}*")
         lines.append("")
     elif lda_topics:
-        lines.append("**LDA 主题（无监督，仅作探索）**：")
+        lines.append("**自动归纳的主题（无监督，仅作探索）**：")
         for i, words in enumerate(lda_topics):
             lines.append(f"- 主题 {i + 1}：{'、'.join(words)}")
         lines.append("")
@@ -423,7 +423,7 @@ def _merge_snippets_from_comment_groups(
     comment_rows: list[dict[str, str]],
     run_dir: Path,
 ) -> None:
-    """把正式 ``build_comment_groups_llm_payload`` 中的摘录并入探针行（原地修改）。"""
+    """把正式 ``build_comment_groups_llm_payload`` 中的摘录并入补充分析行（原地修改）。"""
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     fb = jcr._consumer_feedback_by_matrix_group(
@@ -461,9 +461,9 @@ def _run_probe_text_mining_llm(
     *,
     chunked: bool,
 ) -> str:
-    """探针专用：``PROBE_TEXT_MINING_SYSTEM`` + 结构化 JSON；可选按细类拆分调用。"""
+    """补充分析专用：``PROBE_TEXT_MINING_SYSTEM`` + 结构化 JSON；可选按细类拆分调用。"""
     if not payload.get("groups"):
-        return "> **探针 LLM 解读**：无分组数据，跳过。"
+        return "> **补充分析 LLM 解读**：无分组数据，跳过。"
     try:
         if not chunked:
             p = _truncate_probe_payload(payload)
@@ -487,7 +487,7 @@ def _run_probe_text_mining_llm(
             if g.get("probe_status") != "ok":
                 parts.append(
                     f"#### {gname}\n\n"
-                    f"*（未做探针：{g.get('reason', '')}）*"
+                    f"*（评论量不足，未做词云与主题归纳：{g.get('reason', '')}）*"
                 )
                 continue
             mini = {
@@ -507,13 +507,13 @@ def _run_probe_text_mining_llm(
             )
         return "\n\n---\n\n".join(parts)
     except Exception as e:
-        return f"> **探针 LLM 解读**调用失败：{e}"
+        return f"> **补充分析 LLM 解读**调用失败：{e}"
 
 
 def _ensure_probe_dependencies() -> None:
     if not _PROBE_TEXT_MINING_DEPS_OK:
         raise ImportError(
-            "第八章文本挖掘探针依赖未安装，请在 backend 环境下执行："
+            "第八章评论文本补充分析依赖未安装，请在 backend 环境下执行："
             "pip install jieba scikit-learn numpy wordcloud\n"
             f"原始错误: {_PROBE_TEXT_MINING_IMPORT_ERROR}"
         )
@@ -542,7 +542,7 @@ def build_markdown(
     )
 
     lines: list[str] = [
-        "# 八、消费者反馈与用户画像（文本挖掘探针 · 实验稿）",
+        "# 八、消费者反馈与用户画像（评论文本补充分析 · 实验稿）",
         "",
         f"- **运行目录**：`{run_dir}`",
         f"- **监测词（run_meta）**：{kw or '—'}",
@@ -550,10 +550,9 @@ def build_markdown(
         "",
         "## 8.0 说明",
         "",
-        "本稿为**独立探针**，流程参考「清洗 → 词云（可选）→ 词频/TF-IDF → 共现 → LDA → 叙事小结」；"
-        "文末可选 **探针专用 LLM 解读**（独立 JSON + ``PROBE_TEXT_MINING_SYSTEM``，**非**正式 ``COMMENT_GROUPS_SYSTEM`` / §8.2）。"
-        "与线上一致的部分：**细类划分与 SKU 归因**复用 ``jd_competitor_report._consumer_feedback_by_matrix_group``；"
-        "其余为 **jieba + sklearn** 的开放词表分析，**不替代**正式报告中的规则统计。",
+        "本稿为**独立补充分析**，流程为：清洗评论 → 词云（可选）→ 词频与关键词 → 词对共现 → 主题归纳 → 文字小结；"
+        "文末可选用**专用提示词**由大模型解读（与第八章第二节所用口径不同）。"
+        "**细类划分与 SKU 归因**与主报告一致；其余为中文分词与统计工具做的开放词表分析，**不替代**正式报告中的规则统计。",
         "",
         "---",
         "",
@@ -591,7 +590,7 @@ def build_markdown(
                 [
                     f"## {gname}",
                     "",
-                    f"*本细类有效文本 {n_raw} 条，低于 ``--min-texts``={min_texts}，跳过。*",
+                    f"*本细类有效评论仅 {n_raw} 条，低于分析所需最少条数（{min_texts} 条），故未生成词云与主题图。*",
                     "",
                     "---",
                     "",
@@ -668,7 +667,7 @@ def build_markdown(
             )
             if not err_wc:
                 lines.append(
-                    f"![词云（本分词词频权重；探针）](report_assets/{fn})"
+                    f"![词云（按词频权重）](report_assets/{fn})"
                 )
                 lines.append("")
                 wc_n += 1
@@ -696,8 +695,8 @@ def build_markdown(
         "schema_version": 1,
         "keyword": kw,
         "probe_note": (
-            "jieba 分词 + 停用词；TF-IDF/共现/LDA 为 sklearn；"
-            "与正式报告的关注词规则统计、§8.2 情感口径均不同；"
+            "中文分词 + 停用词；关键词突出度/共现/主题归纳为统计库；"
+            "与正式报告的关注词规则统计、第八章第二节情感口径均不同；"
             "评价摘录字段合并自 build_comment_groups_llm_payload，供语境对照；"
             "「使用场景」若出现，须仅能从本 JSON 内统计与摘录推断，不接入正式场景分组。"
         ),
@@ -709,11 +708,10 @@ def build_markdown(
             "",
             "---",
             "",
-            "## 探针归纳（大模型 · 文本挖掘专用）",
+            "## 评论文本归纳（大模型 · 专用口径）",
             "",
-            "> 输入为探针 JSON（``schema_version``=1）：每细类含 **word_freq / tfidf / cooccurrence / lda** 及合并后的 **focus_hit_lines、sample_text_snippets**（供语境，**非**要求逐条复述）；"
-            "归纳中的**使用场景**仅能从上述字段推断，**不**等同正式「场景分组」章节；"
-            "系统提示为脚本内 ``PROBE_TEXT_MINING_SYSTEM``，**不是** ``COMMENT_GROUPS_SYSTEM``。",
+            "> 输入为按细类整理后的词频、关键词、共现与主题等统计结果，以及少量原文摘录（供理解语境，**不是**要求逐条复述）；"
+            "归纳中的**使用场景**仅能从上述统计推断，**不等同**于正式的「场景分组」章节。",
             "",
         ]
     )
@@ -721,7 +719,7 @@ def build_markdown(
         lines.append(_run_probe_text_mining_llm(llm_payload, chunked=llm_chunked))
     else:
         lines.append(
-            "> **探针 LLM 解读**：未启用。请使用 ``--live-llm``（需 ``AI_crawler`` 等可用）；"
+            "> **补充分析 LLM 解读**：未启用。请使用 ``--live-llm``（需 ``AI_crawler`` 等可用）；"
             "细类很多、单次 JSON 易超长时可加 ``--llm-chunked``（按细类多次调用后拼接）。"
         )
 
@@ -732,7 +730,7 @@ def build_markdown(
 
 def markdown_embed_body_for_competitor_report(full_probe_md: str) -> str:
     """
-    将独立探针稿转为可嵌入 ``build_competitor_markdown`` 的 **§8.3 正文**（不含 ``### 8.3`` 标题行）：
+    将独立补充分析稿转为可嵌入 ``build_competitor_markdown`` 的 **第八章第三节正文**（不含 ``### 8.3`` 标题行）：
     从 ``## 8.0 说明`` 起至文末，并把 ``## …`` 降为 ``#### …``，避免与宿主 ``## 八、`` 冲突。
     """
     lines = (full_probe_md or "").splitlines()
@@ -766,7 +764,7 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-    ap = argparse.ArgumentParser(description="第八章文本挖掘探针（独立脚本）")
+    ap = argparse.ArgumentParser(description="第八章评论文本补充分析（独立脚本）")
     ap.add_argument(
         "--run-dir",
         type=Path,
@@ -780,19 +778,19 @@ def main() -> None:
         help="输出 Markdown 路径（默认 <run_dir>/chapter8_text_mining_probe.md）",
     )
     ap.add_argument("--min-texts", type=int, default=8, help="细类最少评论条数才分析")
-    ap.add_argument("--lda-topics", type=int, default=4, help="LDA 主题数上限（会按样本量裁剪）")
-    ap.add_argument("--top-k-words", type=int, default=30, help="词频/TF-IDF 展示长度")
+    ap.add_argument("--lda-topics", type=int, default=4, help="自动主题归纳条数上限（会按样本量裁剪）")
+    ap.add_argument("--top-k-words", type=int, default=30, help="词频/关键词突出度展示长度")
     ap.add_argument("--cooc-vocab", type=int, default=80, help="共现矩阵保留的高频词数")
     ap.add_argument("--cooc-pairs", type=int, default=25, help="输出词对数量")
     ap.add_argument(
         "--live-llm",
         action="store_true",
-        help="文末调用探针专用 LLM（PROBE_TEXT_MINING_SYSTEM + 结构化 JSON；需 AI_crawler 等）",
+        help="文末调用补充分析专用 LLM（PROBE_TEXT_MINING_SYSTEM + 结构化 JSON；需 AI_crawler 等）",
     )
     ap.add_argument(
         "--llm-chunked",
         action="store_true",
-        help="按细类拆分多次调用同一探针提示词，防单次 JSON 过长",
+        help="按细类拆分多次调用同一补充分析提示词，防单次 JSON 过长",
     )
     ap.add_argument(
         "--no-wordcloud",

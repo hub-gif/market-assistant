@@ -757,7 +757,7 @@ def _read_page_params(request) -> tuple[int, int]:
 
 
 def _report_group_options_for_job(job: PipelineJob) -> list[str]:
-    """类目选项：与 §5 矩阵一致，来自合并表 ``detail_category_path`` 解析。"""
+    """类目选项：与第五章矩阵一致，来自合并表商品详情页类目路径解析。"""
     qs = (
         JdJobMergedRow.objects.filter(job=job)
         .exclude(matrix_group_label="")

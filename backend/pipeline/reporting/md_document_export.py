@@ -23,7 +23,24 @@ def _is_table_sep(line: str) -> bool:
     return bool(inner) and all(p in ("", "---", ":---", "---:", ":---:") for p in t.split("|"))
 
 
+_RE_HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
+_RE_UL = re.compile(r"^\s*[-*+]\s+(.+)$")
+_RE_OL = re.compile(r"^\s*(\d+)\.\s+(.+)$")
+_RE_BLOCKQUOTE = re.compile(r"^\s*>\s?(.*)$")
+_RE_HR = re.compile(r"^\s*(?:[-*_]\s*){3,}\s*$")
+
 _img_line = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+
+
+def _match_heading(line: str) -> tuple[int, str] | None:
+    """返回 (docx level 0–8, 标题文本) 或 None。"""
+    m = _RE_HEADING.match(line.strip())
+    if not m:
+        return None
+    depth = len(m.group(1))
+    title = _strip_inline_md(m.group(2).strip())
+    level = min(max(depth - 1, 0), 8)
+    return (level, title)
 
 
 def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
@@ -38,6 +55,20 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         style.font.size = Pt(10.5)
     except Exception:
         pass
+
+    def _add_list_bullet(text: str) -> None:
+        t = _strip_inline_md(text)
+        try:
+            doc.add_paragraph(t, style="List Bullet")
+        except KeyError:
+            doc.add_paragraph("• " + t)
+
+    def _add_list_number(text: str) -> None:
+        t = _strip_inline_md(text)
+        try:
+            doc.add_paragraph(t, style="List Number")
+        except KeyError:
+            doc.add_paragraph(t)
 
     lines = (md or "").replace("\r\n", "\n").split("\n")
     i = 0
@@ -62,22 +93,18 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             doc.add_paragraph("")
             i += 1
             continue
-        if line.startswith("# "):
-            doc.add_heading(_strip_inline_md(line[2:].strip()), level=0)
+
+        if _RE_HR.match(line):
+            doc.add_paragraph("")
             i += 1
             continue
-        if line.startswith("## "):
-            doc.add_heading(_strip_inline_md(line[3:].strip()), level=1)
+
+        hm = _match_heading(line)
+        if hm is not None:
+            doc.add_heading(hm[1], level=hm[0])
             i += 1
             continue
-        if line.startswith("### "):
-            doc.add_heading(_strip_inline_md(line[4:].strip()), level=2)
-            i += 1
-            continue
-        if line.startswith("#### "):
-            doc.add_heading(_strip_inline_md(line[5:].strip()), level=3)
-            i += 1
-            continue
+
         mimg = _img_line.match(line.strip())
         if mimg and asset_root is not None:
             rel = mimg.group(2).strip()
@@ -92,6 +119,7 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
                     doc.add_picture(str(img_path), width=Inches(5.9))
             i += 1
             continue
+
         if line.strip().startswith("|"):
             rows: list[list[str]] = []
             while i < len(lines) and lines[i].strip().startswith("|"):
@@ -110,6 +138,28 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
                 for ri, row in enumerate(pad_rows):
                     for ci, cell in enumerate(row):
                         tbl.rows[ri].cells[ci].text = cell
+            continue
+
+        mu = _RE_UL.match(line)
+        if mu:
+            _add_list_bullet(mu.group(1))
+            i += 1
+            continue
+
+        mo = _RE_OL.match(line)
+        if mo:
+            _add_list_number(mo.group(2))
+            i += 1
+            continue
+
+        mq = _RE_BLOCKQUOTE.match(line)
+        if mq:
+            inner = mq.group(1).strip()
+            if inner:
+                p = doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.25)
+                p.add_run(_strip_inline_md(inner))
+            i += 1
             continue
 
         p = doc.add_paragraph()
@@ -171,13 +221,14 @@ def _pdf_flowable_image(img_path: Path, *, max_w: float, max_h: float) -> Any:
 
 
 def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
-    """简易纯文本流式 PDF；需本机 .ttf 中文字体或环境变量 MA_PDF_FONT。"""
+    """简易 PDF；需本机 .ttf 中文字体或环境变量 MA_PDF_FONT。"""
+    from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import cm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     font_name = "MaExportCJK"
     registered = False
@@ -226,22 +277,89 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         leading=17,
         spaceAfter=6,
     )
+    h3s = ParagraphStyle(
+        name="H3CJK",
+        parent=body,
+        fontSize=12,
+        leading=16,
+        spaceAfter=5,
+    )
+    h4s = ParagraphStyle(
+        name="H4CJK",
+        parent=body,
+        fontSize=11,
+        leading=15,
+        spaceAfter=4,
+    )
+    h56s = ParagraphStyle(
+        name="H56CJK",
+        parent=body,
+        fontSize=10.5,
+        leading=14,
+        spaceAfter=3,
+    )
+    quote_style = ParagraphStyle(
+        name="QuoteCJK",
+        parent=body,
+        leftIndent=14,
+        fontSize=9.5,
+        textColor=colors.HexColor("#444444"),
+    )
+    bullet_body = ParagraphStyle(
+        name="BulletBodyCJK",
+        parent=body,
+        leftIndent=18,
+        bulletIndent=8,
+        firstLineIndent=0,
+    )
 
     story: list[Any] = []
     lines = (md or "").replace("\r\n", "\n").split("\n")
+    i = 0
     in_fence = False
-    for raw in lines:
+
+    def _para_cell(s: str, style: Any) -> Paragraph:
+        return Paragraph(xml_escape(_strip_inline_md(s)), style)
+
+    while i < len(lines):
+        raw = lines[i]
         if raw.strip().startswith("```"):
             in_fence = not in_fence
+            i += 1
             continue
         s = raw.rstrip()
         if in_fence:
             story.append(Paragraph(xml_escape(s or " "), body))
             story.append(Spacer(1, 0.1 * cm))
+            i += 1
             continue
         if not s.strip():
             story.append(Spacer(1, 0.15 * cm))
+            i += 1
             continue
+
+        if _RE_HR.match(s):
+            story.append(Spacer(1, 0.2 * cm))
+            i += 1
+            continue
+
+        hm = _match_heading(s)
+        if hm is not None:
+            level, title = hm
+            title_esc = xml_escape(title)
+            if level == 0:
+                story.append(Paragraph(title_esc, h1s))
+            elif level == 1:
+                story.append(Paragraph(title_esc, h2s))
+            elif level == 2:
+                story.append(Paragraph(title_esc, h3s))
+            elif level == 3:
+                story.append(Paragraph(title_esc, h4s))
+            else:
+                story.append(Paragraph(title_esc, h56s))
+            i += 1
+            continue
+
         mimg = _img_line.match(s.strip())
         if mimg and asset_root is not None:
             rel = mimg.group(2).strip()
@@ -250,28 +368,83 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
                 try:
                     img_path.relative_to(asset_root.resolve())
                 except ValueError:
+                    i += 1
                     continue
                 if img_path.is_file():
-                    # 版面可用高度需小于正文框（A4 减边距后约 24.6cm），否则 ReportLab 报 LayoutError
                     story.append(
                         _pdf_flowable_image(
                             img_path, max_w=13 * cm, max_h=24 * cm
                         )
                     )
                     story.append(Spacer(1, 0.2 * cm))
+            i += 1
             continue
+
+        if s.strip().startswith("|"):
+            rows: list[list[str]] = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                row_line = lines[i].strip()
+                if _is_table_sep(row_line):
+                    i += 1
+                    continue
+                cells = [c.strip() for c in row_line.strip("|").split("|")]
+                rows.append([_strip_inline_md(c) for c in cells])
+                i += 1
+            if rows:
+                max_cols = max(len(r) for r in rows)
+                pad_rows = [r + [""] * (max_cols - len(r)) for r in rows]
+                usable_w = 13 * cm
+                col_w = usable_w / float(max_cols)
+                data: list[list[Any]] = []
+                for row in pad_rows:
+                    data.append(
+                        [_para_cell(c, body) for c in row]
+                    )
+                t = Table(data, colWidths=[col_w] * max_cols)
+                t.setStyle(
+                    TableStyle(
+                        [
+                            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                            ("TOPPADDING", (0, 0), (-1, -1), 3),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ]
+                    )
+                )
+                story.append(t)
+                story.append(Spacer(1, 0.15 * cm))
+            continue
+
+        mu = _RE_UL.match(s)
+        if mu:
+            txt = xml_escape(_strip_inline_md(mu.group(1)))
+            story.append(Paragraph(f"• {txt}", bullet_body))
+            i += 1
+            continue
+
+        mo = _RE_OL.match(s)
+        if mo:
+            n, rest = mo.group(1), mo.group(2)
+            txt = xml_escape(_strip_inline_md(rest))
+            story.append(Paragraph(f"{n}. {txt}", bullet_body))
+            i += 1
+            continue
+
+        mq = _RE_BLOCKQUOTE.match(s)
+        if mq:
+            inner = mq.group(1).strip()
+            if inner:
+                story.append(
+                    Paragraph(xml_escape(_strip_inline_md(inner)), quote_style)
+                )
+            i += 1
+            continue
+
         plain = _strip_inline_md(s)
-        text = xml_escape(plain)
-        if s.startswith("# "):
-            story.append(Paragraph(xml_escape(plain[2:]), h1s))
-        elif s.startswith("## "):
-            story.append(Paragraph(xml_escape(plain[3:]), h2s))
-        elif s.startswith("### "):
-            story.append(Paragraph(xml_escape(plain[4:]), body))
-        elif s.strip().startswith("|"):
-            story.append(Paragraph(text.replace("|", " │ "), body))
-        else:
-            story.append(Paragraph(text, body))
+        story.append(Paragraph(xml_escape(plain), body))
+        i += 1
 
     buf = BytesIO()
     doc = SimpleDocTemplate(

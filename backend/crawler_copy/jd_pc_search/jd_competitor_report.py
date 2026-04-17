@@ -2,7 +2,7 @@
 """
 关键词 → 调用 ``jd_keyword_pipeline`` 全链路采集 → 生成 **标准化竞品分析报告**（Markdown）。
 
-报告结构对齐常见竞品分析框架：研究范围与方法、执行摘要、**整体市场观察（列表可见度 proxy）**、
+报告结构对齐常见竞品分析框架：研究范围与方法、执行摘要、**整体市场观察（列表可见度参考）**、
 市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析（含规则化价差/活动信号与可选 **细类价盘·促销** 大模型归纳）、**按细分类目的消费者反馈与用户画像**、**策略与机会提示**（以大模型归纳为主，可选）与附录；并明确数据边界。
 若运行配置中提供了外部市场规模摘录（``EXTERNAL_MARKET_TABLE_ROWS``），则追加对应表格小节；否则不输出占位行。
 
@@ -337,43 +337,10 @@ def _collect_prices(rows: list[dict[str, str]]) -> list[float]:
     return out
 
 
-# 列表/合并表中「卖点、腰带」常见活动话术子串（行级命中，非严谨 NLP）
-_PROMO_SUBSTRINGS_IN_COPY: tuple[str, ...] = (
-    "满减",
-    "秒杀",
-    "限时",
-    "优惠券",
-    "领券",
-    "券后",
-    "红包",
-    "京豆",
-    "百亿补贴",
-    "包邮",
-    "赠品",
-    "买赠",
-    "第二件",
-    "第2件",
-    "直降",
-    "特价",
-    "促销",
-    "套装",
-    "任选",
-    "到手价",
-    "补贴",
-    "聚划算",
-    "预售",
-    "定金",
-    "返现",
-    "折扣",
-    "加购",
-    "下单立减",
-)
-
-
 def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
     """
-    从列表或合并行中归纳「标价 vs 券后/到手」及卖点/腰带中的活动话术信号，
-    供 §6.1 与结构化摘要使用（按**页面展示价**字段归纳，非结算实付）。
+    从列表或合并行中归纳「标价 vs 券后/到手」等价差信号，
+    供第六章第一节与结构化摘要使用（按**页面展示价**字段归纳，非结算实付）。
     """
     n = len(rows)
     with_jd = with_cp = with_both = 0
@@ -415,21 +382,6 @@ def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
         if _cell(r, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY).strip()
     )
 
-    kw_row_hits: dict[str, int] = {}
-    for kw in _PROMO_SUBSTRINGS_IN_COPY:
-        c = 0
-        for row in rows:
-            blob = (
-                _cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY)
-                + " "
-                + _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY)
-            )
-            if kw in blob:
-                c += 1
-        if c:
-            kw_row_hits[kw] = c
-    top_promos = sorted(kw_row_hits.items(), key=lambda x: -x[1])[:14]
-
     median_pct = statistics.median(pct_offs) if pct_offs else None
     mean_pct = statistics.mean(pct_offs) if pct_offs else None
     share_below = (
@@ -448,14 +400,12 @@ def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
         "rows_original_price_above_list_price": ori_above_list,
         "rows_selling_point_nonempty": selling_nonempty,
         "rows_rank_tagline_nonempty": rank_nonempty,
-        "promo_keyword_row_hits_top": [
-            {"keyword": k, "rows": v} for k, v in top_promos
-        ],
+        "promo_keyword_row_hits_top": [],
     }
 
 
 def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
-    """§6.1 优惠活动与价差信号（Markdown 行列表）。"""
+    """第六章第一节：优惠活动与价差信号（Markdown 行列表）。"""
     lines: list[str] = [
         "### 6.1 优惠活动与价差信号（页面展示摘录）",
         "",
@@ -466,7 +416,7 @@ def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
     wb = int(p.get("rows_with_both_list_and_coupon") or 0)
     if wb <= 0:
         lines.append(
-            "- **标价与券后价可对齐比较**的有效行不足，本节仅摘录卖点/腰带中的活动话术（若有）。"
+            "- **标价与券后价可对齐比较**的有效行不足，本节以展示价与券后/到手字段的可得信息为主。"
         )
         lines.append("")
     else:
@@ -493,7 +443,7 @@ def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
             )
         elif cb > 0:
             lines.append(
-                "- **价差**：存在「券后低于标价」样本，但条数较少，未给出稳健分位数；建议结合 §5 单品对照。"
+                "- **价差**：存在「券后低于标价」样本，但条数较少，未给出稳健分位数；建议结合第五章矩阵中的单品对照。"
             )
         lines.append("")
         oa = int(p.get("rows_original_price_above_list_price") or 0)
@@ -502,33 +452,10 @@ def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
                 f"- **划线原价高于当前标价** 的行约 **{oa}** 条（常见「划线价 + 当前价」促销陈列，具体以页面为准）。"
             )
             lines.append("")
-    sn = int(p.get("rows_selling_point_nonempty") or 0)
-    rn = int(p.get("rows_rank_tagline_nonempty") or 0)
-    nr = int(p.get("row_count") or 0)
-    if nr > 0:
-        lines.append(
-            f"- **卖点字段非空**：**{sn}** / **{nr}** 行；**榜单/腰带类文案非空**：**{rn}** / **{nr}** 行（用于观察申报活动与心智标签）。"
-        )
-        lines.append("")
-    top = p.get("promo_keyword_row_hits_top") or []
-    if isinstance(top, list) and top:
-        lines.append("- **活动话术在列表行中的出现面**（卖点+腰带合并扫描预设子串；**同一行可含多词**，为行级命中次数）：")
-        parts = []
-        for it in top[:10]:
-            if isinstance(it, dict):
-                k = it.get("keyword") or ""
-                v = it.get("rows")
-                if k and v is not None:
-                    parts.append(f"「{k}」**{int(v)}** 行")
-        if parts:
-            lines.append("  - " + "；".join(parts) + "。")
-        lines.append(
-            "  - **解读**：高频词反映列表侧**主推活动类型**（如满减、百亿补贴、赠品）；与 §6 分布表结合看「低价来自常态价还是大促价带」。"
-        )
-    else:
-        lines.append(
-            "- **活动话术**：未在卖点/腰带字段中命中预设促销子串（可能字段为空或话术与词表不一致）。"
-        )
+    lines.append(
+        "- **说明**：本节**不对**列表「卖点/腰带」等字段做预设促销关键词行级统计；"
+        "活动形态归纳以第六章「细类促销与活动要点归纳」为准（若已生成）。"
+    )
     lines.append("")
     return lines
 
@@ -1029,7 +956,7 @@ def build_price_groups_llm_payload(
 
 
 def _promo_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
-    """单条 SKU：合并表中的「促销摘要 / 榜单排名 / 列表卖点与腰带」摘录，供促销 LLM 用。"""
+    """单条 SKU：合并表「促销摘要」「榜单排名」「榜单类文案」摘录，供促销 LLM 用（不含列表卖点/腰带列，避免固定词表匹配的粗口径）。"""
     title = _md_cell(_cell(row, title_h), 56)
     promo = _cell(
         row,
@@ -1041,7 +968,6 @@ def _promo_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
         MERGED_FIELD_TO_CSV_HEADER["buyer_ranking_line"],
         "buyer_ranking_line",
     )
-    sp = _cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY)
     belt = _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY)
     parts: list[str] = [title]
     if promo.strip():
@@ -1052,8 +978,6 @@ def _promo_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
         parts.append(
             f"{MERGED_FIELD_TO_CSV_HEADER['buyer_ranking_line']}:{_md_cell(br, 120)}"
         )
-    if sp.strip():
-        parts.append(f"{JD_SEARCH_CSV_HEADERS['selling_point']}:{_md_cell(sp, 100)}")
     if belt.strip():
         parts.append(
             f"{JD_SEARCH_CSV_HEADERS['hot_list_rank']}:{_md_cell(belt, 80)}"
@@ -2245,15 +2169,15 @@ def build_competitor_markdown(
         "### 1.1 研究范围",
         "",
         f"- **搜索关键词**：「{keyword}」",
-        f"- **分析对象**：流水线拉取的 **{n_sku}** 个 SKU（搜索排序靠前子样本，非全站普查）。",
+        f"- **分析对象**：本次采集流程选取的 **{n_sku}** 个 SKU（搜索排序靠前子样本，非全站普查）。",
     ]
     if n_sku:
         n_sku_nop = n_sku - n_sku_pathed
         n_sku_unparsed = n_sku_pathed - n_sku_matrix
         lines.append(
-            f"- **细类分析范围**：**{n_sku_matrix}** 个 SKU 具备可参与 **§5～§8** 的商详 "
-            f"``detail_category_path``（且路径可解析为可读细类）；另有 **{n_sku_nop}** 个缺该字段、"
-            f"**{n_sku_unparsed}** 个有路径但无可读细类段，**未纳入**细类矩阵与按细类评价统计。"
+            f"- **细类分析范围**：**{n_sku_matrix}** 个 SKU 具备参与**第五至第八章**分析所需的**商品详情页类目路径**"
+            f"（且能读出常见细类名称，如饼干、挂面等）；另有 **{n_sku_nop}** 个商品缺少该信息、"
+            f"**{n_sku_unparsed}** 个虽有路径但读不出细类名称，**未纳入**细类矩阵与按细类的评价统计。"
         )
     if meta:
         lines.append(
@@ -2270,16 +2194,16 @@ def build_competitor_markdown(
             "",
             "### 1.3 方法说明（指标含义）",
             "",
-            "- **价格**：自页面「标价 / 券后价 / 详情价」等抽取的**展示价**，含促销与规格差异，**不等于**出厂价或成本。**第六章** 在具备可用的搜索列表导出时，优先以**列表全量**统计；否则使用**已深入 SKU** 的合并数据；**§6.1** 归纳标价与券后价差及卖点/腰带中的**活动话术信号**。",
+            "- **价格**：自页面「标价 / 券后价 / 详情价」等抽取的**展示价**，含促销与规格差异，**不等于**出厂价或成本。**第六章** 在具备可用的搜索列表导出时，优先以**列表全量**统计；否则使用**已深入 SKU** 的合并数据；**第六章第一节** 归纳标价与券后价差等**列表侧展示价差信号**（不对卖点/腰带字段做预设关键词扫描）。",
             "- **品牌/店铺集中度（第四章）**：有列表全量时按列表行计店铺与品牌占比；无列表导出时按深入 SKU 合并表估算。",
             "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
             (
-                "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；§8.3 为 **jieba + TF-IDF / 共现 / LDA** 文本挖掘探针（与 §8.2 条形图口径不同、互补），可选词云与探针专用大模型归纳。"
+                "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；**第八章第三节**另用分词、词频与主题模型等对评论做**补充分析**（与**第八章第二节**条形图口径不同、互为补充），可选词云并由大模型归纳要点。"
                 if _ch8_probe_sec
-                else "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见 §8.3。"
+                else "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见**第八章第三节**。"
             ),
-            "- **细类划分（§5～§8）**：**仅**依据合并表 ``detail_category_path``；该列为空或无法解析出可读细类段的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
+            "- **细类划分（第五至第八章）**：**仅**依据合并表中的**商品详情页类目路径**；该信息缺失或无法读出细类名称的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
             "",
             "### 1.4 主要局限",
@@ -2288,7 +2212,7 @@ def build_competitor_markdown(
             "- 样本量由本次抓取上限与搜索页数决定，**结论外推需谨慎**。",
             "- 详情配料与宣称以页面展示为准，**与真实配方可能不一致**（合规与实测另议）。",
             (
-                "- **行业零售额、TAM、CAGR 等**：无法从本批次数据推导；本报告已纳入任务中配置的第三方摘录，见 **§3.5**。"
+                "- **行业零售额、TAM、CAGR 等**：无法从本批次数据推导；本报告已纳入任务中配置的第三方摘录，见 **第三章第五节**。"
                 if has_external_market
                 else "- **行业零售额、TAM、CAGR 等**：无法从本批次数据推导；本报告未纳入外部摘录（可在任务报告调参中维护市场信息表）。"
             ),
@@ -2308,22 +2232,22 @@ def build_competitor_markdown(
         src = f"列表全量 **{n_structure}** 行"
         if cr3_shop is not None:
             exec_bullets.append(
-                f"竞争结构（{src}，§4）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」），"
+                f"竞争结构（{src}，第四章）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」），"
                 f"前三店铺合计份额 ≈ **{100 * cr3_shop:.1f}%**（按列表行计，同一 SKU 多行会重复计）。"
             )
         else:
             exec_bullets.append(
-                f"竞争结构（{src}，§4）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」）。"
+                f"竞争结构（{src}，第四章）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」）。"
             )
     elif not list_export and cr1_deep is not None and top_brand_deep:
         if cr3_deep is not None:
             exec_bullets.append(
-                f"竞争结构（无列表导出，§4 用深入合并表）：**品牌** 第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」），"
+                f"竞争结构（无列表导出，第四章用深入合并表）：**品牌** 第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」），"
                 f"前三品牌合计份额 ≈ **{100 * cr3_deep:.1f}%**。"
             )
         else:
             exec_bullets.append(
-                f"竞争结构（无列表导出，§4 用深入合并表）：**品牌** 第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」）。"
+                f"竞争结构（无列表导出，第四章用深入合并表）：**品牌** 第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」）。"
             )
     if (
         list_export
@@ -2342,7 +2266,7 @@ def build_competitor_markdown(
             )
     elif list_export and cr1_deep is not None and top_brand_deep and not brands_for_cr:
         exec_bullets.append(
-            f"列表导出缺少品牌标题字段，**深入 {n_sku} SKU** 商详品牌第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」），供与 §5 矩阵对照。"
+            f"列表导出缺少品牌标题字段，**深入 {n_sku} SKU** 商详品牌第一大品牌份额 ≈ **{100 * cr1_deep:.1f}%**（「{top_brand_deep}」），供与第五章矩阵对照。"
         )
     if pst:
         price_src_short = (
@@ -2359,11 +2283,11 @@ def build_competitor_markdown(
         med = promo_sig.get("median_discount_pct_when_coupon_below")
         if wb >= 3 and isinstance(sh, (int, float)) and sh >= 0.08 and med is not None:
             exec_bullets.append(
-                f"列表侧约 **{100.0 * float(sh):.0f}%** 可对齐行呈现「券后/到手」**低于**「标价」，展示价差中位数约 **{float(med):.1f}%**（**§6.1** 活动与话术摘录）。"
+                f"列表侧约 **{100.0 * float(sh):.0f}%** 可对齐行呈现「券后/到手」**低于**「标价」，展示价差中位数约 **{float(med):.1f}%**（**第六章第一节** 活动与话术摘录）。"
             )
     if multi_feedback_cat and (hits or scen_n_texts > 0):
         exec_bullets.append(
-            "评价侧写（关注词、用途/场景）已按 **§5 同款细类** 分节，见 **§8.3**（同图并列）。"
+            "评价侧写（关注词、用途/场景）已按**第五章同一细类划分**分节，见**第八章第三节**（同图并列）。"
         )
     elif hits:
         top3 = "、".join(f"「{w}」({n})" for w, n in hits.most_common(3))
@@ -2374,7 +2298,7 @@ def build_competitor_markdown(
         exec_bullets.append(f"用途/场景（评价自述，可多选）：{frag}（有效文本 **{scen_n_texts}** 条）。")
     if api_rc is not None:
         exec_bullets.append(
-            f"PC 搜索返回的检索结果规模约 **{api_rc:,}**（站内匹配条数量级，见 §3.2；**不是**零售额或动销统计）。"
+            f"PC 搜索返回的检索结果规模约 **{api_rc:,}**（站内匹配条数量级，见第三章第二节；**不是**零售额或动销统计）。"
         )
     for b in exec_bullets:
         lines.append(f"- {b}")
@@ -2382,13 +2306,13 @@ def build_competitor_markdown(
         lines.append("- 当前批次可汇总要点较少（以正文各节实际输出为准）。")
 
     proxy = _search_list_proxies(search_export_rows) if search_export_rows else {}
-    lines.extend(["", "---", "", "## 三、整体市场观察（渠道可见度 proxy · 非官方规模）", ""])
+    lines.extend(["", "---", "", "## 三、整体市场观察（渠道可见度参考，非官方市场规模）", ""])
     lines.extend(
         [
             "### 3.1 与「市场规模」的区别",
             "",
             "- **官方/行业市场规模**（如全国零售额、品类增速、渗透率）通常来自 **Euromonitor、行业协会、上市公司年报、券商研报** 等；**不能**用京东搜索返回条数或 SKU 数直接等同。",
-            "- **§3.2** 使用搜索接口返回的**检索结果规模**字段；**§3.3～3.4** 描述本次导出的列表行、去重 SKU/店铺及列表价，用作 **proxy（参照）**，外推全市场需谨慎。",
+            "- **第三章第二节** 使用搜索接口返回的**结果条数**；**第三章第三、四节** 描述本次导出的列表行、去重 SKU/店铺及列表价，仅作**参照**，外推全市场需谨慎。",
             "",
             "### 3.2 接口返回的检索规模",
             "",
@@ -2435,7 +2359,7 @@ def build_competitor_markdown(
             [
                 f"- **列表导出行数**：**{proxy['total_rows']}** 行。",
                 f"- **去重 SKU 数**：**{proxy['unique_skus']}**；**去重店铺数**：**{proxy['unique_shops']}**；{span_txt}。",
-                f"- **列表中去重叶子类目代码/片段数**（粗略）：**{proxy['unique_leaf_cats']}**（同一关键词下品类宽度 proxy）。",
+                f"- **列表中去重叶子类目代码/片段数**（粗略）：**{proxy['unique_leaf_cats']}**（同一关键词下品类宽度的参考）。",
                 "",
             ]
         )
@@ -2456,7 +2380,7 @@ def build_competitor_markdown(
             lines.append("")
     else:
         lines.append(
-            "*未读到可用的搜索列表导出或文件为空；§3.3～3.4 无列表侧数据。*"
+            "*未读到可用的搜索列表导出或文件为空；第三章第三、四节无列表侧数据。*"
         )
         lines.append("")
         lines.extend(["### 3.4 列表端展示价（全导出）", "", "*无列表数据。*", ""])
@@ -2466,7 +2390,7 @@ def build_competitor_markdown(
             [
                 "### 3.5 外部市场规模与行业信息（运行配置摘录）",
                 "",
-                "以下为本次任务报告调参中维护的**第三方市场摘录**，可与 §3.2 检索规模及 §3.3～3.4 列表参照对照使用；**指标含义与真实性以原出处为准**。",
+                "以下为本次任务报告调参中维护的**第三方市场摘录**，可与第三章第二节检索规模及第三章第三、四节列表参照对照使用；**指标含义与真实性以原出处为准**。",
                 "",
                 "| 指标 | 数值与说明 | 来源 | 年份 |",
                 "| --- | --- | --- | --- |",
@@ -2486,7 +2410,7 @@ def build_competitor_markdown(
     lines.extend(["", "---", "", ch4_heading, ""])
     if list_export:
         lines.append(
-            f"基于**搜索列表导出**共 **{n_structure}** 行，与 §3.3 一致；"
+            f"基于**搜索列表导出**共 **{n_structure}** 行，与第三章第三节一致；"
             f"集中度按**列表行**计数（同一 SKU 多次曝光则重复计）。"
         )
     else:
@@ -2504,7 +2428,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_brand_rows_pie.png",
-                "品牌列表曝光占比（扇形图；按 strip 后品牌名计数、与结构化摘要 ``list_brand_mix_top`` 同源；"
+                "品牌列表曝光占比（扇形图；按整理后的品牌名计数，与结构化摘要中的品牌占比统计一致；"
                 "长尾并入「（其余品牌）」；扇形内再合并为「其他」）",
             )
         )
@@ -2523,8 +2447,8 @@ def build_competitor_markdown(
     elif list_export:
         lines.append(
             f"*列表导出中店铺/品牌标题有效 **{brand_rows_n}** 条，"
-            f"低于建议阈值（≥{min_brand_rows}），品牌集中度未展开。**店铺结构见 §4.2**；"
-            f"商详品牌在 **§5**。*"
+            f"低于建议阈值（≥{min_brand_rows}），品牌集中度未展开。**店铺结构见第四章第二节**；"
+            f"商详品牌在**第五章**。*"
         )
     else:
         lines.append("*深入子样本无可用品牌字段。*")
@@ -2537,7 +2461,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_shop_rows_pie.png",
-                "店铺列表曝光占比（扇形图；按 strip 后店铺名计数、与结构化摘要 ``list_shop_mix_top`` 同源；"
+                "店铺列表曝光占比（扇形图；按整理后的店铺名计数，与结构化摘要中的店铺占比统计一致；"
                 "长尾并入「（其余店铺）」；扇形内再合并为「其他」）",
             )
         )
@@ -2557,14 +2481,14 @@ def build_competitor_markdown(
         lines.append("*无店铺字段。*")
     lines.append("")
 
-    lines.extend(["### 4.3 细分类目分布（深入合并表 · 与 §5 矩阵同一细类划分）", ""])
+    lines.extend(["### 4.3 细分类目分布（深入合并表 · 与第五章矩阵同一细类划分）", ""])
     if cm_structure and n_sku_matrix > 0:
         lines.extend(
             _embed_chart(
                 run_dir,
                 "chart_category_mix_pie.png",
-                "细类标签分布（扇形图；合并表 ``detail_category_path``，与 §5 同源；"
-                "Top 12 以外的细类在数据层并入「（其余细类）」；扇形图内再合并为「其他」）",
+                "细类标签分布（扇形图；依据合并表中的商品详情页类目路径，与第五章一致；"
+                "Top 12 以外的细类在统计时并入「（其余细类）」；扇形图内再合并为「其他」）",
             )
         )
         lines.append(
@@ -2572,7 +2496,7 @@ def build_competitor_markdown(
         )
     else:
         lines.append(
-            "*深入合并表中无具备可解析 ``detail_category_path`` 细类标签的 SKU，本小节不展示扇形图；请核对商详抓取与合并字段。*"
+            "*深入合并表中无具备可解析商品详情页类目路径的 SKU，本小节不展示扇形图；请核对商详抓取与合并字段。*"
         )
     lines.append("")
 
@@ -2582,11 +2506,11 @@ def build_competitor_markdown(
             "",
             "## 五、竞品对比矩阵（按细分类目分组）",
             "",
-            "分组**仅**使用合并表列 ``detail_category_path``（商详类目路径）：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
-            "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。**该列为空**或路径段均为内部编码、**无法解析出可读细类**的 SKU **不进入**本矩阵，亦**不参与**第八章按细类的评价统计。",
+            "分组**仅**依据合并表中的**商品详情页类目路径**（京东商详中的类目层级）：**三级路径**取中间一段（如 … > **饼干** > 粗粮饼干），"
+            "**四级及以上**取倒数第二段（如 … > **面条** > 挂面）。**路径缺失**或各段均为内部编码、**读不出常见细类名称**的 SKU **不进入**本矩阵，亦**不参与**第八章按细类的评价统计。",
             "",
-            "**读图方式**：每个细类下为**并列横向条形图**（左：**展示价**（元）；右：**销量**（搜索列表 ``totalSales`` 文案解析件数，如「已售50万+」计为 **50 万**）），"
-            "纵轴为**产品标题**（与 ``report_assets/chart_matrix_prices_sales__*.png`` 同源）。**SKU、店铺、配料与评价摘要等明细不列入正文**，见本批次 ``keyword_pipeline_merged.csv``。",
+            "**读图方式**：每个细类下为**并列横向条形图**（左：**展示价**（元）；右：**销量**（来自搜索列表页「已售」等销量文案，如「已售50万+」计为 **50 万**）），"
+            "纵轴为**产品标题**（与本节各附图一致）。**SKU、店铺、配料与评价摘要等明细不列入正文**，详见本批次导出的合并数据表。",
             "",
         ]
     )
@@ -2594,8 +2518,8 @@ def build_competitor_markdown(
     if not grouped_matrix:
         if merged_rows:
             lines.append(
-                "*深入合并表有条目，但均无可用 ``detail_category_path``（或路径无法解析为可读细类），故无法生成细类矩阵；"
-                "§5～§8 中依赖矩阵的按细类统计相应为空。请核对商详抓取与合并字段。*"
+                "*深入合并表有条目，但均无可用商品详情页类目路径（或路径无法解析为可读细类），故无法生成细类矩阵；"
+                "第五至第八章中依赖矩阵的按细类统计相应为空。请核对商详抓取与合并字段。*"
             )
         else:
             lines.append("*无合并表 SKU。*")
@@ -2608,7 +2532,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 mx_chart,
-                f"「{_md_cell(gname, 20)}」· 展示价与销量（totalSales 解析）；纵轴为产品标题。",
+                f"「{_md_cell(gname, 20)}」· 展示价与销量（页面「已售」销量文案）；纵轴为产品标题。",
             )
         )
         if not (run_dir / "report_assets" / mx_chart).is_file():
@@ -2625,7 +2549,7 @@ def build_competitor_markdown(
                 "",
                 "#### 细类要点归纳（大模型，与上文条形图互补）",
                 "",
-                "> **说明**：与 §5 相同的细类划分下归纳卖点与配料共性；**具体 SKU、价格与条形图以正文为准**，SKU级明细见合并表 CSV。",
+                "> **说明**：与第五章相同的细类划分下归纳卖点与配料共性；**具体 SKU、价格与条形图以正文为准**，SKU 级明细见合并表 CSV。",
                 "",
                 _llm_mx,
                 "",
@@ -2692,7 +2616,7 @@ def build_competitor_markdown(
         lines.extend(
             [
                 "",
-                "#### 细类价盘要点归纳（大模型，与 §6 量化表互补）",
+                "#### 细类价盘要点归纳（大模型，与第六章量化表互补）",
                 "",
                 "> **说明**：侧重价带与标价/券后关系的可读叙述；**数值以正文分位数表为准**。",
                 "",
@@ -2706,10 +2630,10 @@ def build_competitor_markdown(
         lines.extend(
             [
                 "",
-                "#### 细类促销与活动要点归纳（大模型，与 §6.1 及价盘互补）",
+                "#### 细类促销与活动要点归纳（大模型，与第六章第一节及价盘互补）",
                 "",
-                "> **说明**：依据合并表「促销摘要」及列表卖点/腰带、榜单类文案等**页面展示摘录**；"
-                "归纳券/补贴/新人/榜单曝光等活动形态，**不**替代 §5 的配料/宣称归纳。**具体以页面与 CSV 为准**。",
+                "> **说明**：依据合并表「促销摘要」及榜单相关字段（如「榜单排名」「榜单类文案」）等**页面展示摘录**；"
+                "不采用列表「卖点/腰带」类字段作归纳依据（多为固定词表匹配，口径偏粗）。归纳券/补贴/新人/榜单曝光等活动形态，**不**替代第五章的配料/宣称归纳。**具体以页面与 CSV 为准**。",
                 "",
                 _llm_po,
                 "",
@@ -2729,18 +2653,18 @@ def build_competitor_markdown(
         "",
         "### 8.1 方法",
         "",
-        "- **细类划分**：与 **§5 竞品矩阵** 相同，**仅**依据 ``detail_category_path`` 解析为「饼干 / 西式糕点 / …」等（规则见 §5 章首说明）。",
-        "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺 ``detail_category_path`` 或路径无法解析为可读细类的，该评价不进入按细类统计**（与 §5 **同一条排除规则**）。",
-        "- **正负面粗判（§8.2）**：若评价含有效「评分」列则**先按星级**粗分正负与中评，再在对应子集内统计口语短语；无评分时仍按关键词子串；若任务开启 **llm_comment_sentiment**，可附**大模型对抽样原文的主题归因**，与条形图互补。",
+        "- **细类划分**：与**第五章「竞品矩阵」**相同，**仅**依据合并表中的**商品详情页类目路径**解析为「饼干 / 西式糕点 / …」等（规则见第五章开头说明）。",
+        "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺少类目路径或读不出细类名称的，该评价不进入按细类统计**（与第五章**同一条排除规则**）。",
+        "- **正负面粗判（第八章第二节）**：若评价含有效「评分」列则**先按星级**粗分正负与中评，再在对应子集内统计口语短语；无评分时仍按关键词子串；若任务开启**大模型评价情感分析**，可附**大模型对抽样原文的主题归因**，与条形图互补。",
         (
-            "- **文本挖掘探索（§8.3）**：本任务已启用 **jieba + sklearn** 的开放词表分析（词频 / TF-IDF / 共现 / LDA，可选词云），与 §8.2 规则词表条形图**不同**、**互补**；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
+            "- **文本补充分析（第八章第三节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），与**第八章第二节**规则词表条形图**不同**、**互补**；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
             if _ch8_probe_sec
-            else "- **关注词与使用场景（§8.3）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与 §5 矩阵细类一一对应。"
+            else "- **关注词与使用场景（第八章第三节）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与第五章矩阵细类一一对应。"
         ),
         "",
         _sec82_title,
         "",
-        f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与 §8.1 **归因规则**一致）。",
+        f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与第八章第一节**归因规则**一致）。",
     ]
     if _sm_score:
         _sec82_block.append(
@@ -2835,21 +2759,21 @@ def build_competitor_markdown(
     if _ch8_probe_sec:
         lines.extend(
             [
-                "### 8.3 文本挖掘探针（jieba / TF-IDF / 共现 / LDA）",
+                "### 8.3 评论文本补充分析（词频、关键词与共现、主题归纳）",
                 "",
-                "> **说明**：与 §8.2 口语短语条形图（规则词表）**口径不同**、**互补**；**不**再输出本章原「关注词 + 场景」左右并列条图；插图路径相对于本批次目录下 ``report_assets/``。",
+                "> **说明**：与**第八章第二节**口语短语条形图（规则词表）**口径不同**、**互补**；**不再**输出本章原「关注词 + 场景」左右并列条图；插图位于本批次报告附图文件夹中。",
                 "",
                 _ch8_probe_sec,
                 "",
             ]
         )
     else:
-        # 仅当未嵌入文本挖掘探针（_ch8_probe_sec 为空）时：原「关注词 + 场景」条图与逐细类段落
+        # 仅当未嵌入第八章第三节补充分析（_ch8_probe_sec 为空）时：原「关注词 + 场景」条图与逐细类段落
         lines.extend(
             [
                 "### 8.3 关注词与使用场景（按细类）",
                 "",
-                "每细类一张**左右并列图**（与 ``report_assets/chart_focus_and_scenarios_bar__*.png`` 同源）："
+                "每细类一张**左右并列图**（与报告附图文件夹中的 ``chart_focus_and_scenarios_bar__*.png`` 同源）："
                 "**左**为配置关注词子串命中次数（同一评价可出现多次，为次数而非去重条数）；"
                 "**右**为预设场景词组命中占该细类有效文本比例 %（一条可属多场景；多柱比例可相加 **>** 100%）。"
                 "统计均基于评价正文（或兜底预览）子串规则，**不等于**购买动机调研结论。",
@@ -2904,9 +2828,9 @@ def build_competitor_markdown(
             lines.extend(
                 [
                     "",
-                    "#### 使用场景要点归纳（大模型，与 §8.3 右栏图表互补）",
+                    "#### 使用场景要点归纳（大模型，与第八章第三节右栏图表互补）",
                     "",
-                    "> **说明**：与 §8.3 **相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
+                    "> **说明**：与第八章第三节**相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
                     "",
                     _llm_sg,
                     "",
@@ -2918,9 +2842,9 @@ def build_competitor_markdown(
             lines.extend(
                 [
                     "",
-                    "#### 细类评价与关注词要点归纳（大模型，与 §8.3 左栏图表互补）",
+                    "#### 细类评价与关注词要点归纳（大模型，与第八章第三节左栏图表互补）",
                     "",
-                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与 §8.3 图左栏以正文为准**。",
+                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与第八章第三节图左栏以正文为准**。",
                     "",
                     _llm_cg,
                     "",
