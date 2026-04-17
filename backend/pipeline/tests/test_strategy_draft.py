@@ -105,3 +105,31 @@ class StrategyDraftTests(SimpleTestCase):
         )
         self.assertIn("「口感」：子串统计命中约 **501** 次", md)
         self.assertIn("场景「控糖/血糖相关」：约 **305** 条", md)
+
+    def test_shops_unique_sku_basis_rendered(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "测试",
+            "concentration": {
+                "shops_from_list": {
+                    "first_share": 0.6,
+                    "top_three_combined_share": 0.85,
+                    "top_label": "京东自营",
+                    "unique_sku_basis": {
+                        "first_share": 0.35,
+                        "top_three_combined_share": 0.7,
+                        "top_label": "京东自营",
+                        "n_unique_skus": 120,
+                    },
+                },
+                "detail_brand_among_merged": {},
+            },
+        }
+        md = build_strategy_draft_markdown(
+            job_id=1,
+            keyword="测试",
+            brief=brief,
+        )
+        self.assertIn("按去重 SKU", md)
+        self.assertIn("120", md)
+        self.assertIn("35.0%", md)

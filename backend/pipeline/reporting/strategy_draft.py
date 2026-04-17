@@ -77,6 +77,25 @@ def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
     return f"- **{label}**：头部为「{top_s}」（缺少占比时可结合列表与商详数据补全）。"
 
 
+def _shop_unique_sku_basis_lines(shops: dict[str, Any]) -> list[str]:
+    """
+    ``shops_from_list.unique_sku_basis`` 与竞品报告/摘要一致：按去重 SKU 的店铺集中度对照口径。
+    """
+    usb = shops.get("unique_sku_basis") if isinstance(shops, dict) else None
+    if not isinstance(usb, dict) or not usb.get("n_unique_skus"):
+        return []
+    u1 = concentration_first_share(usb)
+    u3 = concentration_top_three_share(usb)
+    utop = _esc(usb.get("top_label") or "")
+    if u1 is None or not utop:
+        return []
+    return [
+        f"- **列表侧店铺（按去重 SKU）**：共 **{_num(usb.get('n_unique_skus'))}** 个去重 SKU；"
+        f"第一大店铺「{utop}」约占 **{_pct(u1)}**；前三合计 **{_pct(u3)}**。"
+        "*（与上行「按列表行」可能因同一 SKU 多行曝光而差异；非销量/市占。）*"
+    ]
+
+
 def _goal_bullet(label: str, user_val: str, placeholder: str) -> str:
     v = _esc(user_val).strip()
     if v:
@@ -230,6 +249,8 @@ def build_strategy_draft_markdown(
     )
     if n_shop:
         lines.append(n_shop)
+    for uline in _shop_unique_sku_basis_lines(shops):
+        lines.append(uline)
     if n_brand:
         lines.append(n_brand)
     if not n_shop and not n_brand:
