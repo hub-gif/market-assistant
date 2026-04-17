@@ -28,18 +28,19 @@ Cookie：``../common/jd_cookie.txt``（或配置项 ``COOKIE_FILE`` / ``COOKIE_O
 依赖: pip install playwright && playwright install chromium（``USE_CHROME=True`` 时用本机 Chrome）
 
 用法: 改下方「运行配置」后执行 ``python jd_detail_ware_business_requests.py``（无命令行参数）。
+
+**模块划分**：响应 JSON 的扁平化与落盘格式化在 ``jd_detail_ware_parse.py``；
+Playwright 打开商品页、拦截接口、``#detail-main`` 抽图在 ``jd_detail_ware_fetch.py``；
+本文件保留运行配置、CLI ``main``、配料视觉桥接与解析结果写盘辅助，并对外 re-export 解析符号以兼容旧导入路径。
 """
 
 from __future__ import annotations
 
 import csv
 import json
-import re
 import sys
-import time
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -139,833 +140,36 @@ _JD_DETAIL_CONTEXT_EXTRA_HEADERS: dict[str, str] = {
     "sec-ch-ua-platform": '"Windows"',
 }
 
-# PC 详情页底部锚点：商品详情（与页面 id 一致，改版时需对照 DOM）
-_JD_TAB_PRODUCT_DETAIL_SELECTOR = "#SPXQ-tab-column"
-
-
-def _jd_function_id_from_api_url(url: str) -> str:
-    """从 ``api.m.jd.com?...`` 的 query 取 ``functionId``；无则空串。"""
-    try:
-        q = parse_qs(urlparse(url).query)
-        v = q.get("functionId") or q.get("functionid")
-        if not v:
-            return ""
-        return str(v[0]).strip()
-    except Exception:
-        return ""
-
-
-def _print_api_m_jd_trace(rows: list[dict[str, Any]], *, sku_id: str) -> None:
-    if not rows:
-        print(
-            f"[京东] api.m.jd.com 轨迹 sku={sku_id}：未观察到该域名任何响应（Cookie/拦截或接口已迁域）。",
-            file=sys.stderr,
-        )
-        return
-    print(
-        f"[京东] api.m.jd.com 轨迹 sku={sku_id} 共 {len(rows)} 条（按时间顺序；"
-        "after_tab 内无新行则点击 tab 未触发该域名 XHR）",
-        file=sys.stderr,
-    )
-    for i, r in enumerate(rows, 1):
-        fid = r.get("functionId") or "(无 query functionId)"
-        print(
-            f"  {i}. [{r.get('phase')}] HTTP {r.get('status')}  {fid}",
-            file=sys.stderr,
-        )
-        u = (r.get("url") or "")[:900]
-        print(f"      {u}", file=sys.stderr)
-    print(
-        "[京东] 提示：若仍对不上 DevTools，请看 POST 请求的 form/body 里的 functionId；"
-        "图文详情也可能在首屏 HTML、iframe 或非 api.m.jd.com 的静态资源。",
-        file=sys.stderr,
-    )
-
-
-def _click_jd_product_detail_tab(page: Any, *, timeout_ms: int) -> None:
-    """点击「商品详情」锚点 tab；失败仅打日志，不中断（部分模板无此节点）。"""
-    cap = max(2_000, min(12_000, int(timeout_ms)))
-    try:
-        loc = page.locator(_JD_TAB_PRODUCT_DETAIL_SELECTOR)
-        loc.wait_for(state="visible", timeout=cap)
-        loc.click(timeout=cap)
-    except Exception as e:
-        print(
-            f"[京东] 未点击商品详情 tab（{_JD_TAB_PRODUCT_DETAIL_SELECTOR}）: {e}",
-            file=sys.stderr,
-        )
-
-
-# #detail-main 内 style 块中的 background-image:url(...)
-_CSS_BG_URL_RE = re.compile(r"url\s*\(\s*([^)]+)\s*\)", re.I)
-# zbViewWeChatMiniImages 的 value="a.jpg,b.jpg,..."
-_ZB_MINI_VALUE_RE = re.compile(
-    r"zbViewWeChatMiniImages[^>]*\bvalue\s*=\s*[\"']([^\"']+)[\"']",
-    re.I | re.DOTALL,
+# ---------------------------------------------------------------------------
+# 解析（JSON 扁平）与采集（Playwright 拦截）分模块，见 jd_detail_ware_parse / jd_detail_ware_fetch
+# ---------------------------------------------------------------------------
+from jd_detail_ware_fetch import (  # noqa: E402
+    WareFetchRuntime,
+    _print_http_verbose,
+    fetch_ware_business as _fetch_ware_business_impl,
+)
+from jd_detail_ware_parse import (  # noqa: E402
+    DETAIL_WARE_LEAN_CSV_FIELDNAMES,
+    SKU_BODY_IMAGES_ONLY_FIELDNAMES,
+    WARE_BUSINESS_MERGE_FIELDNAMES,
+    WARE_PARSED_CSV_FIELDNAMES,
+    detail_ware_lean_csv_row,
+    flatten_ware_business,
+    format_ware_response_for_save,
+    format_ware_response_text,
+    minimal_sku_body_images_row,
+    parse_ware_business_response_text,
+    ware_parsed_row,
 )
 
-
-def _normalize_jd_detail_asset_url(raw: str) -> str:
-    """将 //、/sku/jfs、/cms/jfs 等补全为可访问的 https URL。"""
-    s = (raw or "").strip()
-    if len(s) >= 2 and s[0] in "\"'" and s[-1] == s[0]:
-        s = s[1:-1].strip()
-    if not s or s.lower().startswith("data:"):
-        return ""
-    if s.startswith("//"):
-        return ("https:" + s)[:900]
-    if s.startswith("http://"):
-        return ("https://" + s[7:])[:900]
-    if s.startswith("https://"):
-        return s[:900]
-    if s.startswith("/sku/jfs/"):
-        return ("https://img30.360buyimg.com" + s)[:900]
-    if s.startswith("/cms/jfs/"):
-        return ("https://img12.360buyimg.com" + s)[:900]
-    if s.startswith("/jfs/"):
-        return ("https://img30.360buyimg.com/sku/jfs" + s[4:])[:900]
-    if s.startswith("jfs/"):
-        return ("https://img30.360buyimg.com/sku/" + s)[:900]
-    return s[:900]
-
-
-def _dedupe_urls_preserve_order(urls: list[str]) -> list[str]:
-    seen: set[str] = set()
-    out: list[str] = []
-    for u in urls:
-        u = (u or "").strip()
-        if not u or u in seen:
-            continue
-        seen.add(u)
-        out.append(u)
-    return out
-
-
-def _urls_from_detail_main_inner_html(html: str) -> list[str]:
-    raw: list[str] = []
-    if not (html or "").strip():
-        return raw
-    for m in _CSS_BG_URL_RE.finditer(html):
-        inner = (m.group(1) or "").strip().strip("\"'")
-        if inner:
-            raw.append(inner)
-    zm = _ZB_MINI_VALUE_RE.search(html)
-    if zm:
-        for part in (zm.group(1) or "").split(","):
-            p = part.strip()
-            if p:
-                raw.append(p)
-    for m in re.finditer(
-        r"""<img\b[^>]*\bsrc\s*=\s*(['"])(?P<u>.*?)\1""",
-        html,
-        re.I | re.DOTALL,
-    ):
-        u = (m.group("u") or "").strip()
-        if u:
-            raw.append(u)
-    for m in re.finditer(r"""<img\b[^>]*\bsrc\s*=\s*([^\s>'"]+)""", html, re.I):
-        u = (m.group(1) or "").strip()
-        if u:
-            raw.append(u)
-    return raw
-
-
-def scrape_detail_main_body_urls_joined(
-    page: Any,
-    *,
-    wait_ms: int = 8_000,
-    separator: str | None = None,
-    max_chars: int | None = None,
-) -> str:
-    """
-    从当前页 ``#detail-main`` 收集图文资源 URL（SSD 背景图、img、zbViewWeChatMiniImages），
-    补全为 https，去重保序后用 ``separator`` 拼成一段字符串（供 CSV 单格）。
-    页面须已展示商品详情区（通常需先点 ``#SPXQ-tab-column``）。
-    """
-    if not COLLECT_DETAIL_MAIN_IMAGE_URLS:
-        return ""
-    sep = (
-        separator
-        if separator is not None
-        else (DETAIL_BODY_IMAGE_URL_SEPARATOR or "; ")
-    )
-    cap = max(2000, min(15_000, int(wait_ms)))
-    loc = page.locator("#detail-main")
-    try:
-        loc.wait_for(state="attached", timeout=cap)
-    except Exception:
-        return ""
-    try:
-        html = loc.inner_html(timeout=min(5_000, cap))
-    except Exception:
-        html = ""
-    dom_srcs: list[str] = []
-    try:
-        dom_srcs = page.evaluate(
-            """() => {
-              const r = document.querySelector('#detail-main');
-              if (!r) return [];
-              return Array.from(r.querySelectorAll('img'))
-                .map(i => (i.currentSrc || i.src || '').trim())
-                .filter(Boolean);
-            }"""
-        )
-    except Exception:
-        dom_srcs = []
-    if not isinstance(dom_srcs, list):
-        dom_srcs = []
-
-    candidates = _urls_from_detail_main_inner_html(html) + [str(x) for x in dom_srcs]
-    normalized: list[str] = []
-    for c in candidates:
-        n = _normalize_jd_detail_asset_url(c)
-        if not n:
-            continue
-        low = n.lower()
-        if "sku-market-gw.jd.com" in low and low.endswith(".css"):
-            continue
-        if "list.jd.com" in low or "item.jd.com" in low or "mall.jd.com" in low:
-            if not any(
-                low.endswith(ext)
-                for ext in (".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif", ".dpg")
-            ):
-                continue
-        normalized.append(n)
-
-    uniq = _dedupe_urls_preserve_order(normalized)
-    joined = sep.join(uniq)
-    mxc = (
-        int(max_chars)
-        if max_chars is not None
-        else int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS)
-    )
-    if mxc > 0 and len(joined) > mxc:
-        joined = joined[: mxc - 3] + "..."
-    return joined
-
-
-def _normalize_ware_json_tree(obj: Any, *, sort_keys: bool) -> Any:
-    """递归规整：字典可选按键名排序，列表保持元素顺序。"""
-    if isinstance(obj, dict):
-        pairs = [
-            (k, _normalize_ware_json_tree(v, sort_keys=sort_keys))
-            for k, v in obj.items()
-        ]
-        if sort_keys:
-            pairs.sort(key=lambda kv: kv[0])
-        return dict(pairs)
-    if isinstance(obj, list):
-        return [_normalize_ware_json_tree(x, sort_keys=sort_keys) for x in obj]
-    return obj
-
-
-def _format_ware_response_text(
-    text: str,
-    *,
-    normalize: bool,
-    sort_keys: bool,
-    indent: int,
-) -> tuple[str, bool]:
-    """
-    尝试将接口 body 规整为可读 JSON。
-    返回 (输出文本, 是否已成功按 JSON 处理)。
-    """
-    if not normalize or not (text or "").strip():
-        return text, False
-    try:
-        obj = json.loads(text)
-    except json.JSONDecodeError:
-        return text, False
-    obj = _normalize_ware_json_tree(obj, sort_keys=sort_keys)
-    if indent > 0:
-        out = json.dumps(obj, ensure_ascii=False, indent=indent) + "\n"
-    else:
-        out = json.dumps(obj, ensure_ascii=False, separators=(",", ":")) + "\n"
-    return out, True
-
-
-# 与 pc_detailpage_wareBusiness 响应对应的扁平字段（字符串，缺失为空），顺序即 CSV 建议列序
-WARE_BUSINESS_MERGE_FIELDNAMES: tuple[str, ...] = (
-    "detail_sku_title",
-    "detail_price_final",
-    "detail_price_original",
-    "detail_purchase_price",
-    "detail_shop_name",
-    "detail_shop_id",
-    "detail_shop_url",
-    "detail_vender_id",
-    "detail_stock_text",
-    "detail_delivery_promise",
-    "detail_sku_name",
-    "detail_product_id",
-    "detail_main_sku_id",
-    "detail_page_sku_id",
-    "detail_brand",
-    "detail_category_path",
-    "detail_main_image",
-    "detail_product_attributes",
-    "detail_belt_banner",
-    "detail_csfh_text",
-    # 来自 DOM #detail-main（非 wareBusiness JSON）；列语义为「详情长图衍生信息」，常为 URL 串，流水线可替换为配料表文本
-    "detail_body_ingredients",
-    # 视觉识别命中时：实际用于解析配料的那张详情长图 URL（自后向前首次通过校验）
-    "detail_body_ingredients_source_url",
+_WARE_FETCH_RUNTIME = WareFetchRuntime(
+    log_api_m_jd_trace=bool(LOG_API_M_JD_TRACE),
+    goto_wait_until=str(GOTO_WAIT_UNTIL or "domcontentloaded").strip(),
+    click_product_detail_tab=bool(CLICK_PRODUCT_DETAIL_TAB),
+    collect_detail_main_image_urls=bool(COLLECT_DETAIL_MAIN_IMAGE_URLS),
+    detail_body_image_url_separator=str(DETAIL_BODY_IMAGE_URL_SEPARATOR or "; "),
+    detail_body_image_urls_max_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
 )
-
-
-def _empty_ware_flat() -> dict[str, str]:
-    return {k: "" for k in WARE_BUSINESS_MERGE_FIELDNAMES}
-
-
-def _strip_htmlish(s: str, *, max_len: int) -> str:
-    if not s:
-        return ""
-    t = re.sub(r"<[^>]+>", " ", s)
-    t = " ".join(t.split()).strip()
-    return t[:max_len] if max_len > 0 else t
-
-
-def _s(obj: Any) -> str:
-    if obj is None:
-        return ""
-    return str(obj).strip()
-
-
-def _join_url(u: str) -> str:
-    u = u.strip()
-    if not u:
-        return ""
-    if u.startswith("//"):
-        return "https:" + u
-    return u
-
-
-def _jd_product_image_url(path: str) -> str:
-    """与搜索侧一致：jfs/ 相对路径补全为可访问 URL。"""
-    p = (path or "").strip()
-    if not p:
-        return ""
-    if p.startswith("//"):
-        return "https:" + p
-    if p.startswith("http://"):
-        return "https://" + p[7:]
-    if p.startswith("https://"):
-        return p[:800]
-    if p.startswith("jfs/"):
-        return "https://img13.360buyimg.com/n2/s480x480_" + p[:700]
-    return p[:800]
-
-
-def flatten_ware_business(obj: Any) -> dict[str, str]:
-    """
-    将 ``pc_detailpage_wareBusiness`` 的 JSON 根对象压成扁平字符串字典。
-    非 dict 或字段缺失时对应值为空串。
-    """
-    out = _empty_ware_flat()
-    if not isinstance(obj, dict):
-        return out
-
-    sh = obj.get("skuHeadVO")
-    sh = sh if isinstance(sh, dict) else {}
-    out["detail_sku_title"] = _s(sh.get("skuTitle"))[:2000]
-
-    price = obj.get("price")
-    price = price if isinstance(price, dict) else {}
-    fp = price.get("finalPrice")
-    fp = fp if isinstance(fp, dict) else {}
-    out["detail_price_final"] = _s(fp.get("price")) or _s(price.get("p"))[:64]
-    out["detail_price_original"] = _s(price.get("op")) or _s(price.get("p"))[:64]
-
-    bp = obj.get("bestPromotion")
-    bp = bp if isinstance(bp, dict) else {}
-    out["detail_purchase_price"] = _s(bp.get("purchasePrice"))[:64]
-
-    ishop = obj.get("itemShopInfo")
-    ishop = ishop if isinstance(ishop, dict) else {}
-    out["detail_shop_name"] = _s(ishop.get("shopName"))[:500]
-    out["detail_shop_id"] = _s(ishop.get("shopId"))[:32]
-    out["detail_shop_url"] = _join_url(_s(ishop.get("shopUrl")))[:500]
-
-    pc = obj.get("pageConfigVO")
-    pc = pc if isinstance(pc, dict) else {}
-    out["detail_vender_id"] = _s(pc.get("venderId"))[:32]
-    sk = pc.get("skuid")
-    out["detail_page_sku_id"] = _s(sk)[:32]
-    cats = pc.get("catName")
-    if isinstance(cats, list):
-        parts = [_s(x) for x in cats if _s(x)]
-        out["detail_category_path"] = " > ".join(parts)[:500]
-    src = _s(pc.get("src"))
-    if src:
-        out["detail_main_image"] = _jd_product_image_url(src)
-
-    mi = obj.get("mainImageVO")
-    if isinstance(mi, dict) and not out["detail_main_image"]:
-        mia = mi.get("mainImageArea")
-        if isinstance(mia, dict):
-            iu = _s(mia.get("imageUrl"))
-            if iu:
-                out["detail_main_image"] = _jd_product_image_url(iu)
-
-    si = obj.get("stockInfo")
-    si = si if isinstance(si, dict) else {}
-    out["detail_stock_text"] = _strip_htmlish(_s(si.get("stockDesc")), max_len=500)
-    if not out["detail_stock_text"]:
-        out["detail_stock_text"] = _strip_htmlish(_s(si.get("promiseResult")), max_len=500)
-    out["detail_delivery_promise"] = _strip_htmlish(
-        _s(si.get("promiseResult") or si.get("promiseInfoText")), max_len=800
-    )
-
-    wim = obj.get("wareInfoReadMap")
-    wim = wim if isinstance(wim, dict) else {}
-    out["detail_sku_name"] = _s(wim.get("sku_name"))[:2000]
-    out["detail_product_id"] = _s(wim.get("product_id"))[:32]
-    out["detail_main_sku_id"] = _s(wim.get("main_sku_id"))[:32]
-    out["detail_brand"] = _s(wim.get("cn_brand"))[:200]
-    if not out["detail_brand"]:
-        pav = obj.get("productAttributeVO")
-        if isinstance(pav, dict):
-            for it in pav.get("attributes") or []:
-                if not isinstance(it, dict):
-                    continue
-                if _s(it.get("labelName")) == "品牌":
-                    out["detail_brand"] = _s(it.get("labelValue"))[:200]
-                    break
-
-    pav = obj.get("productAttributeVO")
-    attrs: list[str] = []
-    if isinstance(pav, dict):
-        for it in pav.get("attributes") or []:
-            if not isinstance(it, dict):
-                continue
-            ln, lv = _s(it.get("labelName")), _s(it.get("labelValue"))
-            if ln and lv:
-                attrs.append(f"{ln}:{lv}")
-    out["detail_product_attributes"] = "; ".join(attrs)[:4000]
-
-    out["detail_belt_banner"] = _join_url(_s(obj.get("beltBanner")))[:800]
-    out["detail_csfh_text"] = _s(obj.get("csfhText"))[:200]
-
-    return out
-
-
-# 与 OUT_PARSED_CSV / 流水线 detail CSV 列一致
-WARE_PARSED_CSV_FIELDNAMES: tuple[str, ...] = (
-    "skuId",
-    "http_status",
-    *WARE_BUSINESS_MERGE_FIELDNAMES,
-)
-
-# 仅 sku + 配料（本脚本 OUTPUT_SKU_AND_BODY_IMAGES_ONLY 时 main 写 CSV/解析 JSON 用）
-SKU_BODY_IMAGES_ONLY_FIELDNAMES: tuple[str, ...] = (
-    "skuId",
-    "detail_body_ingredients",
-)
-
-# 与合并表 lean 商详块一致 + SKU；keyword_pipeline DETAIL_WARE_CSV_MODE=lean 写 detail_ware_export.csv（纯中文表头）
-DETAIL_WARE_LEAN_CSV_FIELDNAMES: tuple[str, ...] = (
-    "SKU",
-    "品牌",
-    "到手价",
-    "店铺名称",
-    "类目路径",
-    "商品参数",
-    "配料表",
-    "榜单排名",
-    "促销摘要",
-)
-
-# ``ware_parsed_row`` 可提供的 lean 列（购买者摘要由独立抽取补充）
-_DETAIL_WARE_LEAN_FROM_RESPONSE_KEYS: tuple[str, ...] = (
-    "skuId",
-    "detail_brand",
-    "detail_price_final",
-    "detail_shop_name",
-    "detail_category_path",
-    "detail_product_attributes",
-    "detail_body_ingredients",
-)
-
-
-def detail_ware_lean_csv_row(
-    sku: str,
-    http_status: int,
-    response_text: str,
-    *,
-    detail_body_ingredients: str = "",
-    detail_body_ingredients_source_url: str = "",
-    buyer_ranking_line: str = "",
-    buyer_promo_text: str = "",
-) -> dict[str, str]:
-    """lean 详情汇总表一行（无 http_status）；字段来自 ``ware_parsed_row`` 子集 + 购买者摘要列。"""
-    full = ware_parsed_row(
-        sku,
-        http_status,
-        response_text,
-        detail_body_ingredients=detail_body_ingredients,
-        detail_body_ingredients_source_url=detail_body_ingredients_source_url,
-    )
-    out = {k: str(full.get(k) or "") for k in _DETAIL_WARE_LEAN_FROM_RESPONSE_KEYS}
-    out["buyer_ranking_line"] = (buyer_ranking_line or "").strip()
-    out["buyer_promo_text"] = (buyer_promo_text or "").strip()
-    _cn = DETAIL_WARE_LEAN_CSV_FIELDNAMES
-    _en = (
-        "skuId",
-        "detail_brand",
-        "detail_price_final",
-        "detail_shop_name",
-        "detail_category_path",
-        "detail_product_attributes",
-        "detail_body_ingredients",
-        "buyer_ranking_line",
-        "buyer_promo_text",
-    )
-    return {_cn[i]: str(out.get(_en[i]) or "") for i in range(len(_cn))}
-
-
-def minimal_sku_body_images_row(
-    sku: str,
-    detail_body_ingredients: str,
-    *,
-    detail_body_ingredients_source_url: str = "",
-) -> dict[str, str]:
-    """``skuId``、配料文本（图源仅内部流程使用，不写入极简 CSV）。"""
-    _ = detail_body_ingredients_source_url  # 保留参数供调用方兼容
-    u = (detail_body_ingredients or "").strip()
-    mxc = max(0, int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS))
-    if mxc and len(u) > mxc:
-        u = u[:mxc]
-    return {
-        "skuId": str(sku).strip(),
-        "detail_body_ingredients": u,
-    }
-
-
-def _write_minimal_body_images_json(
-    path: Path,
-    sku: str,
-    detail_body_ingredients: str,
-    *,
-    detail_body_ingredients_source_url: str = "",
-) -> None:
-    row = minimal_sku_body_images_row(
-        sku,
-        detail_body_ingredients,
-        detail_body_ingredients_source_url=detail_body_ingredients_source_url,
-    )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[京东] 已写图文 URL JSON：{path}", file=sys.stderr)
-
-
-def parse_ware_business_response_text(text: str) -> tuple[dict[str, str], bool]:
-    """
-    解析响应体字符串。
-    返回 ``(扁平字典, 是否成功解析为 JSON 对象)``；失败时扁平字典各键均为 ``""``。
-    """
-    raw = (text or "").strip()
-    if not raw:
-        return _empty_ware_flat(), False
-    try:
-        obj = json.loads(raw)
-    except json.JSONDecodeError:
-        return _empty_ware_flat(), False
-    if not isinstance(obj, dict):
-        return _empty_ware_flat(), False
-    return flatten_ware_business(obj), True
-
-
-def ware_parsed_row(
-    sku: str,
-    http_status: int,
-    response_text: str,
-    *,
-    detail_body_ingredients: str = "",
-    detail_body_ingredients_source_url: str = "",
-) -> dict[str, str]:
-    """单行扁平结果：``skuId``、``http_status`` 与 ``WARE_BUSINESS_MERGE_FIELDNAMES``（含 DOM 长图 URL 或配料文本）。"""
-    flat, _ = parse_ware_business_response_text(
-        response_text if http_status == 200 else ""
-    )
-    row: dict[str, str] = {
-        "skuId": str(sku).strip(),
-        "http_status": str(http_status),
-        **flat,
-    }
-    u = (detail_body_ingredients or "").strip()
-    if u:
-        mxc = max(0, int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS))
-        row["detail_body_ingredients"] = u[:mxc] if mxc else u
-    src = (detail_body_ingredients_source_url or "").strip()
-    if src:
-        mxc = max(0, int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS))
-        row["detail_body_ingredients_source_url"] = src[:mxc] if mxc else src
-    return row
-
-
-def ware_fetch_should_retry(http_status: int, response_text: str) -> bool:
-    """
-    True 表示应重试：未命中接口、HTTP 非 200、正文空、非 JSON、或解析后业务字段全空。
-    """
-    if int(http_status) != 200:
-        return True
-    raw = (response_text or "").strip()
-    if not raw:
-        return True
-    flat, ok = parse_ware_business_response_text(raw)
-    if not ok:
-        return True
-    return not any((v or "").strip() for v in flat.values())
-
-
-def format_ware_response_for_save(
-    text: str,
-    *,
-    normalize: bool = True,
-    sort_keys: bool = True,
-    indent: int = 2,
-) -> str:
-    """流水线等落盘用：尽量输出缩进 + 可选键排序的 JSON 文本（失败则保留原文）。"""
-    body, _ok = _format_ware_response_text(
-        text or "",
-        normalize=normalize,
-        sort_keys=sort_keys,
-        indent=max(0, int(indent)),
-    )
-    return body
-
-
-def _write_ware_parsed_json(
-    path: Path,
-    sku: str,
-    http_status: int,
-    response_text: str,
-    *,
-    detail_body_ingredients: str = "",
-    detail_body_ingredients_source_url: str = "",
-) -> None:
-    row = ware_parsed_row(
-        sku,
-        http_status,
-        response_text,
-        detail_body_ingredients=detail_body_ingredients,
-        detail_body_ingredients_source_url=detail_body_ingredients_source_url,
-    )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[京东] 已写解析 JSON：{path}", file=sys.stderr)
-
-
-def _read_jd_cookie_file_raw(cookie_file: str | None) -> str:
-    """多行合并为 ``; `` 分隔（与 Node ``readCookieFile`` 一致）。"""
-    path = Path(cookie_file) if (cookie_file or "").strip() else _DEFAULT_COOKIE_PATH
-    path = path.resolve()
-    if not path.is_file():
-        return ""
-    chunks: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        t = line.strip()
-        if t and not t.startswith("#"):
-            chunks.append(t)
-    return "; ".join(chunks).strip()
-
-
-def _cookie_header_to_playwright(cookie_header: str) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for part in cookie_header.split(";"):
-        part = part.strip()
-        if not part or "=" not in part:
-            continue
-        name, _, value = part.partition("=")
-        name, value = name.strip(), value.strip()
-        if not name:
-            continue
-        rows.append(
-            {
-                "name": name,
-                "value": value,
-                "domain": ".jd.com",
-                "path": "/",
-                "secure": True,
-            }
-        )
-    return rows
-
-
-def _headers_for_verbose(h: dict[str, str], *, cookie_preview: int = 96) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for k, v in h.items():
-        if k.lower() == "cookie" and len(v) > cookie_preview:
-            out[k] = (
-                v[:cookie_preview]
-                + f"...（共 {len(v)} 字符，完整值请用 --http-log）"
-            )
-        else:
-            out[k] = v
-    return out
-
-
-def _print_http_verbose(meta: dict[str, Any], *, body_max: int) -> None:
-    req = meta["request"]
-    res = meta["response"]
-    body = res.get("body") or ""
-    if len(body) > body_max:
-        body_show = (
-            body[:body_max]
-            + f"\n...（stderr 已截断，响应共 {len(body)} 字符；完整见 --http-log）"
-        )
-    else:
-        body_show = body
-    req_block: dict[str, Any] = {"method": req.get("method", "GET")}
-    if req.get("url"):
-        req_block["url"] = req["url"]
-    for k in ("via", "item_page", "referrer_document", "note"):
-        if k in req:
-            req_block[k] = req[k]
-    hdrs = req.get("headers")
-    if hdrs:
-        req_block["headers"] = _headers_for_verbose(hdrs)
-    block = {
-        "skuId": meta.get("skuId"),
-        "request": req_block,
-        "response": {
-            "url": res.get("url"),
-            "status": res.get("status"),
-            "status_text": res.get("status_text"),
-            "headers": res.get("headers"),
-            "body": body_show,
-        },
-    }
-    sys.stderr.write(
-        "[京东] HTTP 详情（stderr）:\n"
-        + json.dumps(block, ensure_ascii=False, indent=2)
-        + "\n"
-    )
-
-
-def _fetch_ware_business_once(
-    context: Any,
-    page: Any,
-    sku_id: str,
-    *,
-    cookie_file: str | None = None,
-    timeout_ms: int = 30_000,
-    cookie_override: str = "",
-) -> tuple[int, str, dict[str, Any]]:
-    """单次打开商品页并拦截 ``pc_detailpage_wareBusiness`` 响应（无重试）。"""
-    raw_cookie = (cookie_override or "").strip() or _read_jd_cookie_file_raw(cookie_file)
-    if not raw_cookie:
-        print(
-            "[京东] 需要 Cookie：--cookie 或 jd_cookie.txt（--cookie-file）",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-    context.clear_cookies()
-    try:
-        context.add_cookies(_cookie_header_to_playwright(raw_cookie))
-    except Exception as e:
-        print(f"[京东] add_cookies 警告: {e}", file=sys.stderr)
-    item_url = f"https://item.jd.com/{str(sku_id).strip()}.html"
-    matches: list[tuple[int, str, str, dict[str, str]]] = []
-    trace_rows: list[dict[str, Any]] = []
-    trace_phase = "opening"
-
-    def _on_response(response: Any) -> None:
-        try:
-            u = response.url
-            if LOG_API_M_JD_TRACE and "api.m.jd.com" in u:
-                ct = ""
-                try:
-                    ct = (response.headers.get("content-type") or "").strip()
-                except Exception:
-                    pass
-                trace_rows.append(
-                    {
-                        "phase": trace_phase,
-                        "status": response.status,
-                        "functionId": _jd_function_id_from_api_url(u),
-                        "content_type": ct[:160],
-                        "url": u[:2000],
-                    }
-                )
-            if (
-                "api.m.jd.com" in u
-                and "pc_detailpage_wareBusiness" in u
-                and "functionId=" in u
-            ):
-                st = response.status
-                body = response.text()
-                matches.append((st, body, u, dict(response.headers)))
-        except Exception:
-            pass
-
-    detail_joined = ""
-    page.on("response", _on_response)
-    try:
-        _wu = (GOTO_WAIT_UNTIL or "domcontentloaded").strip()
-        page.goto(item_url, wait_until=_wu, timeout=timeout_ms)
-        trace_phase = "loaded"
-        if CLICK_PRODUCT_DETAIL_TAB:
-            _click_jd_product_detail_tab(page, timeout_ms=timeout_ms)
-            trace_phase = "after_tab"
-        extra = min(12_000, max(3_000, timeout_ms // 2))
-        page.wait_for_timeout(extra)
-        if COLLECT_DETAIL_MAIN_IMAGE_URLS:
-            try:
-                detail_joined = scrape_detail_main_body_urls_joined(
-                    page,
-                    wait_ms=min(timeout_ms, 12_000),
-                )
-            except Exception as e:
-                print(
-                    f"[京东] 抽取 #detail-main 图文 URL 失败: {e}",
-                    file=sys.stderr,
-                )
-    finally:
-        try:
-            page.remove_listener("response", _on_response)
-        except Exception:
-            pass
-    if LOG_API_M_JD_TRACE:
-        _print_api_m_jd_trace(trace_rows, sku_id=str(sku_id).strip())
-    if not matches:
-        meta: dict[str, Any] = {
-            "skuId": str(sku_id).strip(),
-            "request": {
-                "method": "GET",
-                "via": "capture_page_navigation",
-                "item_page": item_url,
-                "note": "未捕获到 pc_detailpage_wareBusiness（页面可能改版或 Cookie 未登录）",
-            },
-            "response": {"status": 0, "status_text": "", "headers": {}, "body": ""},
-        }
-        if LOG_API_M_JD_TRACE:
-            meta["api_m_jd_trace"] = trace_rows
-        meta["detail_body_image_urls"] = detail_joined
-        return 0, "", meta
-    ok_rows = [m for m in matches if m[0] == 200]
-    st, body, u, rh = ok_rows[-1] if ok_rows else matches[-1]
-    meta = {
-        "skuId": str(sku_id).strip(),
-        "request": {
-            "method": "GET",
-            "url": u,
-            "via": "capture_page_navigation",
-            "item_page": item_url,
-            "captures_count": len(matches),
-        },
-        "response": {
-            "url": u,
-            "status": st,
-            "status_text": "",
-            "headers": rh,
-            "body": body,
-        },
-    }
-    if LOG_API_M_JD_TRACE:
-        meta["api_m_jd_trace"] = trace_rows
-    meta["detail_body_image_urls"] = detail_joined
-    return st, body, meta
 
 
 def fetch_ware_business(
@@ -980,53 +184,20 @@ def fetch_ware_business(
     retry_delay_sec: float = 2.0,
     cancel_check: Callable[[], bool] | None = None,
 ) -> tuple[int, str, dict[str, Any]]:
-    """
-    打开商品页并拦截 ``pc_detailpage_wareBusiness``。
-    ``max_attempts``>1 时，在结果为空或失败时按 ``retry_delay_sec`` 间隔重试。
-    """
-    sid = str(sku_id).strip()
-    n = max(1, int(max_attempts))
-    last: tuple[int, str, dict[str, Any]] = (0, "", {})
-    for i in range(n):
-        if cancel_check is not None and cancel_check():
-            return last
-        if i > 0:
-            delay = max(0.0, float(retry_delay_sec))
-            if delay > 0:
-                time.sleep(delay)
-        if cancel_check is not None and cancel_check():
-            return last
-        code, text, meta = _fetch_ware_business_once(
-            context,
-            page,
-            sid,
-            cookie_file=cookie_file,
-            timeout_ms=timeout_ms,
-            cookie_override=cookie_override,
-        )
-        last = (code, text, meta)
-        if OUTPUT_SKU_AND_BODY_IMAGES_ONLY and (
-            meta.get("detail_body_image_urls") or ""
-        ).strip():
-            if i > 0:
-                print(
-                    f"[京东] sku={sid} 第 {i + 1} 次尝试已成功（已抽到 #detail-main 图文 URL）",
-                    file=sys.stderr,
-                )
-            break
-        if not ware_fetch_should_retry(code, text):
-            if i > 0:
-                print(
-                    f"[京东] sku={sid} 第 {i + 1} 次尝试已成功",
-                    file=sys.stderr,
-                )
-            break
-        print(
-            f"[京东] sku={sid} 详情结果为空或无效 (HTTP {code})，"
-            f"重试 {i + 1}/{n}…",
-            file=sys.stderr,
-        )
-    return last
+    '''打开商品页并拦截 pc_detailpage_wareBusiness（与流水线兼容的薄封装）。'''
+    return _fetch_ware_business_impl(
+        context,
+        page,
+        sku_id,
+        cookie_file=cookie_file,
+        timeout_ms=timeout_ms,
+        cookie_override=cookie_override,
+        max_attempts=max_attempts,
+        retry_delay_sec=retry_delay_sec,
+        cancel_check=cancel_check,
+        output_sku_and_body_images_only=bool(OUTPUT_SKU_AND_BODY_IMAGES_ONLY),
+        runtime=_WARE_FETCH_RUNTIME,
+    )
 
 
 def _detail_body_ingredients_column_value(
@@ -1063,6 +234,46 @@ def _detail_body_ingredients_column_value(
     except Exception as e:
         print(f"[京东] 配料视觉提取异常: {e}", file=sys.stderr)
         return f"【未识别到配料】识别异常：{e}"[:800], ""
+
+
+def _write_minimal_body_images_json(
+    path: Path,
+    sku: str,
+    detail_body_ingredients: str,
+    *,
+    detail_body_ingredients_source_url: str = "",
+) -> None:
+    row = minimal_sku_body_images_row(
+        sku,
+        detail_body_ingredients,
+        detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+        max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"[京东] 已写图文 URL JSON：{path}", file=sys.stderr)
+
+
+def _write_ware_parsed_json(
+    path: Path,
+    sku: str,
+    http_status: int,
+    response_text: str,
+    *,
+    detail_body_ingredients: str = "",
+    detail_body_ingredients_source_url: str = "",
+) -> None:
+    row = ware_parsed_row(
+        sku,
+        http_status,
+        response_text,
+        detail_body_ingredients=detail_body_ingredients,
+        detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+        max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"[京东] 已写解析 JSON：{path}", file=sys.stderr)
 
 
 def main() -> None:
@@ -1172,6 +383,7 @@ def main() -> None:
                 s,
                 detail_body_ingredients,
                 detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+                max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
             )
             if out_dir:
                 if out_parsed_dir:
@@ -1217,7 +429,7 @@ def main() -> None:
         if out_dir:
             out_p = Path(out_dir).resolve() / f"ware_{s}.json"
             out_p.parent.mkdir(parents=True, exist_ok=True)
-            body, _ok = _format_ware_response_text(
+            body, _ok = format_ware_response_text(
                 text,
                 normalize=normalize_json,
                 sort_keys=sort_keys,
@@ -1243,13 +455,14 @@ def main() -> None:
                         text,
                         detail_body_ingredients=detail_body_ingredients,
                         detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+                        max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
                     )
                 )
             return
         if out_path:
             Path(out_path).parent.mkdir(parents=True, exist_ok=True)
             if normalize_json:
-                body, _ok = _format_ware_response_text(
+                body, _ok = format_ware_response_text(
                     text,
                     normalize=True,
                     sort_keys=sort_keys,
@@ -1285,6 +498,7 @@ def main() -> None:
                         text,
                         detail_body_ingredients=detail_body_ingredients,
                         detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+                        max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
                     )
                 )
             return
@@ -1298,6 +512,7 @@ def main() -> None:
                         text,
                         detail_body_ingredients=detail_body_ingredients,
                         detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+                        max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
                     )
                 )
             return
@@ -1311,7 +526,7 @@ def main() -> None:
                 detail_body_ingredients_source_url=detail_body_ingredients_source_url,
             )
         if normalize_json:
-            body, ok = _format_ware_response_text(
+            body, ok = format_ware_response_text(
                 text,
                 normalize=True,
                 sort_keys=sort_keys,
@@ -1338,6 +553,7 @@ def main() -> None:
                     text,
                     detail_body_ingredients=detail_body_ingredients,
                     detail_body_ingredients_source_url=detail_body_ingredients_source_url,
+                    max_cell_chars=int(DETAIL_BODY_IMAGE_URLS_MAX_CHARS),
                 )
             )
 
