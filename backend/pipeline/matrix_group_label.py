@@ -1,5 +1,5 @@
 """
-与 ``jd_competitor_report._matrix_group_label_from_path`` 同源：
+与 ``competitor_report.matrix_group`` / 历史 ``jd_competitor_report`` 中路径解析逻辑同源：
 从商详 ``detail_category_path`` 解析 §5 竞品矩阵用的类目展示名（如饼干、米）。
 """
 from __future__ import annotations

@@ -28,7 +28,6 @@ import json
 import math
 import random
 import re
-import statistics
 import sys
 from collections import Counter
 from pathlib import Path
@@ -66,6 +65,27 @@ from competitor_report.comment_sentiment import (  # noqa: E402
     _merge_comment_previews,
     _parse_comment_score,
 )
+from competitor_report.ingredients import (  # noqa: E402
+    _ingredients_from_product_attributes,
+    _ingredients_single_line,
+    _is_ingredient_url_blob,
+)
+from competitor_report.llm_group_payloads import (  # noqa: E402
+    build_comment_groups_llm_payload,
+    build_matrix_groups_llm_payload,
+    build_price_groups_llm_payload,
+    build_promo_groups_llm_payload,
+    build_scenario_groups_llm_payload,
+    _comment_scenario_counts,
+    _group_keyword_hits,
+    _text_hits_scenario_triggers,
+)
+from competitor_report.matrix_group import (  # noqa: E402
+    _category_mix,
+    _competitor_matrix_group_key,
+    _merged_rows_grouped_for_matrix,
+)
+from competitor_report.price_stats import _price_stats_extended  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # 运行配置（按需改这里；与 competitor_report.constants 中默认关注词等配合使用）
@@ -120,318 +140,6 @@ def _comment_lines_with_product_context(
     return out
 
 
-def _matrix_excerpt_line_for_llm(row: dict[str, str], title_h: str) -> str:
-    title = _md_cell(_cell(row, title_h), 100)
-    sp = _md_cell(_cell(row, _SELLING_POINT_KEY, _LEGACY_SELLING_POINT_KEY), 120)
-    ing_raw = _ingredients_from_product_attributes(
-        _cell(
-            row,
-            MERGED_FIELD_TO_CSV_HEADER["detail_product_attributes"],
-            "detail_product_attributes",
-        )
-    )
-    ing = _md_cell(_ingredients_single_line(ing_raw), 100) if ing_raw else ""
-    chunks: list[str] = []
-    if title:
-        chunks.append(title)
-    if sp:
-        chunks.append(f"卖点:{sp}")
-    if ing:
-        chunks.append(f"配料:{ing}")
-    return "｜".join(chunks) if chunks else "（无标题摘录）"
-
-
-def _listing_price_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
-    title = _md_cell(_cell(row, title_h), 72)
-    lp = _cell(row, *_LIST_SHOW_PRICE_CELL_KEYS)
-    cp = _cell(row, _COUPON_SHOW_PRICE_KEY, _LEGACY_COUPON_SHOW_PRICE_KEY)
-    dp = _cell(row, *_DETAIL_PRICE_FINAL_CSV_KEYS)
-    return f"{title}｜标价:{lp}｜券后:{cp}｜详情价:{dp}"
-
-
-def build_matrix_groups_llm_payload(
-    merged_rows: list[dict[str, str]],
-    *,
-    title_h: str,
-    sku_header: str = "",
-) -> list[dict[str, Any]]:
-    """供 ``generate_matrix_group_summaries_llm``：与 §5 细类划分一致。"""
-    _ = sku_header
-    if not merged_rows:
-        return []
-    out: list[dict[str, Any]] = []
-    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
-        prices = _collect_prices(grows)
-        pst = _price_stats_extended(prices) if prices else {"n": 0}
-        lines = [_matrix_excerpt_line_for_llm(r, title_h) for r in grows[:24]]
-        out.append(
-            {
-                "group": gname,
-                "sku_count": len(grows),
-                "price_stats": pst,
-                "lines": lines,
-            }
-        )
-    return out
-
-
-def build_price_groups_llm_payload(
-    merged_rows: list[dict[str, str]],
-    *,
-    title_h: str,
-    sku_header: str = "",
-) -> list[dict[str, Any]]:
-    """供 ``generate_price_group_summaries_llm``。"""
-    _ = sku_header
-    if not merged_rows:
-        return []
-    out: list[dict[str, Any]] = []
-    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
-        prices = _collect_prices(grows)
-        pst = _price_stats_extended(prices) if prices else {"n": 0}
-        snippets = [_listing_price_snippet_for_llm(r, title_h) for r in grows[:16]]
-        out.append(
-            {
-                "group": gname,
-                "sku_count": len(grows),
-                "price_stats": pst,
-                "listing_snippets": snippets,
-            }
-        )
-    return out
-
-
-def _promo_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
-    """单条 SKU：合并表「促销摘要」「榜单排名」「榜单类文案」摘录，供促销 LLM 用（不含列表卖点/腰带列，避免固定词表匹配的粗口径）。"""
-    title = _md_cell(_cell(row, title_h), 56)
-    promo = _cell(
-        row,
-        MERGED_FIELD_TO_CSV_HEADER["buyer_promo_text"],
-        "buyer_promo_text",
-    )
-    br = _cell(
-        row,
-        MERGED_FIELD_TO_CSV_HEADER["buyer_ranking_line"],
-        "buyer_ranking_line",
-    )
-    belt = _cell(row, _RANK_TAGLINE_KEY, _LEGACY_RANK_TAGLINE_KEY)
-    parts: list[str] = [title]
-    if promo.strip():
-        parts.append(
-            f"{MERGED_FIELD_TO_CSV_HEADER['buyer_promo_text']}:{_md_cell(promo, 360)}"
-        )
-    if br.strip():
-        parts.append(
-            f"{MERGED_FIELD_TO_CSV_HEADER['buyer_ranking_line']}:{_md_cell(br, 120)}"
-        )
-    if belt.strip():
-        parts.append(
-            f"{JD_SEARCH_CSV_HEADERS['hot_list_rank']}:{_md_cell(belt, 80)}"
-        )
-    return "｜".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
-
-
-def build_promo_groups_llm_payload(
-    merged_rows: list[dict[str, str]],
-    *,
-    title_h: str,
-    sku_header: str = "",
-) -> list[dict[str, Any]]:
-    """供 ``generate_promo_group_summaries_llm``：与 §5/§6 细类划分一致。"""
-    _ = sku_header
-    if not merged_rows:
-        return []
-    out: list[dict[str, Any]] = []
-    for gname, grows in _merged_rows_grouped_for_matrix(merged_rows):
-        snippets = [_promo_snippet_for_llm(r, title_h) for r in grows[:16]]
-        nonempty = sum(
-            1
-            for r in grows
-            if _cell(
-                r,
-                MERGED_FIELD_TO_CSV_HEADER["buyer_promo_text"],
-                "buyer_promo_text",
-            ).strip()
-        )
-        out.append(
-            {
-                "group": gname,
-                "sku_count": len(grows),
-                "rows_with_buyer_promo_text": nonempty,
-                "promo_snippets": snippets,
-            }
-        )
-    return out
-
-
-def build_comment_groups_llm_payload(
-    *,
-    feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
-    focus_words: tuple[str, ...],
-    merged_rows: list[dict[str, str]],
-    sku_header: str,
-    title_h: str,
-) -> list[dict[str, Any]]:
-    """供 ``generate_comment_group_summaries_llm``。"""
-    if not feedback_groups:
-        return []
-    sku_meta: dict[str, tuple[str, str, str]] = {}
-    for row in merged_rows:
-        sku = _cell(row, sku_header).strip()
-        if not sku:
-            continue
-        gk = _competitor_matrix_group_key(row)
-        if not gk:
-            continue
-        sku_meta[sku] = (
-            gk,
-            _cell(row, title_h),
-            _cell(row, *_MERGED_SHOP_CELL_KEYS),
-        )
-    out: list[dict[str, Any]] = []
-    for gname, cr, tu in feedback_groups:
-        if not tu and not cr:
-            continue
-        gh = _group_keyword_hits(cr, tu, focus_words=focus_words)
-        focus_hit_lines = [
-            f"「{w}」{n} 次" for w, n in gh.most_common(14) if n > 0
-        ]
-        snippets: list[str] = []
-        for row in cr[:48]:
-            txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
-            if not txt:
-                continue
-            sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
-            meta = sku_meta.get(sku)
-            if meta:
-                sg, tit, shop = meta
-                prefix = (
-                    f"【细类：{sg}｜SKU：{sku}｜品名：{_md_cell(tit, 60)}｜"
-                    f"店铺：{_md_cell(shop, 28)}】"
-                )
-                snippets.append(prefix + txt[:300])
-            else:
-                snippets.append(
-                    f"【细类：{gname}｜SKU：{sku or '—'}】" + txt[:320]
-                )
-            if len(snippets) >= 16:
-                break
-        eff = tu[:28]
-        if len(tu) > 28:
-            eff = list(eff) + [f"…共 {len(tu)} 条有效文本，此处截断"]
-        out.append(
-            {
-                "group": gname,
-                "comment_flat_rows": f"评价行 {len(cr)}；有效文本单元 {len(tu)}",
-                "effective_text_lines": eff,
-                "focus_hit_lines": focus_hit_lines,
-                "sample_text_snippets": snippets,
-            }
-        )
-    return out
-
-
-def build_scenario_groups_llm_payload(
-    *,
-    feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
-    scenario_groups: tuple[tuple[str, tuple[str, ...]], ...],
-    merged_rows: list[dict[str, str]],
-    sku_header: str,
-    title_h: str,
-) -> dict[str, Any]:
-    """供 ``generate_scenario_group_summaries_llm``；计数与 §8.3 图右栏（场景）一致。"""
-    if not feedback_groups:
-        return {}
-    sku_meta: dict[str, tuple[str, str, str]] = {}
-    for row in merged_rows:
-        sku = _cell(row, sku_header).strip()
-        if not sku:
-            continue
-        gk = _competitor_matrix_group_key(row)
-        if not gk:
-            continue
-        sku_meta[sku] = (
-            gk,
-            _cell(row, title_h),
-            _cell(row, *_MERGED_SHOP_CELL_KEYS),
-        )
-    lexicon = [
-        {"label": lbl, "trigger_examples": list(trigs[:12])}
-        for lbl, trigs in scenario_groups
-    ]
-    groups_out: list[dict[str, Any]] = []
-    for gname, cr, tu in feedback_groups:
-        if not tu and not cr:
-            continue
-        scen_g, scen_ng = _comment_scenario_counts(tu, scenario_groups)
-        dist: list[dict[str, Any]] = []
-        for lbl, n in scen_g.most_common():
-            if n <= 0:
-                continue
-            dist.append(
-                {
-                    "scenario": lbl,
-                    "mention_rows": int(n),
-                    "share_of_effective_texts": round(
-                        float(n) / float(scen_ng), 4
-                    )
-                    if scen_ng > 0
-                    else 0.0,
-                }
-            )
-        snippets: list[str] = []
-        for row in cr:
-            txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
-            if not txt:
-                continue
-            if not _text_hits_scenario_triggers(txt, scenario_groups):
-                continue
-            sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
-            meta = sku_meta.get(sku)
-            if meta:
-                sg, tit, shop = meta
-                prefix = (
-                    f"【细类：{sg}\uff5cSKU：{sku}\uff5c品名：{_md_cell(tit, 60)}\uff5c"
-                    f"店铺：{_md_cell(shop, 28)}】"
-                )
-                snippets.append(prefix + txt[:300])
-            else:
-                snippets.append(
-                    f"【细类：{gname}\uff5cSKU：{sku or '—'}】" + txt[:320]
-                )
-            if len(snippets) >= 16:
-                break
-        if len(snippets) < 5:
-            for row in cr:
-                txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
-                if not txt:
-                    continue
-                sku = _cell(row, _COMMENT_CSV_SKU, "sku").strip()
-                meta = sku_meta.get(sku)
-                if meta:
-                    sg, tit, shop = meta
-                    prefix = (
-                        f"【细类：{sg}\uff5cSKU：{sku}\uff5c品名：{_md_cell(tit, 60)}\uff5c"
-                        f"店铺：{_md_cell(shop, 28)}】"
-                    )
-                    snippets.append(prefix + txt[:260])
-                else:
-                    snippets.append(
-                        f"【细类：{gname}\uff5cSKU：{sku or '—'}】" + txt[:280]
-                    )
-                if len(snippets) >= 10:
-                    break
-        groups_out.append(
-            {
-                "group": gname,
-                "effective_text_count": int(scen_ng),
-                "scenario_distribution": dist[:18],
-                "sample_text_snippets": snippets,
-            }
-        )
-    if not groups_out:
-        return {}
-    return {"scenario_lexicon": lexicon, "groups": groups_out}
 
 def _mermaid_pie_focus_keywords(hits: Counter[str], *, top_k: int = 8) -> str:
     """关注词全局 Top 的 Mermaid pie（便于渲染或导出工具识别）。"""
@@ -455,29 +163,6 @@ def _mermaid_pie_focus_keywords(hits: Counter[str], *, top_k: int = 8) -> str:
     return "\n".join(lines)
 
 
-def _comment_scenario_counts(
-    texts: list[str],
-    scenario_groups: tuple[tuple[str, tuple[str, ...]], ...],
-) -> tuple[Counter[str], int]:
-    """每组统计「至少命中一个触发词」的条数。返回 (各组条数, 有效文本条数)。"""
-    c: Counter[str] = Counter()
-    n = len(texts)
-    for blob in texts:
-        for label, triggers in scenario_groups:
-            if any(t in blob for t in triggers):
-                c[label] += 1
-    return c, n
-
-
-def _text_hits_scenario_triggers(
-    text: str,
-    scenario_groups: tuple[tuple[str, tuple[str, ...]], ...],
-) -> bool:
-    blob = text or ""
-    for _lbl, triggers in scenario_groups:
-        if any(t in blob for t in triggers):
-            return True
-    return False
 
 
 def _scenario_summary_bullets(counter: Counter[str], n_texts: int, top_k: int = 5) -> list[str]:
@@ -540,26 +225,6 @@ def _comment_text_units_for_matrix_group(
     return texts
 
 
-def _group_keyword_hits(
-    comment_rows_in_group: list[dict[str, str]],
-    texts_fallback: list[str],
-    *,
-    focus_words: tuple[str, ...],
-) -> Counter[str]:
-    h = _comment_keyword_hits(comment_rows_in_group, focus_words)
-    if h:
-        return h
-    if not texts_fallback:
-        return Counter()
-    blob = "\n".join(texts_fallback)
-    c: Counter[str] = Counter()
-    for w in focus_words:
-        if len(w) < 2:
-            continue
-        n = blob.count(w)
-        if n:
-            c[w] += n
-    return c
 
 
 def _consumer_feedback_by_matrix_group(
@@ -741,28 +406,6 @@ def _counter_mix_top_rows_with_remainder(
     return out
 
 
-def _price_stats_extended(prices: list[float]) -> dict[str, Any]:
-    if not prices:
-        return {}
-    out: dict[str, Any] = {
-        "min": min(prices),
-        "max": max(prices),
-        "mean": statistics.mean(prices),
-        "n": len(prices),
-    }
-    if len(prices) >= 2:
-        out["stdev"] = statistics.stdev(prices)
-    if len(prices) >= 2:
-        out["median"] = statistics.median(prices)
-    if len(prices) >= 4:
-        s = sorted(prices)
-        n = len(s)
-        mid = n // 2
-        lower = s[:mid] if n % 2 else s[:mid]
-        upper = s[mid + 1 :] if n % 2 else s[mid:]
-        out["q1"] = statistics.median(lower) if lower else s[0]
-        out["q3"] = statistics.median(upper) if upper else s[-1]
-    return out
 
 
 def _search_list_proxies(rows: list[dict[str, str]]) -> dict[str, Any]:
@@ -803,118 +446,6 @@ def _search_list_proxies(rows: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
-def _category_token_meaningless(seg: str) -> bool:
-    """纯数字类目 ID、空串或疑似内部编码的段，不宜直接作为矩阵分组展示名。"""
-    t = (seg or "").strip()
-    if not t:
-        return True
-    if t.isdigit():
-        return True
-    if len(t) >= 14 and re.fullmatch(r"[A-Za-z0-9_\-]+", t):
-        return True
-    return False
-
-
-def _matrix_display_segment_from_parts(parts: list[str]) -> str | None:
-    """
-    与历史逻辑一致的主选段；若该段无意义则自右向左找第一段可读文本
-    （避免「仅类目码」或中间段为数字 ID 时，把路径误解析成无意义的细类展示名）。
-    """
-    if not parts:
-        return None
-    if len(parts) >= 4:
-        preferred = parts[-2]
-    elif len(parts) >= 3:
-        preferred = parts[1]
-    elif len(parts) >= 2:
-        preferred = parts[1]
-    else:
-        preferred = parts[0]
-    order: list[str] = []
-    if preferred:
-        order.append(preferred)
-    if len(parts) >= 2:
-        order.append(parts[-2])
-    order.append(parts[-1])
-    order.extend(reversed(parts))
-    seen: set[str] = set()
-    for cand in order:
-        if not cand or cand in seen:
-            continue
-        seen.add(cand)
-        if not _category_token_meaningless(cand):
-            return cand.strip()
-    return None
-
-
-def _matrix_group_label_from_path(path: str) -> str:
-    """由 ``detail_category_path`` 文本解析细类展示名；空或无可读段则返回空串。"""
-    t = (path or "").strip()
-    if not t:
-        return ""
-    parts = [p.strip() for p in t.replace("＞", ">").split(">") if p.strip()]
-    if not parts:
-        return ""
-    key = _matrix_display_segment_from_parts(parts)
-    return (key[:80] if key else "")
-
-
-def _matrix_group_label_from_detail_path(row: dict[str, str]) -> str:
-    return _matrix_group_label_from_path(_detail_category_path_cell(row))
-
-
-def _competitor_matrix_group_key(row: dict[str, str]) -> str:
-    """
-    竞品矩阵分组：§5 / §8 / 统计图共用。
-    **仅**依据 ``detail_category_path``；列为空或路径段均为无意义编码时不参与矩阵（返回空串）。
-    """
-    return _matrix_group_label_from_detail_path(row)
-
-
-def _merged_rows_grouped_for_matrix(
-    merged_rows: list[dict[str, str]],
-) -> list[tuple[str, list[dict[str, str]]]]:
-    buckets: dict[str, list[dict[str, str]]] = {}
-    for row in merged_rows:
-        k = _competitor_matrix_group_key(row)
-        if not k:
-            continue
-        buckets.setdefault(k, []).append(row)
-
-    def sort_key(item: tuple[str, list[dict[str, str]]]) -> tuple[int, int, str]:
-        name, rows = item
-        miss = name.startswith("未归类")
-        return (1 if miss else 0, -len(rows), name)
-
-    return sorted(buckets.items(), key=sort_key)
-
-
-def _category_mix(
-    rows: list[dict[str, str]], *, top_k: int = 12
-) -> list[tuple[str, int]]:
-    """
-    按「可读细类标签」统计 SKU 分布（与 §5 ``_competitor_matrix_group_key`` 同源）；
-    仅含 ``detail_category_path`` 可解析为展示名的行。
-
-    返回 ``most_common(top_k)``，并将未列入 Top K 的款数合并为「（其余细类）」，
-    使各块 SKU 数之和等于有效矩阵 SKU 总数（与扇形图、简报 ``category_mix_top`` 一致）。
-    """
-    labels: list[str] = []
-    for r in rows:
-        k = _matrix_group_label_from_detail_path(r)
-        if k:
-            labels.append(k)
-    if not labels:
-        return []
-    c = Counter(labels)
-    common = c.most_common(top_k)
-    accounted = sum(v for _, v in common)
-    total = sum(c.values())
-    rest = total - accounted
-    out: list[tuple[str, int]] = list(common)
-    if rest > 0:
-        out.append(("（其余细类）", rest))
-    return out
 
 
 def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
@@ -946,35 +477,6 @@ def _structure_brands(rows: list[dict[str, str]], *, list_export: bool) -> list[
     ]
 
 
-def _is_ingredient_url_blob(s: str) -> bool:
-    """详情主图 URL 串（分号分隔）或单列以 http 开头。"""
-    t = (s or "").strip()
-    if not t:
-        return False
-    if t.startswith(("http://", "https://")):
-        return True
-    head = t[:400]
-    if ("https://" in head or "http://" in head) and (
-        ";" in t or len(t) > 180 or t.count("http") >= 2
-    ):
-        return True
-    return False
-
-
-def _ingredients_from_product_attributes(attrs: str) -> str:
-    m = re.search(r"配料(?:表)?[:：]\s*([^;；]+)", attrs or "")
-    return m.group(1).strip() if m else ""
-
-
-def _ingredients_single_line(s: str) -> str:
-    """与 ``AI_crawler.normalize_ingredients_text_for_csv`` 一致：多行配料压成一行（行间 ``；``），便于表格/CSV。"""
-    t = (s or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    if not t:
-        return ""
-    lines = [ln.strip() for ln in t.split("\n") if ln.strip()]
-    if len(lines) <= 1:
-        return lines[0] if lines else ""
-    return "；".join(lines)
 
 
 def _matrix_ingredients_cell(row: dict[str, str], *, max_len: int = 420) -> str:
