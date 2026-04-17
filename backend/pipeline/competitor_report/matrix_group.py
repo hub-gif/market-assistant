@@ -1,9 +1,9 @@
-"""竞品矩阵细类键：与 ``pipeline.matrix_group_label`` 及 §5 矩阵/扇图同源。"""
+"""竞品矩阵细类键：与 ``pipeline.jd.matrix_group_label`` 及 §5 矩阵/扇图同源。"""
 from __future__ import annotations
 
 from collections import Counter
 
-from pipeline.matrix_group_label import (
+from pipeline.jd.matrix_group_label import (
     matrix_group_label_from_detail_path as _matrix_group_label_from_path,
 )
 

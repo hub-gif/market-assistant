@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 
 def backfill_matrix_group_labels(apps, schema_editor):
-    from pipeline.matrix_group_label import matrix_group_label_from_detail_path
+    from pipeline.jd.matrix_group_label import matrix_group_label_from_detail_path
 
     JdJobDetailRow = apps.get_model("pipeline", "JdJobDetailRow")
     JdJobMergedRow = apps.get_model("pipeline", "JdJobMergedRow")

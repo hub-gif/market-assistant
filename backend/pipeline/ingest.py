@@ -29,7 +29,7 @@ from .csv_schema import (
     search_csv_effective_total_sales,
     strip_buyer_ranking_line_prefix,
 )
-from .matrix_group_label import matrix_group_label_from_detail_path
+from pipeline.jd.matrix_group_label import matrix_group_label_from_detail_path
 from .models import (
     JdJobCommentRow,
     JdJobDetailRow,
