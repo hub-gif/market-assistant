@@ -192,6 +192,10 @@ export function reportConfigDefaultsUrl() {
   return '/api/report-config-defaults/'
 }
 
+export function strategyConfigDefaultsUrl() {
+  return '/api/strategy-config-defaults/'
+}
+
 /**
  * @param {Record<string, string | number | undefined> | string} [opts] 筛选参数对象；兼容旧调用：传入字符串视为 comments 的 sku_id
  */

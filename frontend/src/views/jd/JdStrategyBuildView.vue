@@ -1,7 +1,12 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { refreshJobs, useJobs, api } from '../../composables/useJobs'
+import {
+  refreshJobs,
+  useJobs,
+  api,
+  strategyConfigDefaultsUrl,
+} from '../../composables/useJobs'
 import {
   generationInFlightKey,
   withGenerationInFlight,
@@ -34,6 +39,11 @@ const strategyGeneratingOtherTask = computed(
     strategyDraftPendingJobId.value !== selectedId.value,
 )
 const useLlm = ref(false)
+/** 与报告页「仅规则稿」一致：勾选则本次只出规则策略稿，不调用大模型润色 */
+const rulesOnlyThisRun = ref(false)
+const strategyDefaults = ref({ use_llm_default: false })
+const strategySaveLoading = ref(false)
+const strategySaveErr = ref('')
 
 const decisions = reactive({
   product_role: '',
@@ -56,10 +66,6 @@ const successJobs = computed(() =>
   [...jobs.value].filter((j) => j.status === 'success').sort((a, b) => b.id - a.id),
 )
 
-const selectedJob = computed(() =>
-  successJobs.value.find((j) => String(j.id) === selectedId.value),
-)
-
 const positioningOptions = [
   { value: '', label: '暂不勾选（文稿中均为空选）' },
   { value: 'top', label: '贴顶' },
@@ -77,8 +83,9 @@ const stanceOptions = [
 ]
 
 function buildPayload() {
+  const generator = rulesOnlyThisRun.value ? 'rules' : useLlm.value ? 'llm' : 'rules'
   return {
-    generator: useLlm.value ? 'llm' : 'rules',
+    generator,
     business_notes: businessNotes.value,
     product_role: decisions.product_role,
     time_horizon: decisions.time_horizon,
@@ -98,6 +105,65 @@ function buildPayload() {
 }
 
 const STORAGE_KEY = (id) => `ma_strategy_draft_${id}`
+
+function formatJobOption(j) {
+  const t = j.created_at
+  const tail = t ? String(t).replace('T', ' ').slice(0, 16) : ''
+  return tail ? `#${j.id} · ${j.keyword} · ${tail}` : `#${j.id} · ${j.keyword}`
+}
+
+function applyStrategyConfigFromJob(job) {
+  const stored =
+    job && typeof job.strategy_config === 'object' && job.strategy_config !== null
+      ? job.strategy_config
+      : {}
+  const eff = { ...strategyDefaults.value, ...stored }
+  useLlm.value = !!eff.use_llm_default
+}
+
+async function loadStrategyDefaults() {
+  try {
+    const r = await api(strategyConfigDefaultsUrl())
+    if (r.ok) {
+      strategyDefaults.value = await r.json()
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function saveStrategyPreferences() {
+  const id = selectedId.value
+  if (!id) return
+  strategySaveErr.value = ''
+  strategySaveLoading.value = true
+  try {
+    const r = await api(`/api/jobs/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        strategy_config: { use_llm_default: useLlm.value },
+      }),
+    })
+    const text = await r.text()
+    if (!r.ok) {
+      try {
+        const j = JSON.parse(text)
+        strategySaveErr.value = j.detail || text
+      } catch {
+        strategySaveErr.value = text || `HTTP ${r.status}`
+      }
+      return
+    }
+    const updated = JSON.parse(text)
+    const idx = jobs.value.findIndex((x) => x.id === updated.id)
+    if (idx >= 0) jobs.value[idx] = updated
+    applyStrategyConfigFromJob(updated)
+  } catch (e) {
+    strategySaveErr.value = String(e)
+  } finally {
+    strategySaveLoading.value = false
+  }
+}
 
 async function loadList() {
   try {
@@ -144,7 +210,10 @@ async function generateAndGoPreview() {
   })
 }
 
-onMounted(loadList)
+onMounted(async () => {
+  await loadStrategyDefaults()
+  await loadList()
+})
 
 watch(
   () => route.query.job,
@@ -163,6 +232,23 @@ watch(
   },
   { immediate: true },
 )
+
+watch(selectedId, async () => {
+  strategySaveErr.value = ''
+  const id = selectedId.value
+  if (!id) return
+  try {
+    const r = await api(`/api/jobs/${id}/`)
+    if (r.ok) {
+      const j = await r.json()
+      const idx = jobs.value.findIndex((x) => x.id === j.id)
+      if (idx >= 0) jobs.value[idx] = j
+      applyStrategyConfigFromJob(j)
+    }
+  } catch {
+    /* ignore */
+  }
+})
 </script>
 
 <template>
@@ -170,17 +256,19 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，在下方填空与勾选。<strong>未勾选</strong>下方选项时，由系统规则生成策略底稿；<strong>勾选「使用大模型生成」</strong>后，由大模型在底稿与数据摘要基础上成稿（服务端需已配置并可用）。提交后跳转到
+        选择<strong>已成功</strong>任务，在下方填空与勾选。策略页的默认选项保存在本任务的<strong>策略配置</strong>中（与「分析报告生成」页的<strong>报告配置</strong>相互独立）。未勾选大模型时由规则生成策略底稿；勾选后由大模型在底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>（无需在此勾选）。提交后跳转到
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
-        。数据与
-        <RouterLink to="/jd/analysis-view">同任务分析产出</RouterLink>
-        一致。未填项在文稿中仍保留占位提示。
+        。未填项在文稿中仍保留占位提示。
       </p>
 
-      <div class="toolbar">
+      <div class="toolbar toolbar-col">
         <label class="chk-inline">
-          <input v-model="useLlm" type="checkbox" />
-          使用大模型生成（服务端需已配置并可用）
+          <input v-model="rulesOnlyThisRun" type="checkbox" />
+          本次仅生成规则稿（不做大模型全文润色，更快、不调用智能服务）
+        </label>
+        <label class="chk-inline">
+          <input v-model="useLlm" type="checkbox" :disabled="rulesOnlyThisRun" />
+          使用大模型生成（与上项互斥：勾选上一项时本项无效）
         </label>
       </div>
       <div class="toolbar">
@@ -188,9 +276,17 @@ watch(
         <select v-model="selectedId" class="job-select">
           <option value="" disabled>请选择任务</option>
           <option v-for="j in successJobs" :key="j.id" :value="String(j.id)">
-            #{{ j.id }} · {{ j.keyword }} · {{ j.run_dir?.split(/[/\\]/).pop() || '' }}
+            {{ formatJobOption(j) }}
           </option>
         </select>
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!selectedId || strategySaveLoading"
+          @click="saveStrategyPreferences"
+        >
+          {{ strategySaveLoading ? '保存中…' : '保存策略偏好' }}
+        </button>
         <button
           type="button"
           class="ma-btn ma-btn-primary"
@@ -200,12 +296,9 @@ watch(
           {{ strategyGeneratingThisTask ? '生成中…' : '生成并前往预览' }}
         </button>
       </div>
+      <p v-if="strategySaveErr" class="ma-err">{{ strategySaveErr }}</p>
       <p v-if="strategyGeneratingOtherTask" class="ma-warn-banner">
         任务 #{{ strategyDraftPendingJobId }} 的策略稿正在生成中，请稍候再切换任务或重复提交。
-      </p>
-
-      <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        任务目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
       <p v-if="err" class="ma-err">{{ err }}</p>
       <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
@@ -336,6 +429,10 @@ watch(
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
+.toolbar-col {
+  flex-direction: column;
+  align-items: stretch;
+}
 .sel-label {
   font-size: 0.85rem;
   font-weight: 500;
@@ -353,18 +450,6 @@ watch(
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-}
-.run-dir-note {
-  margin: 0.75rem 0 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.run-dir-path {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  word-break: break-all;
-  color: #475569;
 }
 .ma-muted {
   color: #64748b;

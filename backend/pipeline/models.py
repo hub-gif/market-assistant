@@ -37,6 +37,8 @@ class PipelineJob(models.Model):
     scenario_filter_enabled = models.BooleanField(null=True, blank=True)
     # 竞品报告 / competitor-brief：关注词、场景词组、外部市场表等（JSON，空对象=用爬虫脚本默认）
     report_config = models.JSONField(default=dict, blank=True)
+    # 策略生成页独立配置（与 report_config 无关），如默认是否使用大模型润色等
+    strategy_config = models.JSONField(default=dict, blank=True)
     status = models.CharField(
         max_length=16,
         choices=JobStatus.choices,

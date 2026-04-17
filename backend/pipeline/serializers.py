@@ -86,6 +86,33 @@ def validate_report_config_body(value: dict) -> dict:
     return value
 
 
+_STRATEGY_CONFIG_ALLOWED_KEYS = frozenset({"use_llm_default"})
+_DEFAULT_STRATEGY_CONFIG: dict[str, bool] = {"use_llm_default": False}
+
+
+def validate_strategy_config_body(value: dict) -> dict:
+    """策略生成页独立 JSON（与 ``report_config`` 无关）。"""
+    if not isinstance(value, dict):
+        raise serializers.ValidationError("须为 JSON 对象")
+    value = dict(value)
+    extra = set(value.keys()) - _STRATEGY_CONFIG_ALLOWED_KEYS
+    if extra:
+        raise serializers.ValidationError(
+            f"未知字段：{', '.join(sorted(extra))}"
+        )
+    if "use_llm_default" in value and value["use_llm_default"] is not None:
+        if not isinstance(value["use_llm_default"], bool):
+            raise serializers.ValidationError("use_llm_default 须为 true 或 false")
+    merged = {
+        **_DEFAULT_STRATEGY_CONFIG,
+        **{k: value[k] for k in _STRATEGY_CONFIG_ALLOWED_KEYS if k in value},
+    }
+    raw = json.dumps(merged, ensure_ascii=False)
+    if len(raw) > 32_000:
+        raise serializers.ValidationError("策略配置体积过大")
+    return merged
+
+
 _ARTIFACT_FILES: tuple[tuple[str, str], ...] = (
     ("merged", "keyword_pipeline_merged.csv"),
     ("pc_search", "pc_search_export.csv"),
@@ -119,6 +146,7 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "list_pages",
             "scenario_filter_enabled",
             "report_config",
+            "strategy_config",
             "status",
             "cancellation_requested",
             "resume_from_checkpoint",
@@ -142,6 +170,7 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "report_config",
+            "strategy_config",
         ]
 
     def get_inline_cookie_used(self, obj: PipelineJob) -> bool:
@@ -341,6 +370,15 @@ class JobReportConfigPatchSerializer(serializers.Serializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("须为 JSON 对象")
         return validate_report_config_body(value)
+
+
+class JobStrategyConfigPatchSerializer(serializers.Serializer):
+    strategy_config = serializers.JSONField()
+
+    def validate_strategy_config(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("须为 JSON 对象")
+        return validate_strategy_config_body(value)
 
 
 class RegenerateReportRequestSerializer(serializers.Serializer):

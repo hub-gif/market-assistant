@@ -8,6 +8,11 @@ urlpatterns = [
         views.ReportConfigDefaultsView.as_view(),
         name="report-config-defaults",
     ),
+    path(
+        "strategy-config-defaults/",
+        views.StrategyConfigDefaultsView.as_view(),
+        name="strategy-config-defaults",
+    ),
     path("jobs/", views.JobListCreateView.as_view(), name="job-list-create"),
     path("jobs/<int:pk>/", views.JobDetailView.as_view(), name="job-detail"),
     path(

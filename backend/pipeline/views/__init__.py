@@ -26,6 +26,7 @@ from .job_views import (
     JobRegenerateReportView,
     JobResumeView,
     ReportConfigDefaultsView,
+    StrategyConfigDefaultsView,
 )
 from .product_views import (
     JdProductDetailView,
@@ -55,6 +56,7 @@ __all__ = [
     "JobRegenerateReportView",
     "JobResumeView",
     "ReportConfigDefaultsView",
+    "StrategyConfigDefaultsView",
     "JdProductDetailView",
     "JdProductListView",
     "JdProductSnapshotDetailView",

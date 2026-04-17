@@ -18,6 +18,7 @@ from ..ingest import resolve_and_validate_run_dir
 from ..jd.runner import (
     build_competitor_brief_for_job,
     get_default_report_config,
+    get_default_strategy_config,
     merge_llm_supplement_with_rules_report,
     regenerate_competitor_report,
     write_competitor_analysis_markdown,
@@ -28,6 +29,7 @@ from ..serializers import (
     CreatePipelineJobSerializer,
     JobReportConfigPatchSerializer,
     JobResumeRequestSerializer,
+    JobStrategyConfigPatchSerializer,
     PipelineJobSerializer,
     RegenerateReportRequestSerializer,
 )
@@ -75,6 +77,7 @@ class JobListCreateView(APIView):
             list_pages=data.get("list_pages") or "",
             scenario_filter_enabled=data.get("scenario_filter_enabled"),
             report_config=report_config_initial,
+            strategy_config=get_default_strategy_config(),
             status=JobStatus.PENDING,
         )
         t = threading.Thread(target=execute_job, args=(job.id,), daemon=True)
@@ -108,6 +111,11 @@ class JobDetailView(APIView):
             ser.is_valid(raise_exception=True)
             job.report_config = ser.validated_data["report_config"]
             update_fields.append("report_config")
+        if "strategy_config" in body:
+            ser = JobStrategyConfigPatchSerializer(data={"strategy_config": body["strategy_config"]})
+            ser.is_valid(raise_exception=True)
+            job.strategy_config = ser.validated_data["strategy_config"]
+            update_fields.append("strategy_config")
         if "run_dir" in body:
             try:
                 job.run_dir = str(
@@ -118,7 +126,9 @@ class JobDetailView(APIView):
             update_fields.append("run_dir")
         if not update_fields:
             return Response(
-                {"detail": "请提供 report_config 或 run_dir（用于绑定已有批次目录）"},
+                {
+                    "detail": "请提供 report_config、strategy_config 或 run_dir（用于绑定已有批次目录）"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         job.save(update_fields=update_fields + ["updated_at"])
@@ -205,6 +215,13 @@ class ReportConfigDefaultsView(APIView):
                 {"detail": str(e)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+
+class StrategyConfigDefaultsView(APIView):
+    """返回策略生成页独立默认 JSON（与 ``report_config`` 无关）。"""
+
+    def get(self, request):
+        return Response(get_default_strategy_config())
 
 
 class JobDownloadView(APIView):
