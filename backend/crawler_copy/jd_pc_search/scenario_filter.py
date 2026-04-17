@@ -17,7 +17,7 @@ from typing import Any
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
-from pipeline.csv_schema import JD_SEARCH_CSV_HEADERS  # noqa: E402
+from pipeline.csv.schema import JD_SEARCH_CSV_HEADERS  # noqa: E402
 
 # 与 CSV 导出列名一致（jd_h5_search_requests.CSV_FIELDS 子集）
 _SCENARIO_TEXT_FIELDS: tuple[str, ...] = (

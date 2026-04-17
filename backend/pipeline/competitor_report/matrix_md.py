@@ -1,7 +1,7 @@
 """竞品矩阵 Markdown 行：配料格与整行管道表单元。"""
 from __future__ import annotations
 
-from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER, merged_csv_effective_total_sales
+from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER, merged_csv_effective_total_sales
 
 from .constants import (
     _COMMENT_FUZZ_KEYS,

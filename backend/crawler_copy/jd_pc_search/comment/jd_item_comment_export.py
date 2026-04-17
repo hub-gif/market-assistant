@@ -16,7 +16,7 @@ from typing import Any
 _BACKEND_ROOT = Path(__file__).resolve().parents[3]
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
-from pipeline.csv_schema import COMMENT_CSV_COLUMNS, COMMENT_ROW_DICT_KEYS  # noqa: E402
+from pipeline.csv.schema import COMMENT_CSV_COLUMNS, COMMENT_ROW_DICT_KEYS  # noqa: E402
 
 
 def write_comments_flat_csv(path: Path | str, rows: list[dict[str, Any]]) -> None:

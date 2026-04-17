@@ -14,7 +14,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .csv_schema import (
+from .csv.schema import (
     COMMENT_CSV_COLUMNS,
     COMMENT_CSV_TO_FIELD,
     DETAIL_CSV_COLUMNS,

@@ -1,7 +1,7 @@
 """评价与合并表按细类矩阵对齐：带前缀行、SKU→细类映射、按细类消费者反馈分组。"""
 from __future__ import annotations
 
-from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER
 
 from .comment_sentiment import _iter_comment_text_units
 from .constants import (

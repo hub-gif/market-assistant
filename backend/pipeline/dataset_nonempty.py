@@ -1,7 +1,7 @@
 """按任务扫描库内行，得到「全表至少一格非空」的列，供摘要 / 浏览 / 导出一致裁剪。"""
 from __future__ import annotations
 
-from .csv_schema import (
+from .csv.schema import (
     COMMENT_CSV_COLUMNS,
     COMMENT_CSV_TO_FIELD,
     DETAIL_CSV_COLUMNS,

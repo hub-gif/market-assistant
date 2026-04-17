@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .csv_schema import (
+from .csv.schema import (
     COMMENT_CSV_COLUMNS,
     COMMENT_CSV_TO_FIELD,
     DETAIL_CSV_COLUMNS,

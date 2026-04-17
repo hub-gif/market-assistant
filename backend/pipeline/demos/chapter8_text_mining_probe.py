@@ -46,7 +46,7 @@ if str(JCR_ROOT) not in sys.path:
 from pipeline.competitor_report import jd_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
-from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
+from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
 from pipeline.llm.generate import _call_llm  # noqa: E402 探针专用，不新增 generate 导出
 
 # 导入失败时**不得** ``sys.exit``：本模块会被 ``runner`` 在 Web 请求中 import，退出会整进程 500。

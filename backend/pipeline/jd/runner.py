@@ -12,7 +12,7 @@ from typing import Any
 
 from django.conf import settings
 
-from ..csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from ..csv.schema import MERGED_FIELD_TO_CSV_HEADER
 from ..models import PipelineJob
 
 

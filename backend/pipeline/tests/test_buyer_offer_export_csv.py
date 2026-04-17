@@ -7,7 +7,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from pipeline.csv_schema import strip_buyer_ranking_line_prefix
+from pipeline.csv.schema import strip_buyer_ranking_line_prefix
 
 
 class BuyerOfferExportCsvTests(SimpleTestCase):

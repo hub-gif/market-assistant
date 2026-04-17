@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-将已有 run 目录下 CSV 表头重写为 ``csv_schema`` 纯中文表头（仅重命名与列序，不修改业务逻辑）。
+将已有 run 目录下 CSV 表头重写为 ``pipeline.csv.schema`` 纯中文表头（仅重命名与列序，不修改业务逻辑）。
 
 在 ``backend`` 目录::
 
@@ -16,7 +16,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from pipeline.csv_header_rewrite import rewrite_run_dir_csv_headers
+from pipeline.csv.header_rewrite import rewrite_run_dir_csv_headers
 from pipeline.ingest import (
     FILE_COMMENTS_FLAT_CSV,
     FILE_DETAIL_WARE_CSV,
@@ -27,7 +27,7 @@ from pipeline.ingest import (
 
 
 class Command(BaseCommand):
-    help = "将 pipeline run 目录内 CSV 表头规范为 csv_schema 中的中文表头。"
+    help = "将 pipeline run 目录内 CSV 表头规范为 pipeline.csv.schema 中的中文表头。"
 
     def add_arguments(self, parser) -> None:
         parser.add_argument(

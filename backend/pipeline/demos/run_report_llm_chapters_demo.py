@@ -40,7 +40,7 @@ if str(JCR_ROOT) not in sys.path:
 from pipeline.competitor_report import jd_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
-from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
+from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
 from pipeline.jd.runner import (  # noqa: E402
     get_default_report_config,
     use_chunked_group_summaries_llm,

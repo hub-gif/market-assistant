@@ -12,7 +12,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
-from pipeline.csv_schema import (  # noqa: E402
+from pipeline.csv.schema import (  # noqa: E402
     MERGED_CSV_COLUMNS,
     remap_merged_row_english_detail_keys_to_csv_headers,
 )
@@ -54,7 +54,7 @@ def normalize_merged_rows_for_export(rows: list[dict[str, str]]) -> None:
     整合表落盘前：搜索侧「榜单类文案」与「榜单排名」去掉 ``榜单/曝光：`` 前缀，
     与 ``strip_buyer_ranking_line_prefix`` / 入库规则一致。
     """
-    from pipeline.csv_schema import strip_buyer_ranking_line_prefix  # noqa: WPS433
+    from pipeline.csv.schema import strip_buyer_ranking_line_prefix  # noqa: WPS433
 
     hot_key = "榜单类文案"
     rank_key = "榜单排名"

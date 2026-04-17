@@ -17,7 +17,7 @@ import json
 import re
 from typing import Any
 
-from pipeline.csv_schema import strip_buyer_ranking_line_prefix
+from pipeline.csv.schema import strip_buyer_ranking_line_prefix
 
 
 def _s(x: Any) -> str:

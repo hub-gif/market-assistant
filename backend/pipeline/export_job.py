@@ -9,7 +9,7 @@ from typing import Any
 from django.db.models import QuerySet
 from openpyxl import Workbook
 
-from .csv_schema import (
+from .csv.schema import (
     COMMENT_CSV_TO_FIELD,
     DETAIL_CSV_TO_FIELD,
     JD_SEARCH_CSV_HEADERS,

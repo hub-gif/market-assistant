@@ -31,7 +31,7 @@ class JdProductListView(APIView):
                 | Q(detail_brand__icontains=q)
             )
         if kw:
-            from ..csv_schema import MERGED_FIELD_TO_CSV_HEADER
+            from ..csv.schema import MERGED_FIELD_TO_CSV_HEADER
 
             h_kw = MERGED_FIELD_TO_CSV_HEADER["pipeline_keyword"]
             qs = qs.filter(

@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from pipeline.csv_schema import JD_SEARCH_CSV_HEADERS, MERGED_FIELD_TO_CSV_HEADER
+from pipeline.csv.schema import JD_SEARCH_CSV_HEADERS, MERGED_FIELD_TO_CSV_HEADER
 
 from .constants import (
     _LEGACY_LIST_BRAND_TITLE_KEY,

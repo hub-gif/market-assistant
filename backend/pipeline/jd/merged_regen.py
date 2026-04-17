@@ -1,11 +1,11 @@
-"""从 ``detail_ware_export.csv`` / ``detail/ware_*_response.json`` 补全并规范化 lean ``keyword_pipeline_merged.csv``（列序与 ``csv_schema.MERGED_CSV_COLUMNS`` 一致）。"""
+"""从 ``detail_ware_export.csv`` / ``detail/ware_*_response.json`` 补全并规范化 lean ``keyword_pipeline_merged.csv``（列序与 ``pipeline.csv.schema.MERGED_CSV_COLUMNS`` 一致）。"""
 from __future__ import annotations
 
 import csv
 import sys
 from pathlib import Path
 
-from ..csv_schema import (
+from ..csv.schema import (
     MERGED_CSV_COLUMNS,
     MERGED_FIELD_TO_CSV_HEADER,
     MERGED_LEAN_DETAIL_INTERNAL_KEYS,

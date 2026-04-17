@@ -7,7 +7,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 from pipeline.competitor_report import jd_report as jcr
-from pipeline.csv_schema import infer_total_sales_from_sales_floor
+from pipeline.csv.schema import infer_total_sales_from_sales_floor
 from pipeline.reporting.charts import _cn_volume_int
 
 

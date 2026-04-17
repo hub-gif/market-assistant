@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from pipeline.csv_schema import JD_SEARCH_CSV_HEADERS, MERGED_FIELD_TO_CSV_HEADER
+from pipeline.csv.schema import JD_SEARCH_CSV_HEADERS, MERGED_FIELD_TO_CSV_HEADER
 
 from .comment_sentiment import _comment_keyword_hits
 from .constants import (

@@ -1,7 +1,7 @@
 """CSV 表头键、运行默认调参与关注词/场景配置（与 ``pipeline.competitor_report.jd_report`` 顶层一致）。"""
 from __future__ import annotations
 
-from pipeline.csv_schema import (
+from pipeline.csv.schema import (
     COMMENT_CSV_COLUMNS,
     JD_SEARCH_CSV_HEADERS,
     MERGED_FIELD_TO_CSV_HEADER,

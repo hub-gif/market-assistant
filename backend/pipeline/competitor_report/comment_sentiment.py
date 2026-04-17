@@ -7,7 +7,7 @@ import re
 from collections import Counter
 from typing import Any
 
-from pipeline.csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER
 
 from .constants import (
     _COMMENT_CSV_BODY,

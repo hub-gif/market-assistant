@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand
 
-from pipeline.csv_schema import (
+from pipeline.csv.schema import (
     JD_SEARCH_CSV_HEADERS,
     MERGED_FIELD_TO_CSV_HEADER,
     merged_csv_effective_total_sales,

@@ -5,7 +5,7 @@ import csv
 import sys
 from pathlib import Path
 
-from ..csv_schema import MERGED_FIELD_TO_CSV_HEADER
+from ..csv.schema import MERGED_FIELD_TO_CSV_HEADER
 from ..ingest import FILE_DETAIL_WARE_CSV, FILE_MERGED_CSV, SKU_FIELD_MERGED
 
 
