@@ -136,6 +136,8 @@ class JobStrategyDraftView(APIView):
             "audience_segment": vd.get("audience_segment") or "",
             "competitor_reference": vd.get("competitor_reference") or "",
             "resource_notes": vd.get("resource_notes") or "",
+            "marketing_strategy": vd.get("marketing_strategy") or "",
+            "general_strategy": vd.get("general_strategy") or "",
             "ack_risk_keywords": bool(vd.get("ack_risk_keywords")),
             "ack_risk_price": bool(vd.get("ack_risk_price")),
             "ack_risk_concentration": bool(vd.get("ack_risk_concentration")),

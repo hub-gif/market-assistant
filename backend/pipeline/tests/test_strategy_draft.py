@@ -27,6 +27,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("假设A", md)
         self.assertIn("重点：华东", md)
         self.assertIn("目标与边界", md)
+        self.assertIn("营销策略与总体方向", md)
         self.assertIn("市场策略制定草稿", md)
 
     def test_strategy_decisions_merge(self) -> None:
@@ -35,6 +36,8 @@ class StrategyDraftTests(SimpleTestCase):
             "product_role": "追赶型",
             "positioning_choice": "mid",
             "competitive_stance": "flank",
+            "marketing_strategy": "内容种草+搜索承接",
+            "general_strategy": "先腰后顶",
             "pillar_product": "做低糖配方",
             "ack_risk_keywords": True,
             "ack_risk_price": False,
@@ -48,6 +51,8 @@ class StrategyDraftTests(SimpleTestCase):
             report_config={"chapter8_text_mining_probe": False},
         )
         self.assertIn("**本品角色**：追赶型", md)
+        self.assertIn("**营销策略**：内容种草+搜索承接", md)
+        self.assertIn("**总体策略**：先腰后顶", md)
         self.assertIn("- [x] **卡腰**", md)
         self.assertIn("- [ ] **贴顶**", md)
         self.assertIn("侧翼切入", md)

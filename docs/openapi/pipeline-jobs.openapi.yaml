@@ -561,6 +561,14 @@ components:
           type: string
           maxLength: 1000
           description: 资源与预算量级备注（可选）
+        marketing_strategy:
+          type: string
+          maxLength: 2000
+          description: 营销策略（传播、活动、投放、内容等，可选）
+        general_strategy:
+          type: string
+          maxLength: 2000
+          description: 总体策略（增长/品类/经营总原则，可选）
         ack_risk_keywords:
           type: boolean
           default: false

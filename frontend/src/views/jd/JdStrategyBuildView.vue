@@ -51,6 +51,8 @@ const decisions = reactive({
   audience_segment: '',
   competitor_reference: '',
   resource_notes: '',
+  marketing_strategy: '',
+  general_strategy: '',
   ack_risk_keywords: false,
   ack_risk_price: false,
   ack_risk_concentration: false,
@@ -95,6 +97,8 @@ function buildPayload() {
     audience_segment: decisions.audience_segment,
     competitor_reference: decisions.competitor_reference,
     resource_notes: decisions.resource_notes,
+    marketing_strategy: decisions.marketing_strategy,
+    general_strategy: decisions.general_strategy,
     ack_risk_keywords: decisions.ack_risk_keywords,
     ack_risk_price: decisions.ack_risk_price,
     ack_risk_concentration: decisions.ack_risk_concentration,
@@ -291,6 +295,26 @@ watch(
               {{ o.label }}
             </option>
           </select>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>五、营销策略与总体策略</legend>
+        <label class="fld fld-block">
+          <span>营销策略</span>
+          <textarea
+            v-model="decisions.marketing_strategy"
+            rows="3"
+            placeholder="传播、活动、投放、内容主线等（可选）"
+          />
+        </label>
+        <label class="fld fld-block">
+          <span>总体策略</span>
+          <textarea
+            v-model="decisions.general_strategy"
+            rows="3"
+            placeholder="增长 / 品类 / 经营总原则，可与下方 4P 支柱呼应（可选）"
+          />
         </label>
       </fieldset>
 

@@ -102,7 +102,7 @@ def report_uses_chapter8_text_mining_probe(report_config: dict[str, Any] | None)
     """
     与任务 ``report_config`` 中 ``chapter8_text_mining_probe`` 一致；未显式设置时默认 ``True``
     （与 ``jd.runner.get_default_report_config`` 一致）。
-    为 ``True`` 时，策略稿第五节不再逐条列举关注词/场景子串命中，以免与当前报告正文口径冲突。
+    为 ``True`` 时，策略稿「用户与评论侧」一节不再逐条列举关注词/场景子串命中，以免与当前报告正文口径冲突。
     """
     if not isinstance(report_config, dict):
         return True
@@ -170,12 +170,30 @@ def build_strategy_draft_markdown(
         ]
     )
 
+    lines.extend(
+        [
+            "## 二、营销策略与总体方向",
+            "",
+            _goal_bullet(
+                "营销策略",
+                str(d.get("marketing_strategy") or ""),
+                "传播、活动、投放、内容主线等（可选）",
+            ),
+            _goal_bullet(
+                "总体策略",
+                str(d.get("general_strategy") or ""),
+                "增长/品类/经营层面的总原则，可与 4P 支柱呼应（可选）",
+            ),
+            "",
+        ]
+    )
+
     scope = brief.get("scope") or {}
     merged_n = scope.get("merged_sku_count")
     comm_n = scope.get("comment_flat_rows")
     lines.extend(
         [
-            "## 二、战场与样本",
+            "## 三、战场与样本",
             "",
             f"- **监测关键词 / 货架语境**：{kw}",
             f"- **批次**：{_esc(brief.get('batch_label')) or '—'}",
@@ -197,7 +215,7 @@ def build_strategy_draft_markdown(
     conc = brief.get("concentration") or {}
     shops = conc.get("shops_from_list") or {}
     dbrand = conc.get("detail_brand_among_merged") or {}
-    lines.extend(["## 三、竞争结构（摘录）", ""])
+    lines.extend(["## 四、竞争结构（摘录）", ""])
     n_shop = _cr_narrative(
         "列表侧店铺集中度",
         concentration_first_share(shops),
@@ -244,7 +262,7 @@ def build_strategy_draft_markdown(
         lines.append("")
 
     pst = brief.get("price_stats") or {}
-    lines.extend(["## 四、价格带与定位（业务已选）", ""])
+    lines.extend(["## 五、价格带与定位（业务已选）", ""])
     if pst.get("n"):
         src = _esc(brief.get("price_stats_source")) or "—"
         lines.extend(
@@ -278,7 +296,7 @@ def build_strategy_draft_markdown(
 
     ckw = brief.get("comment_focus_keywords") or []
     usc = brief.get("usage_scenarios") or []
-    lines.extend(["## 五、用户与评论侧", ""])
+    lines.extend(["## 六、用户与评论侧", ""])
     if use_ch8_probe:
         lines.extend(
             [
@@ -317,7 +335,7 @@ def build_strategy_draft_markdown(
     hints = brief.get("strategy_hints") or []
     lines.extend(
         [
-            "## 六、机会与策略支柱",
+            "## 七、机会与策略支柱",
             "",
             "### 摘要提示（`strategy_hints`）",
             "",
@@ -357,7 +375,7 @@ def build_strategy_draft_markdown(
     )
     lines.extend(
         [
-            "## 七、风险核对项",
+            "## 八、风险核对项",
             "",
             _risk_line(rk, rk_kw),
             _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗规则）"),
@@ -369,7 +387,7 @@ def build_strategy_draft_markdown(
     notes = _esc(business_notes)
     lines.extend(
         [
-            "## 八、业务约束与备注",
+            "## 九、业务约束与备注",
             "",
             (notes if notes else "*（未填写业务备注。）*"),
             "",
@@ -378,10 +396,10 @@ def build_strategy_draft_markdown(
 
     lines.extend(
         [
-            "## 九、下一步（可执行）",
+            "## 十、下一步（可执行）",
             "",
-            "- [ ] 对齐 **§一** 目标与 **§八** 约束，锁定 1～2 条主命题。",
-            "- [ ] 为 **§六** 支柱各补 **1 条数据证据** + **12 周内可交付动作**（负责人 + 时间）。",
+            "- [ ] 对齐 **§一** 目标与 **§九** 约束，锁定 1～2 条主命题。",
+            "- [ ] 为 **§七** 支柱各补 **1 条数据证据** + **12 周内可交付动作**（负责人 + 时间）。",
             "",
             "---",
             "",
