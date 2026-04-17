@@ -117,6 +117,28 @@ def _risk_line(checked: bool, text: str) -> str:
     return f"- {mark} {text}"
 
 
+def filter_strategy_hints_for_ch8_probe(hints: Any) -> list[str]:
+    """
+    当报告以 **第八章文本挖掘** 为主呈现评论侧时，规则引擎的 ``strategy_hints`` 中仍可能含
+    「关注词出现较多」「预设场景占比」类句子（与 §8 主口径冲突）。此处剔除，避免进入策略底稿与 LLM。
+    """
+    if not isinstance(hints, list):
+        return []
+    out: list[str] = []
+    for h in hints:
+        s = _esc(h) if h is not None else ""
+        if not s.strip():
+            continue
+        if "评价文本中「" in s and "等主题出现较多" in s:
+            continue
+        if "用途/场景中「" in s and "有效评价自述" in s:
+            continue
+        out.append(s)
+    return out if out else [
+        "（与「关注词/预设场景条形图」相关的自动提示已省略；用户洞察请以报告 §8 文本挖掘与第九章节选为准。）"
+    ]
+
+
 def report_uses_chapter8_text_mining_probe(report_config: dict[str, Any] | None) -> bool:
     """
     与任务 ``report_config`` 中 ``chapter8_text_mining_probe`` 一致；未显式设置时默认 ``True``
@@ -353,12 +375,21 @@ def build_strategy_draft_markdown(
             lines.append("*摘要中无关注词/场景组，请结合评论侧分析补全本节。*")
     lines.append("")
 
-    hints = brief.get("strategy_hints") or []
+    raw_hints = brief.get("strategy_hints") or []
+    hints = (
+        filter_strategy_hints_for_ch8_probe(raw_hints)
+        if use_ch8_probe
+        else (list(raw_hints) if isinstance(raw_hints, list) else [])
+    )
     lines.extend(
         [
             "## 七、机会与策略支柱",
             "",
-            "### 摘要提示（`strategy_hints`）",
+            (
+                "### 摘要提示（`strategy_hints`，已按探针口径过滤）"
+                if use_ch8_probe
+                else "### 摘要提示（`strategy_hints`）"
+            ),
             "",
         ]
     )
@@ -385,6 +416,22 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
+    if use_ch8_probe:
+        pst_sig = brief.get("price_promotion_signals") or {}
+        has_promo = isinstance(pst_sig, dict) and bool(pst_sig)
+        lines.extend(
+            [
+                "### 促销与活动（须与报告对齐）",
+                "",
+                "*评论侧需求与场景以报告 **§8 文本挖掘** 为准，**不以**关注词/场景子串统计为论据。*",
+                (
+                    "*促销、满减、券后价差等：须与报告 **第六章** 及摘要 `price_promotion_signals`、**第九章**节选一致；成稿须承接报告已写明的活动与价差线索。*"
+                    if has_promo
+                    else "*促销与价差：若报告 **第六章/第九章** 或摘要 `price_promotion_signals` 有归纳，成稿须承接；无则勿编造具体满减门槛。*"
+                ),
+                "",
+            ]
+        )
 
     rk = bool(d.get("ack_risk_keywords"))
     rp = bool(d.get("ack_risk_price"))

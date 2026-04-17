@@ -133,3 +133,26 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("按去重 SKU", md)
         self.assertIn("120", md)
         self.assertIn("35.0%", md)
+
+    def test_chapter8_probe_filters_strategy_hints_focus_scenario_lines(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "K",
+            "strategy_hints": [
+                "评价文本中「口感、甜」等主题出现较多，可作为假设输入（非严格主题模型）。",
+                "用途/场景中「控糖/血糖相关」在约 72% 的有效评价自述中出现，可作为优先假设（词组规则）。",
+                "样本内品牌较分散，存在定位空间（需验证）。",
+            ],
+            "price_promotion_signals": {"rows_with_both_list_and_coupon": 10},
+        }
+        md = build_strategy_draft_markdown(
+            job_id=1,
+            keyword="K",
+            brief=brief,
+            report_config={"chapter8_text_mining_probe": True},
+        )
+        self.assertNotIn("评价文本中「口感", md)
+        self.assertNotIn("用途/场景中「控糖", md)
+        self.assertIn("样本内品牌较分散", md)
+        self.assertIn("促销与活动（须与报告对齐）", md)
+        self.assertIn("price_promotion_signals", md)
