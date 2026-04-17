@@ -45,6 +45,7 @@ class StrategyDraftTests(SimpleTestCase):
             keyword="K",
             brief=brief,
             strategy_decisions=decisions,
+            report_config={"chapter8_text_mining_probe": False},
         )
         self.assertIn("**本品角色**：追赶型", md)
         self.assertIn("- [x] **卡腰**", md)
@@ -54,3 +55,48 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("- [x] 关注词/场景是否**以偏概全**", md)
         self.assertIn("- [ ] 价格带是否含大促", md)
         self.assertIn("- [x] 列表集中度与深入样本品牌是否**矛盾**", md)
+
+    def test_chapter8_probe_omits_focus_scenario_count_bullets(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "低GI",
+            "comment_focus_keywords": [{"word": "口感", "count": 501}],
+            "usage_scenarios": [
+                {
+                    "scenario": "控糖/血糖相关",
+                    "count": 305,
+                    "share_of_text_units": 0.272,
+                }
+            ],
+        }
+        md = build_strategy_draft_markdown(
+            job_id=1,
+            keyword="低GI",
+            brief=brief,
+            report_config={"chapter8_text_mining_probe": True},
+        )
+        self.assertIn("文本挖掘", md)
+        self.assertNotIn("假设**：用户决策中「口感」", md)
+        self.assertNotIn("场景命题**：「控糖", md)
+
+    def test_legacy_report_shows_focus_scenario_bullets(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "低GI",
+            "comment_focus_keywords": [{"word": "口感", "count": 501}],
+            "usage_scenarios": [
+                {
+                    "scenario": "控糖/血糖相关",
+                    "count": 305,
+                    "share_of_text_units": 0.272,
+                }
+            ],
+        }
+        md = build_strategy_draft_markdown(
+            job_id=1,
+            keyword="低GI",
+            brief=brief,
+            report_config={"chapter8_text_mining_probe": False},
+        )
+        self.assertIn("假设**：用户决策中「口感」", md)
+        self.assertIn("场景命题**：「控糖/血糖相关」", md)

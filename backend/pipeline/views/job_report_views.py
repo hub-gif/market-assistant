@@ -158,6 +158,7 @@ class JobStrategyDraftView(APIView):
             report_excerpt, excerpt_src = load_report_strategy_excerpt(job.run_dir)
         except OSError:
             report_excerpt, excerpt_src = "", "none"
+        rc_job = job.report_config if isinstance(job.report_config, dict) else None
         try:
             if generator == "llm":
                 md = generate_strategy_draft_markdown_llm(
@@ -168,6 +169,7 @@ class JobStrategyDraftView(APIView):
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
                     report_strategy_excerpt=report_excerpt,
+                    report_config=rc_job,
                 )
                 src = "llm_text_ai_crawler_v1"
             else:
@@ -178,6 +180,7 @@ class JobStrategyDraftView(APIView):
                     business_notes=notes,
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
+                    report_config=rc_job,
                 )
                 src = "structured_summary_rules_v1"
         except ValueError as e:

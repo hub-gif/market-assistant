@@ -6,7 +6,10 @@ import os
 from typing import Any
 
 from ..reporting.brief_compact import compact_brief_for_llm
-from ..reporting.strategy_draft import build_strategy_draft_markdown
+from ..reporting.strategy_draft import (
+    build_strategy_draft_markdown,
+    report_uses_chapter8_text_mining_probe,
+)
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
 
 STRATEGY_SYSTEM = """你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」润色为可读的策略 Markdown。
@@ -33,6 +36,7 @@ def generate_strategy_draft_markdown_llm(
     generated_at_iso: str,
     strategy_decisions: dict[str, Any],
     report_strategy_excerpt: str | None = None,
+    report_config: dict[str, Any] | None = None,
 ) -> str:
     """
     ``report_strategy_excerpt``：与同任务宿主报告第九章「策略与机会」正文对齐的节选（见
@@ -45,6 +49,7 @@ def generate_strategy_draft_markdown_llm(
         business_notes=business_notes,
         generated_at_iso=generated_at_iso,
         strategy_decisions=strategy_decisions,
+        report_config=report_config,
     )
     excerpt_raw = (report_strategy_excerpt or "").strip()
     sys_prompt = STRATEGY_SYSTEM
@@ -58,6 +63,15 @@ def generate_strategy_draft_markdown_llm(
         rules_max: int | None,
     ) -> str:
         compact = compact_brief_for_llm(brief, max_chars=compact_max)
+        if report_uses_chapter8_text_mining_probe(report_config):
+            compact = dict(compact)
+            for k in (
+                "comment_focus_keywords",
+                "usage_scenarios",
+                "usage_scenarios_denominator",
+                "usage_scenarios_by_matrix_group",
+            ):
+                compact.pop(k, None)
         ex = (
             _truncate_strategy_narrative(excerpt_raw, excerpt_max)
             if excerpt_raw
@@ -77,6 +91,11 @@ def generate_strategy_draft_markdown_llm(
             "rules_draft_markdown": rd,
             "report_strategy_excerpt": ex,
         }
+        if report_uses_chapter8_text_mining_probe(report_config):
+            payload["structured_brief_omission_note"] = (
+                "已启用第八章文本挖掘：本 JSON 中的 structured_brief 已省略关注词/场景子串计数字段，"
+                "避免与当前报告正文口径冲突；请依规则底稿第五节说明与报告 §8 自拟假设，勿逐条编造子串命中列表。"
+            )
         raw = json.dumps(payload, ensure_ascii=False)
         if len(raw) > 500_000:
             payload["rules_draft_markdown"] = _truncate_rules_draft_md(rd, 200_000)

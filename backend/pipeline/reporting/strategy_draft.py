@@ -98,6 +98,19 @@ def _risk_line(checked: bool, text: str) -> str:
     return f"- {mark} {text}"
 
 
+def report_uses_chapter8_text_mining_probe(report_config: dict[str, Any] | None) -> bool:
+    """
+    与任务 ``report_config`` 中 ``chapter8_text_mining_probe`` 一致；未显式设置时默认 ``True``
+    （与 ``jd.runner.get_default_report_config`` 一致）。
+    为 ``True`` 时，策略稿第五节不再逐条列举关注词/场景子串命中，以免与当前报告正文口径冲突。
+    """
+    if not isinstance(report_config, dict):
+        return True
+    if "chapter8_text_mining_probe" in report_config:
+        return bool(report_config.get("chapter8_text_mining_probe"))
+    return True
+
+
 def build_strategy_draft_markdown(
     *,
     job_id: int,
@@ -106,8 +119,10 @@ def build_strategy_draft_markdown(
     business_notes: str = "",
     generated_at_iso: str = "",
     strategy_decisions: dict[str, Any] | None = None,
+    report_config: dict[str, Any] | None = None,
 ) -> str:
     """生成可下载的 Markdown：策略框架为主，附录为数据速览。"""
+    use_ch8_probe = report_uses_chapter8_text_mining_probe(report_config)
     d = strategy_decisions or {}
     pos = _esc(d.get("positioning_choice") or "").strip()
     kw = _esc(brief.get("keyword")) or _esc(keyword) or "—"
@@ -253,31 +268,41 @@ def build_strategy_draft_markdown(
     ckw = brief.get("comment_focus_keywords") or []
     usc = brief.get("usage_scenarios") or []
     lines.extend(["## 五、用户需求与场景 — 可写成策略的假设", ""])
-    lines.append(
-        "*下列由关注词/场景**计数**转化而来，是「待验证假设」而非结论；请结合评价原文抽样修订。*"
-    )
-    lines.append("")
-    if ckw:
-        for item in ckw[:8]:
-            if isinstance(item, dict):
-                w = _esc(item.get("word"))
-                c = _num(item.get("count"))
-                lines.append(
-                    f"- **假设**：用户决策中「{w}」被频繁提及（约 {c} 次统计命中）—— "
-                    f"*可追问：本品故事是否正面回应？传播关键词是否覆盖？*"
-                )
-    if usc:
-        for item in usc[:6]:
-            if isinstance(item, dict):
-                sc = _esc(item.get("scenario"))
-                cn = _num(item.get("count"))
-                sh = _pct(item.get("share_of_text_units"))
-                lines.append(
-                    f"- **场景命题**：「{sc}」在预设场景中约 {cn} 条、约占 {sh} 文本单元—— "
-                    f"*可追问：主图/详情/客服话术是否对齐该场景？*"
-                )
-    if not ckw and not usc:
-        lines.append("*摘要中无关注词/场景组结果，请补全评论侧分析后再写本节。*")
+    if use_ch8_probe:
+        lines.extend(
+            [
+                "*当前任务报告以**第八章评论侧文本挖掘**为主线（替代原关注词/场景条形图为主呈现）时，**请勿**再逐条照搬「子串命中次数」式假设列表——结构化摘要里仍可能含 `comment_focus_keywords` / `usage_scenarios` 等字段，**与当前报告正文展示口径可能不一致**。*",
+                "",
+                "*请结合报告中 **§8** 评论与情感归纳、文本挖掘小节，以及评价原文抽样，自拟若干条「待验证假设」（需可复核、可证伪）。*",
+                "",
+            ]
+        )
+    else:
+        lines.append(
+            "*下列由关注词/场景**计数**转化而来，是「待验证假设」而非结论；请结合评价原文抽样修订。*"
+        )
+        lines.append("")
+        if ckw:
+            for item in ckw[:8]:
+                if isinstance(item, dict):
+                    w = _esc(item.get("word"))
+                    c = _num(item.get("count"))
+                    lines.append(
+                        f"- **假设**：用户决策中「{w}」被频繁提及（约 {c} 次统计命中）—— "
+                        f"*可追问：本品故事是否正面回应？传播关键词是否覆盖？*"
+                    )
+        if usc:
+            for item in usc[:6]:
+                if isinstance(item, dict):
+                    sc = _esc(item.get("scenario"))
+                    cn = _num(item.get("count"))
+                    sh = _pct(item.get("share_of_text_units"))
+                    lines.append(
+                        f"- **场景命题**：「{sc}」在预设场景中约 {cn} 条、约占 {sh} 文本单元—— "
+                        f"*可追问：主图/详情/客服话术是否对齐该场景？*"
+                    )
+        if not ckw and not usc:
+            lines.append("*摘要中无关注词/场景组结果，请补全评论侧分析后再写本节。*")
     lines.append("")
 
     hints = brief.get("strategy_hints") or []
@@ -316,11 +341,16 @@ def build_strategy_draft_markdown(
     rk = bool(d.get("ack_risk_keywords"))
     rp = bool(d.get("ack_risk_price"))
     rc = bool(d.get("ack_risk_concentration"))
+    rk_kw = (
+        "评论侧量化/关键词归纳是否**以偏概全**？（需原评论抽样）"
+        if use_ch8_probe
+        else "关注词/场景是否**以偏概全**？（需原评论抽样）"
+    )
     lines.extend(
         [
             "## 七、风险与待证伪",
             "",
-            _risk_line(rk, "关注词/场景是否**以偏概全**？（需原评论抽样）"),
+            _risk_line(rk, rk_kw),
             _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗规则）"),
             _risk_line(rc, "列表集中度与深入样本品牌是否**矛盾**？（需解释渠道差异）"),
             "",
