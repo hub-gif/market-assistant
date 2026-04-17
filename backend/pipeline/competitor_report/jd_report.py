@@ -91,6 +91,7 @@ from pipeline.competitor_report.list_mix import (  # noqa: E402
     _brand_cr,
     _counter_mix_top_rows_with_remainder,
     _search_list_proxies,
+    _shop_concentration_by_unique_sku,
     _structure_brands,
     _structure_names_for_pie_counter,
     _structure_shops,
@@ -167,6 +168,11 @@ def build_competitor_markdown(
     shops_for_cr = _structure_names_for_pie_counter(shops_s)
     brands_for_cr = _structure_names_for_pie_counter(brands_s)
     cr1_shop, cr3_shop, top_shop_s, _ = _brand_cr(shops_for_cr)
+    shop_unique_sku_basis = (
+        _shop_concentration_by_unique_sku(search_export_rows)
+        if list_export
+        else None
+    )
     cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_for_cr)
     # §4.3 类目分布：深入合并表（与 §5 竞品矩阵同一细类划分，非搜索列表行）
     cm_structure = _category_mix(merged_rows, top_k=12)
@@ -320,12 +326,21 @@ def build_competitor_markdown(
         if cr3_shop is not None:
             exec_bullets.append(
                 f"竞争结构（{src}，第四章）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」），"
-                f"前三店铺合计份额 ≈ **{100 * cr3_shop:.1f}%**（按列表行计，同一 SKU 多行会重复计）。"
+                f"前三店铺合计份额 ≈ **{100 * cr3_shop:.1f}%**（**按列表行计**，同一 SKU 多行会重复计；**勿与「去重 SKU 款数占比」或市占混淆**）。"
             )
         else:
             exec_bullets.append(
-                f"竞争结构（{src}，第四章）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」）。"
+                f"竞争结构（{src}，第四章）：**店铺** 第一大店铺份额 ≈ **{100 * cr1_shop:.1f}%**（「{top_shop_s}」；**按列表行计**）。"
             )
+        if shop_unique_sku_basis and shop_unique_sku_basis.get("n_unique_skus"):
+            u = shop_unique_sku_basis
+            fs = u.get("first_share")
+            lab = (u.get("top_label") or "").strip()
+            if fs is not None and lab:
+                exec_bullets.append(
+                    f"**对照（按去重 SKU）**：同批列表共 **{u['n_unique_skus']}** 个去重 SKU，第一大店铺「{lab}」"
+                    f"约占 **{100 * float(fs):.1f}%**（每 SKU 计 1 次；**不是**全渠道销量或市占）。"
+                )
     elif not list_export and cr1_deep is not None and top_brand_deep:
         if cr3_deep is not None:
             exec_bullets.append(
@@ -548,7 +563,7 @@ def build_competitor_markdown(
             _embed_chart(
                 run_dir,
                 "chart_shop_rows_pie.png",
-                "店铺列表曝光占比（扇形图；按整理后的店铺名计数，与结构化摘要中的店铺占比统计一致；"
+                "店铺列表曝光占比（扇形图；**按列表行计**的店铺名计数，与结构化摘要一致；若与「按去重 SKU」口径差异大，见下文规则解读；"
                 "长尾并入「（其余店铺）」；扇形内再合并为「其他」）",
             )
         )
@@ -559,6 +574,7 @@ def build_competitor_markdown(
                 top=top_shop_s or "",
                 shop_rows_n=shop_rows_n,
                 n_structure=n_structure,
+                unique_sku_basis=shop_unique_sku_basis,
             )
         )
         lines.append(
@@ -1019,6 +1035,11 @@ def build_competitor_brief(
     shops_for_cr = _structure_names_for_pie_counter(shops_s)
     brands_for_cr = _structure_names_for_pie_counter(brands_s)
     cr1_shop, cr3_shop, top_shop_s, top_shop_share = _brand_cr(shops_for_cr)
+    shop_unique_sku_basis = (
+        _shop_concentration_by_unique_sku(search_export_rows)
+        if list_export
+        else None
+    )
     cr1_list_brand, cr3_list_brand, top_list_brand, _ = _brand_cr(brands_for_cr)
     cm_structure = _category_mix(merged_rows, top_k=12)
     min_brand_rows = max(5, int(0.02 * n_structure)) if n_structure else 5
@@ -1238,6 +1259,7 @@ def build_competitor_brief(
                 "top_three_combined_share": cr3_shop,
                 "top_label": top_shop_s,
                 "top_share_pct": top_shop_share,
+                "unique_sku_basis": shop_unique_sku_basis,
             },
             "list_brand_field": list_brand_block,
             "detail_brand_among_merged": {
@@ -1294,7 +1316,7 @@ def build_competitor_brief(
             "与在线分析报告各章**计数规则**一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
             "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
             "评价语气为关键词粗判，非深度学习情感模型。",
-            "「集中度」中：最大一家占比、前三名合计占比为小数（如 0.12 表示约 12%），对应列表或深入样本中的相关行。",
+            "「集中度」中：默认按**列表行**计数（同一 SKU 多页曝光会重复计）；`shops_from_list.unique_sku_basis` 为按**去重 SKU** 的对照口径。二者均**不是**销量、库存或全渠道市场份额。",
         ],
     }
     return _sanitize_json_numbers(out)

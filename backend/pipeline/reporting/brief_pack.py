@@ -84,11 +84,24 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
             [
                 "## 店铺集中度（列表）",
                 "",
-                f"- **第一大店铺份额**：{_pct(concentration_first_share(shops))}（第一店铺：{shops.get('top_label') or '—'}）",
-                f"- **前三店铺合计份额**：{_pct(concentration_top_three_share(shops))}",
+                f"- **第一大店铺份额（按列表行）**：{_pct(concentration_first_share(shops))}（第一店铺：{shops.get('top_label') or '—'}）",
+                f"- **前三店铺合计份额（按列表行）**：{_pct(concentration_top_three_share(shops))}",
                 "",
             ]
         )
+        usb = shops.get("unique_sku_basis")
+        if isinstance(usb, dict) and usb.get("n_unique_skus"):
+            u1 = usb.get("first_share")
+            u3 = usb.get("top_three_combined_share")
+            if u1 is not None:
+                lines.extend(
+                    [
+                        f"- **按去重 SKU 计**：共 **{_num(usb.get('n_unique_skus'))}** 个 SKU；"
+                        f"第一大店铺 **{_pct(u1)}**（「{usb.get('top_label') or '—'}」）",
+                        f"- **前三店铺合计（按去重 SKU）**：{_pct(u3)}",
+                        "",
+                    ]
+                )
     dbrand = conc.get("detail_brand_among_merged") or {}
     if concentration_first_share(dbrand) is not None or dbrand.get("top_label"):
         lines.extend(

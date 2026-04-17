@@ -167,6 +167,7 @@ def _lines_4_reading_shop(
     top: str,
     shop_rows_n: int,
     n_structure: int,
+    unique_sku_basis: dict[str, Any] | None = None,
 ) -> list[str]:
     if not shop_rows_n:
         return []
@@ -178,13 +179,26 @@ def _lines_4_reading_shop(
     ]
     if cr1 is not None and (top or "").strip():
         lines.append(
-            f"- 第一大店铺「{_md_cell(top.strip(), 40)}」约占 **{100 * cr1:.1f}%**；"
-            "该指标刻画的是**列表可见度**而非销量，适合用于判断货架被哪些店铺占据。"
+            f"- 第一大店铺「{_md_cell(top.strip(), 40)}」约占 **{100 * cr1:.1f}%**（**按列表行计**，同一 SKU 多行重复曝光会重复计）；"
+            "该指标刻画的是**列表可见度**而非销量或全渠道市占。"
         )
     if cr3 is not None:
         lines.append(
             f"- 前三店铺合计约 **{100 * cr3:.1f}%**；若集中度高，可考虑从店铺矩阵、旗舰店/专营店布局等角度拆解竞争。"
         )
+    if isinstance(unique_sku_basis, dict) and unique_sku_basis.get("n_unique_skus"):
+        u1 = unique_sku_basis.get("first_share")
+        u3 = unique_sku_basis.get("top_three_combined_share")
+        utop = (unique_sku_basis.get("top_label") or "").strip()
+        nuk = unique_sku_basis.get("n_unique_skus")
+        if isinstance(u1, (int, float)) and utop:
+            lines.append(
+                f"- **按去重 SKU 计**（列表内共 **{nuk}** 个 SKU，每个计 1 次；店铺取该 SKU 首次出现行）："
+                f"第一大店铺「{_md_cell(utop, 40)}」约占 **{100 * float(u1):.1f}%**。"
+                "若与上行「按行计」差异大，通常因同一 SKU 在多页重复出现；**勿将行占比误称为「SKU 款数占比」或「市场份额」**。"
+            )
+        if isinstance(u3, (int, float)):
+            lines.append(f"- 前三店铺合计（按去重 SKU）约 **{100 * float(u3):.1f}%**。")
     lines.append("")
     return lines
 

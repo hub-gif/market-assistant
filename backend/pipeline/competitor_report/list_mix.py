@@ -99,6 +99,42 @@ def _search_list_proxies(rows: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
+def _shop_concentration_by_unique_sku(
+    rows: list[dict[str, str]],
+) -> dict[str, Any] | None:
+    """
+    列表导出专用：按 **去重 SKU** 归属店铺后计集中度（每个 SKU 计 1 次；店铺名取该 SKU **首次出现** 的列表行）。
+
+    与 ``_structure_names_for_pie_counter(_structure_shops(...))`` 的「按列表行计」可形成对照：
+    同一 SKU 在多页重复曝光时，行占比会高于去重 SKU 占比。**不是**销量、库存或全渠道市场份额。
+    """
+    if not rows:
+        return None
+    sku_k = JD_SEARCH_CSV_HEADERS["sku_id"]
+    shop_k = JD_SEARCH_CSV_HEADERS["shop_name"]
+    sku_to_shop: dict[str, str] = {}
+    for r in rows:
+        sid = _cell(r, sku_k)
+        sh = _cell(r, shop_k, _LEGACY_SHOP_NAME_KEY)
+        if not sid or not sh:
+            continue
+        sid = sid.strip()
+        sh = sh.strip()
+        if not sid or not sh:
+            continue
+        if sid not in sku_to_shop:
+            sku_to_shop[sid] = sh
+    if not sku_to_shop:
+        return None
+    c1, c3, top, _ = _brand_cr(list(sku_to_shop.values()))
+    return {
+        "first_share": c1,
+        "top_three_combined_share": c3,
+        "top_label": top,
+        "n_unique_skus": len(sku_to_shop),
+    }
+
+
 def _structure_shops(rows: list[dict[str, str]], *, list_export: bool) -> list[str]:
     if list_export:
         return [
@@ -132,6 +168,7 @@ __all__ = [
     "_brand_cr",
     "_counter_mix_top_rows_with_remainder",
     "_search_list_proxies",
+    "_shop_concentration_by_unique_sku",
     "_structure_brands",
     "_structure_names_for_pie_counter",
     "_structure_shops",

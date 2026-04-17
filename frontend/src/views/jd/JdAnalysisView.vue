@@ -11,6 +11,15 @@ function pctShare(x) {
   return `${(n * 100).toFixed(1)}%`
 }
 
+/** 集中度块：新键 first_share / top_three_combined_share，旧键 cr1 / cr3 */
+function concShare(block, key) {
+  if (!block || typeof block !== 'object') return null
+  const v0 = key === 'first' ? block.first_share : block.top_three_combined_share
+  if (v0 != null && v0 !== '') return v0
+  const legacy = key === 'first' ? block.cr1 : block.cr3
+  return legacy != null && legacy !== '' ? legacy : null
+}
+
 function briefHumanSummary(j) {
   const rows = []
   if (!j || typeof j !== 'object') return rows
@@ -31,46 +40,69 @@ function briefHumanSummary(j) {
   if (conc && typeof conc === 'object') {
     const shops = conc.shops_from_list
     if (shops && typeof shops === 'object') {
-      if (shops.top_label && shops.cr1 != null) {
+      const cr1 = concShare(shops, 'first')
+      const cr3 = concShare(shops, 'top3')
+      if (shops.top_label && cr1 != null) {
         rows.push({
           label: '第一大店铺（占列表行比例）',
-          value: `${pctShare(shops.cr1)} · ${shops.top_label}`,
+          value: `${pctShare(cr1)} · ${shops.top_label}`,
         })
       }
-      if (shops.cr3 != null) {
+      if (cr3 != null) {
         rows.push({
           label: '前三大店铺合计（占列表行比例）',
-          value: pctShare(shops.cr3),
+          value: pctShare(cr3),
         })
+      }
+      const usb = shops.unique_sku_basis
+      if (usb && typeof usb === 'object' && usb.n_unique_skus != null) {
+        const u1 = concShare(usb, 'first')
+        const u3 = concShare(usb, 'top3')
+        if (usb.top_label && u1 != null) {
+          rows.push({
+            label: '第一大店铺（占去重 SKU 比例）',
+            value: `${pctShare(u1)} · ${usb.top_label} · 共 ${usb.n_unique_skus} 个 SKU`,
+          })
+        }
+        if (u3 != null) {
+          rows.push({
+            label: '前三大店铺合计（占去重 SKU）',
+            value: pctShare(u3),
+          })
+        }
       }
     }
     const lb = conc.list_brand_field
     if (lb && typeof lb === 'object') {
-      if (lb.top_label && lb.cr1 != null) {
+      const l1 = concShare(lb, 'first')
+      const l3 = concShare(lb, 'top3')
+      if (lb.top_label && l1 != null) {
         rows.push({
           label: '第一大品牌（列表侧，按行）',
-          value: `${pctShare(lb.cr1)} · ${lb.top_label}`,
+          value: `${pctShare(l1)} · ${lb.top_label}`,
         })
       }
-      if (lb.cr3 != null) {
+      if (l3 != null) {
         rows.push({
           label: '前三大品牌合计（列表侧）',
-          value: pctShare(lb.cr3),
+          value: pctShare(l3),
         })
       }
     }
     const db = conc.detail_brand_among_merged
     if (db && typeof db === 'object') {
-      if (db.top_label && db.cr1 != null) {
+      const d1 = concShare(db, 'first')
+      const d3 = concShare(db, 'top3')
+      if (db.top_label && d1 != null) {
         rows.push({
           label: '第一大品牌（深入样本）',
-          value: `${pctShare(db.cr1)} · ${db.top_label}`,
+          value: `${pctShare(d1)} · ${db.top_label}`,
         })
       }
-      if (db.cr3 != null) {
+      if (d3 != null) {
         rows.push({
           label: '前三大品牌合计（深入样本）',
-          value: pctShare(db.cr3),
+          value: pctShare(d3),
         })
       }
     }
