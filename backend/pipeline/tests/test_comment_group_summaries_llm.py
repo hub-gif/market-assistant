@@ -67,7 +67,7 @@ class CommentGroupSummariesLlmTests(SimpleTestCase):
         self.assertTrue(any("饼干" in s for s in pl[0]["sample_text_snippets"]))
 
         with patch(
-            "pipeline.llm.generate._call_llm",
+            "pipeline.llm.generate_group_summaries.call_llm",
             return_value="#### 饼干\n单测归纳段落。",
         ) as mock_llm:
             out = generate_comment_group_summaries_llm(pl, keyword="低GI测试")
@@ -87,7 +87,7 @@ class CommentGroupSummariesLlmTests(SimpleTestCase):
         """与生产「按细类拆分」一致：仅一个细类时只请求一次。"""
         pl, _, _ = _payload_single_category_biscuit()
         with patch(
-            "pipeline.llm.generate._call_llm",
+            "pipeline.llm.generate_group_summaries.call_llm",
             return_value="#### 饼干\nchunked。",
         ) as mock_llm:
             out = generate_comment_group_summaries_llm_chunked(pl, keyword="低GI测试")

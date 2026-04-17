@@ -20,7 +20,7 @@ class ChunkedGroupSummariesTests(SimpleTestCase):
             "x\n\ny",
         )
 
-    @patch("pipeline.llm.generate.generate_matrix_group_summaries_llm")
+    @patch("pipeline.llm.generate_group_summaries.generate_matrix_group_summaries_llm")
     def test_matrix_chunked_one_call_per_group(self, mock_mx) -> None:
         mock_mx.side_effect = (
             lambda groups, keyword: f"#### {groups[0]['group']}\ntext"
