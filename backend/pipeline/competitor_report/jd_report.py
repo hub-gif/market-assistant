@@ -10,12 +10,11 @@
 **仅复用已有目录生成报告时**不需要跑浏览器，只需该目录下已有 CSV / ``run_meta.json``。
 
 实现位于 ``pipeline.competitor_report.jd_report``；爬虫仅在 ``crawler_copy/jd_pc_search``。
-根目录 ``pipeline.jd_competitor_report`` 为兼容入口。
 
 用法：
 
 - **重新抓取并出报告**：``EXISTING_RUN_DIR = None``，配置 ``KEYWORD``（及可选 ``OVERRIDE_*``），在 ``backend`` 目录下执行
-  ``python -m pipeline.jd_competitor_report``；或沿用爬虫目录下的兼容入口 ``python jd_competitor_report.py``（见该文件说明）。
+  ``python -m pipeline.competitor_report.jd_report``；或沿用爬虫目录下的兼容入口 ``python jd_competitor_report.py``（见该文件说明）。
 - **只分析已有批次**：将 ``EXISTING_RUN_DIR`` 设为 ``pipeline_runs/<时间戳>_<关键词>/`` 的绝对或相对路径（相对当前工作目录），
   再执行同一命令；**不重新抓取**。关键词优先用本文件 ``KEYWORD``，否则读 ``run_meta.json`` 的 ``keyword``，再否则从目录名
   ``YYYYMMDD_HHMMSS_<词>`` 推断。

@@ -1,4 +1,4 @@
-"""CSV 表头键、运行默认调参与关注词/场景配置（与 ``pipeline.jd_competitor_report`` 顶层一致）。"""
+"""CSV 表头键、运行默认调参与关注词/场景配置（与 ``pipeline.competitor_report.jd_report`` 顶层一致）。"""
 from __future__ import annotations
 
 from pipeline.csv_schema import (

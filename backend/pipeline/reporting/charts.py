@@ -545,7 +545,7 @@ def generate_report_charts(
     )
 
     def scenario_group_asset_slug(group: str, index: int) -> str:
-        """与 ``pipeline.jd_competitor_report`` / ``report_md_helpers._scenario_group_asset_slug`` 保持一致。"""
+        """与 ``pipeline.competitor_report.jd_report`` / ``report_md_helpers._scenario_group_asset_slug`` 保持一致。"""
         raw = (group or "").strip()
         core = re.sub(r"[^\w\u4e00-\u9fff-]", "", raw)[:20]
         if not core:

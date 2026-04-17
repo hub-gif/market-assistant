@@ -13,7 +13,7 @@ from pipeline.llm.generate import (
 
 
 def _load_jcr():
-    from pipeline import jd_competitor_report as jcr  # noqa: WPS433
+    from pipeline.competitor_report import jd_report as jcr  # noqa: WPS433
 
     return jcr
 

@@ -195,7 +195,7 @@ class JobResumeView(APIView):
 
 
 class ReportConfigDefaultsView(APIView):
-    """返回 ``jd_competitor_report`` 中与脚本常量一致的默认报告调参 JSON。"""
+    """返回 ``pipeline.competitor_report.jd_report`` 中与脚本常量一致的默认报告调参 JSON。"""
 
     def get(self, request):
         try:

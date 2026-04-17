@@ -112,7 +112,7 @@ paths:
   /api/report-config-defaults/:
     get:
       tags: [jobs]
-      summary: 报告调参默认模板（与 jd_competitor_report 脚本常量一致）
+      summary: 报告调参默认模板（与 pipeline.competitor_report.jd_report 脚本常量一致）
       responses:
         "200":
           description: OK
@@ -501,7 +501,7 @@ components:
           type: string
           enum: [rules, llm]
           default: rules
-          description: rules=jd_competitor_report 规则引擎；llm=结构化摘要 JSON + AI_crawler 文本接口
+          description: rules=竞品报告规则引擎（jd_report）；llm=结构化摘要 JSON + AI_crawler 文本接口
 
     StrategyDraftRequest:
       type: object
