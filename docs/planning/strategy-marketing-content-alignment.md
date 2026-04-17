@@ -7,7 +7,8 @@
 | 能力 | 位置 |
 |------|------|
 | 规则策略底稿 | `pipeline/reporting/strategy_draft.py` → `build_strategy_draft_markdown` |
-| 策略稿 LLM 润色 | `pipeline/llm/generate_strategy.py` → `generate_strategy_draft_markdown_llm` |
+| 策略稿 LLM 润色 | `pipeline/llm/generate_strategy.py` → `generate_strategy_draft_markdown_llm`（payload 含 `report_strategy_excerpt`） |
+| 第九章节选加载（S1） | `pipeline/reporting/report_strategy_excerpt.py` → `load_report_strategy_excerpt` |
 | 报告第九章策略归纳 | `generate_strategy_opportunities_llm`（与 `competitor_brief` + 各章节选对齐） |
 | 策略稿 API / 导出 | `pipeline/views/job_report_views.py` → `JobStrategyDraftView` |
 | 简报与压缩 | `pipeline/reporting/brief_compact.py` |
@@ -26,15 +27,16 @@
 
 ---
 
-## 2. 策略稿：与报告内「策略建议」对齐（阶段 S1）
+## 2. 策略稿：与报告内「策略建议」对齐（阶段 S1）— **已落地**
 
 **目标**：独立下载的策略稿与宿主报告第九章**方向一致**，避免与已发布报告矛盾。
 
-**拟议实现要点**：
+**实现要点（与代码一致）**：
 
-1. 策略稿生成/润色前，加载本任务 **`strategy_opportunities_llm.json`**（若存在），或从 **`competitor_analysis.md`** 抽取第九章相关正文片段，作为 **`report_strategy_excerpt`** 并入 LLM 的 JSON payload。  
-2. 在 `STRATEGY_SYSTEM` 中明确：**须与 `report_strategy_excerpt` 策略方向一致**；若业务备注与报告冲突，文中标注「与报告不一致处见业务备注」。  
-3. 产品侧：`generator: rules | llm` 区分展示；**规则版**可作为审计与对外发送前的对照底稿。
+1. **`load_report_strategy_excerpt(run_dir)`**：优先读 `strategy_opportunities_llm.json` 的 **`markdown`**（runner 在第九章大模型成功时写入）；否则从 **`competitor_analysis.md`** 截取 `## 九、策略与机会提示` 至 `## 附录` 之前。  
+2. **`STRATEGY_SYSTEM`**：当 `report_strategy_excerpt` 非空时，润色稿须与节选**战略方向一致**；若 `business_notes` / `strategy_decisions` 与节选冲突，须标注「与报告第九章策略归纳不一致之处见业务备注」类表述。节选为空时不得编造第九章结论。  
+3. **API**：`POST /api/jobs/{id}/strategy-draft/` 响应增加 `report_strategy_excerpt_source`、`report_strategy_excerpt_chars`（`generator=rules` 时亦返回，便于核对是否加载到节选）。  
+4. 产品侧：`generator: rules | llm` 仍为既有行为；规则版作审计底稿。
 
 **验收**：抽样任务核对「第九章要点 ↔ 策略稿 bullet」可对应；数字仅来自 brief/底稿。
 
@@ -73,7 +75,7 @@
 
 | 阶段 | 内容 | 产出 |
 |------|------|------|
-| **S1** | 策略稿 payload 增加 `report_strategy_excerpt`，收紧 `STRATEGY_SYSTEM` | 策略稿与第九章可对照 |
+| **S1** | 策略稿 payload 增加 `report_strategy_excerpt`，收紧 `STRATEGY_SYSTEM` | ✅ 已合并：`report_strategy_excerpt.py`、runner 落盘 `markdown`、OpenAPI 响应字段 |
 | **S2** | 营销模块 v1：单模板 + 强约束提示词 + 落盘 + 复用 Word/PDF 导出 | 可演示的营销初稿 |
 | **S3** | 前端：任务页入口、受众与渠道、生成历史 | 产品闭环 |
 | **S4**（可选） | 轻量校验：输出中数字与 brief 同源性启发式检查 | 降低明显幻觉 |
@@ -92,5 +94,6 @@
 | 日期 | 说明 |
 |------|------|
 | 2026-04-17 | 首版：对齐原则、S1～S4、代码锚点、API 示意。 |
+| 2026-04-18 | S1 落地：`load_report_strategy_excerpt`、`STRATEGY_SYSTEM` 对齐条款、`strategy_opportunities_llm.json.markdown`、策略稿 API 响应字段。 |
 
 后续变更请在本表追加一行，并在正文相应章节修改。

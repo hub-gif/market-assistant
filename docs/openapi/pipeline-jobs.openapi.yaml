@@ -585,3 +585,10 @@ components:
           example: structured_summary_rules_v1
         markdown:
           type: string
+        report_strategy_excerpt_source:
+          type: string
+          description: none=未找到第九章正文；json_markdown=strategy_opportunities_llm.json 的 markdown；competitor_analysis_md=从 competitor_analysis.md 截取
+          enum: [none, json_markdown, competitor_analysis_md]
+        report_strategy_excerpt_chars:
+          type: integer
+          description: 参与对齐的第九章节选字符数（供策略稿 LLM 的 report_strategy_excerpt；generator=rules 时仅元数据）

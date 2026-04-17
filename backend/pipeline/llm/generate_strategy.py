@@ -12,7 +12,9 @@ from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window
 STRATEGY_SYSTEM = """你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」润色为可读的策略 Markdown。
 
 **规则**：
-- 输入 JSON 含 `rules_draft_markdown`（规则引擎生成的底稿，与同任务数据一致）、`structured_brief`（摘要子集）、`strategy_decisions`、`business_notes` 等；
+- 输入 JSON 含 `rules_draft_markdown`（规则引擎生成的底稿，与同任务数据一致）、`structured_brief`（摘要子集）、`strategy_decisions`、`business_notes` 等；可选 `report_strategy_excerpt`（与同任务宿主报告**第九章**「策略与机会」正文同源，来自已落盘产物）。
+- **与报告第九章对齐（硬性，当 `report_strategy_excerpt` 非空时）**：润色后的全文在**战略方向与主要判断**上须与该节选**一致**，不得写出与之**明显矛盾**的结论（如定价档位、差异化主线、主要风险判断）；若 `business_notes` 或 `strategy_decisions` 与节选冲突，须在正文适当位置简短说明「与报告第九章策略归纳不一致之处见业务备注」类表述，且**不得**把节选与 `structured_brief` 中均未出现的数字当作既定事实。
+- **当 `report_strategy_excerpt` 为空或仅为占位说明**：表示报告侧未生成或未重跑第九章大模型正文，仅依据 `rules_draft_markdown` 与 `structured_brief` 润色，**不得编造**与可能存在的报告第九章结论。
 - **不得编造**输入中不存在的销量、占比、价格数字；若底稿与摘要中有数字，须保持一致；表述集中度时用「第一大……份额」「前三家合计」等中文，**不要用** CR1、CR3 等缩写；
 - 若 `structured_brief` 含 `matrix_overview_for_llm` 或矩阵相关字段，策略中应**呼应**细分类目分组与竞品矩阵结论，不得无故删光矩阵相关建议；
 - 可调整段落衔接、标题层级、列表与表格呈现，使更易读；可补充「建议」「待业务确认」类表述，但不虚构竞品名称或数据；
@@ -29,7 +31,12 @@ def generate_strategy_draft_markdown_llm(
     business_notes: str,
     generated_at_iso: str,
     strategy_decisions: dict[str, Any],
+    report_strategy_excerpt: str | None = None,
 ) -> str:
+    """
+    ``report_strategy_excerpt``：与同任务宿主报告第九章「策略与机会」正文对齐的节选（见
+    ``reporting.report_strategy_excerpt.load_report_strategy_excerpt``）；空字符串表示未生成或未重跑第九章大模型。
+    """
     rules_md = build_strategy_draft_markdown(
         job_id=job_id,
         keyword=keyword,
@@ -39,6 +46,7 @@ def generate_strategy_draft_markdown_llm(
         strategy_decisions=strategy_decisions,
     )
     compact = compact_brief_for_llm(brief, max_chars=80_000)
+    excerpt = (report_strategy_excerpt or "").strip()
     payload = {
         "job_id": job_id,
         "keyword": keyword,
@@ -47,6 +55,7 @@ def generate_strategy_draft_markdown_llm(
         "business_notes": business_notes,
         "structured_brief": compact,
         "rules_draft_markdown": rules_md,
+        "report_strategy_excerpt": excerpt,
     }
     raw = json.dumps(payload, ensure_ascii=False)
     if len(raw) > 500_000:

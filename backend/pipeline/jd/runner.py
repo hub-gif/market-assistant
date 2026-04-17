@@ -751,6 +751,8 @@ def write_competitor_analysis_for_run_dir(
             strategy_opp_llm_rec["prior_chapter_narrative_keys"] = sorted(
                 _strategy_narratives.keys()
             )
+            if (llm_strategy_opp_md or "").strip():
+                strategy_opp_llm_rec["markdown"] = llm_strategy_opp_md
         except Exception as e:
             strategy_opp_llm_rec["ok"] = False
             strategy_opp_llm_rec["error"] = str(e)

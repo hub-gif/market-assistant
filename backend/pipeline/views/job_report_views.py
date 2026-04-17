@@ -22,6 +22,7 @@ from ..llm.generate import generate_strategy_draft_markdown_llm
 from ..models import JobStatus, PipelineJob
 from ..reporting.brief_pack import build_brief_pack_zip_bytes
 from ..reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
+from ..reporting.report_strategy_excerpt import load_report_strategy_excerpt
 from ..reporting.strategy_draft import build_strategy_draft_markdown
 from ..serializers import PipelineJobSerializer, StrategyDraftRequestSerializer
 from .common import job_run_dir_usable
@@ -151,6 +152,12 @@ class JobStrategyDraftView(APIView):
 
         gen_at = timezone.now().isoformat()
         generator = (vd.get("generator") or "rules").strip()
+        excerpt_src = "none"
+        report_excerpt = ""
+        try:
+            report_excerpt, excerpt_src = load_report_strategy_excerpt(job.run_dir)
+        except OSError:
+            report_excerpt, excerpt_src = "", "none"
         try:
             if generator == "llm":
                 md = generate_strategy_draft_markdown_llm(
@@ -160,6 +167,7 @@ class JobStrategyDraftView(APIView):
                     business_notes=notes,
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
+                    report_strategy_excerpt=report_excerpt,
                 )
                 src = "llm_text_ai_crawler_v1"
             else:
@@ -179,16 +187,17 @@ class JobStrategyDraftView(APIView):
                 {"detail": f"大模型网关错误：{e}"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
-        return Response(
-            {
-                "schema_version": 1,
-                "job_id": job.id,
-                "keyword": job.keyword,
-                "generated_at": gen_at,
-                "source": src,
-                "markdown": md,
-            }
-        )
+        body: dict[str, object] = {
+            "schema_version": 1,
+            "job_id": job.id,
+            "keyword": job.keyword,
+            "generated_at": gen_at,
+            "source": src,
+            "markdown": md,
+            "report_strategy_excerpt_source": excerpt_src,
+            "report_strategy_excerpt_chars": len(report_excerpt or ""),
+        }
+        return Response(body)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
