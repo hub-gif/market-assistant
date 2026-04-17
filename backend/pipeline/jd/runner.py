@@ -1,5 +1,5 @@
 """
-使用 ``crawler_copy/jd_pc_search`` 中的副本脚本执行流水线并生成竞品 Markdown。
+使用 ``crawler_copy/jd_pc_search`` 中的采集脚本执行流水线；竞品 Markdown 由 ``pipeline.jd_competitor_report`` 生成。
 依赖环境变量 ``LOW_GI_PROJECT_ROOT``（由 Django settings 从 ``market_assistant/.env`` 注入）。
 """
 from __future__ import annotations
@@ -133,13 +133,14 @@ def try_write_competitor_report_if_merged_exists(
 
 
 def _jd_crawler_modules():
+    from pipeline import jd_competitor_report as jcr  # noqa: WPS433
+
     root = Path(settings.CRAWLER_JD_ROOT)
     if not root.is_dir():
         raise FileNotFoundError(f"爬虫副本目录不存在: {root}")
     root_s = str(root.resolve())
     if root_s not in sys.path:
         sys.path.insert(0, root_s)
-    import jd_competitor_report as jcr  # noqa: WPS433
     import jd_keyword_pipeline as kpl  # noqa: WPS433
 
     return jcr, kpl
@@ -163,7 +164,7 @@ def use_chunked_group_summaries_llm(report_config: dict[str, Any] | None) -> boo
 
 
 def get_default_report_config() -> dict[str, Any]:
-    """与 ``jd_competitor_report`` 模块常量一致的默认报告调参（供前端回填）。"""
+    """与 ``pipeline.jd_competitor_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
     return {
         "llm_comment_sentiment": True,

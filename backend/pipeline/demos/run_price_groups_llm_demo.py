@@ -26,7 +26,7 @@ JCR_ROOT = BACKEND_ROOT / "crawler_copy" / "jd_pc_search"
 if str(JCR_ROOT) not in sys.path:
     sys.path.insert(0, str(JCR_ROOT))
 
-import jd_competitor_report as jcr  # noqa: E402
+from pipeline import jd_competitor_report as jcr  # noqa: E402
 import jd_keyword_pipeline as kpl  # noqa: E402
 
 

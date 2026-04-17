@@ -25,7 +25,7 @@ PC 搜索导出 CSV、评价扁平 CSV、详情汇总 CSV（``detail_ware_export
 默认启用 **应用场景筛选**（``brief_content.txt`` 4.1 中式面点/主食 + 4.2 烘焙）：仅命中关键词的 SKU 进入详情与评论队列；词表见 ``scenario_filter.py``。``SCENARIO_FILTER_ENABLED=False`` 可关闭；``SCENARIO_FILTER_PC_SEARCH_CSV="filtered"`` 可使导出 CSV 与筛选后列表一致。
 各 SKU 完整接口 JSON 仍在 ``detail/ware_{sku}_response.json``。
 
-端到端竞品速览 Markdown：配置 ``jd_competitor_report.py`` 顶部 ``KEYWORD`` 后执行 ``python jd_competitor_report.py``（内部调用本模块 ``main(keyword=...)``）。
+端到端竞品速览 Markdown：在 ``backend`` 下配置 ``pipeline.jd_competitor_report`` 顶部 ``KEYWORD`` 后执行 ``python -m pipeline.jd_competitor_report``；或执行本目录兼容入口 ``python jd_competitor_report.py``（内部调用本模块 ``main(keyword=...)``）。
 """
 
 from __future__ import annotations
@@ -317,7 +317,7 @@ def main(keyword: str | None = None) -> Path:
     """
     跑完整条流水线。``keyword`` 非空时覆盖文件内 ``KEYWORD``；返回本次运行目录。
 
-    供 ``jd_competitor_report`` 等脚本 ``import`` 调用；命令行仍执行 ``main()`` 无参。
+    供 ``pipeline.jd_competitor_report`` 等脚本 ``import`` 调用；命令行仍执行 ``main()`` 无参。
     """
     try:
         if hasattr(sys.stdout, "reconfigure"):

@@ -2,11 +2,8 @@
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
-from django.conf import settings
 from django.test import SimpleTestCase
 
 from pipeline.llm.generate import (
@@ -16,10 +13,7 @@ from pipeline.llm.generate import (
 
 
 def _load_jcr():
-    root = Path(settings.CRAWLER_JD_ROOT).resolve()
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-    import jd_competitor_report as jcr  # noqa: WPS433
+    from pipeline import jd_competitor_report as jcr  # noqa: WPS433
 
     return jcr
 

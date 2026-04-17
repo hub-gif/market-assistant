@@ -1,24 +1,18 @@
 """结构化竞品摘要：空样本烟测（不依赖真实 run_dir CSV）。"""
 from __future__ import annotations
 
-import sys
 import tempfile
 from pathlib import Path
 
-from django.conf import settings
 from django.test import SimpleTestCase
 
+from pipeline import jd_competitor_report as jcr
 from pipeline.csv_schema import infer_total_sales_from_sales_floor
 from pipeline.reporting.charts import _cn_volume_int
 
 
 class BuildCompetitorBriefTests(SimpleTestCase):
     def test_empty_merged_json_safe(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             (run_dir / "pc_search_raw").mkdir(parents=True)
@@ -43,11 +37,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         json.dumps(out)
 
     def test_comment_sentiment_llm_payload_has_semantic_pool(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         texts = ["口感软硬适中很好吃", "太差了不建议"]
         attr = [f"【细类：A｜SKU：1｜品名：x｜店铺：y】{t}" for t in texts]
         pl = jcr.build_comment_sentiment_llm_payload(
@@ -61,11 +50,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertGreaterEqual(len(pl["sample_reviews_semantic_pool"]), 1)
 
     def test_comment_sentiment_score_then_lexeme(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         texts = ["很好吃", "太差了", "一般般"]
         scores = [5, 1, 3]
         lex = jcr._comment_sentiment_lexicon(texts, scores)
@@ -77,22 +61,12 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(pl.get("sentiment_bucket_method"), "score_then_lexeme")
 
     def test_comment_sentiment_all_scores_missing_falls_back_keyword(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         texts = ["好吃推荐", "差评"]
         scores = [None, None]
         lex = jcr._comment_sentiment_lexicon(texts, scores)
         self.assertEqual(lex.get("method"), "keyword_lexicon")
 
     def test_custom_focus_words_in_report_config(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             (run_dir / "pc_search_raw").mkdir(parents=True)
@@ -115,11 +89,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertIn("自定义词阿尔法", words)
 
     def test_matrix_groups_require_detail_category_path(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         sku_h = "SKU(skuId)"
         merged = [
             {
@@ -149,11 +118,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
 
     def test_comment_lines_with_product_context_prefix(self) -> None:
         """评价抽样须带细类/SKU/品名前缀，便于归因。"""
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         sku_h = "SKU(skuId)"
         title_h = "标题(wareName)"
         merged = [
@@ -179,11 +143,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertIn("整体口感还差点意思", lines[0])
 
     def test_scenario_groups_llm_payload_matches_section_8_4_counts(self) -> None:
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         sku_h = "SKU(skuId)"
         merged = [
             {
@@ -226,11 +185,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
 
     def test_mix_top_remainder_sums_to_all_rows(self) -> None:
         """mix_top 各 count 之和须等于 strip 后可统计行数（与扇图同源）。"""
-        root = Path(settings.CRAWLER_JD_ROOT).resolve()
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-        import jd_competitor_report as jcr  # noqa: WPS433
-
         names = [f"店{i}" for i in range(30)]
         mix = jcr._counter_mix_top_rows_with_remainder(
             names, top_n=24, remainder_label="（其余店铺）"
