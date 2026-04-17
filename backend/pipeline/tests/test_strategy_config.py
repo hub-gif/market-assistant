@@ -9,7 +9,7 @@ from pipeline.serializers import validate_strategy_config_body
 
 def test_validate_strategy_config_merges_default() -> None:
     out = validate_strategy_config_body({})
-    assert out["use_llm_default"] is False
+    assert out["use_llm_default"] is True
 
 
 def test_validate_strategy_config_unknown_key() -> None:

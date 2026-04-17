@@ -194,8 +194,8 @@ def get_default_report_config() -> dict[str, Any]:
 def get_default_strategy_config() -> dict[str, Any]:
     """策略生成页独立默认（与 ``report_config`` 无关），供前端回填与 PATCH 合并。"""
     return {
-        # 打开页面时是否默认勾选「使用大模型生成」
-        "use_llm_default": False,
+        # 默认走大模型润色；用户可在单次生成时勾选「仅规则稿」取消
+        "use_llm_default": True,
     }
 
 

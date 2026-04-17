@@ -1,12 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import {
-  refreshJobs,
-  useJobs,
-  api,
-  strategyConfigDefaultsUrl,
-} from '../../composables/useJobs'
+import { refreshJobs, useJobs, api } from '../../composables/useJobs'
 import {
   generationInFlightKey,
   withGenerationInFlight,
@@ -38,12 +33,8 @@ const strategyGeneratingOtherTask = computed(
     strategyDraftPendingJobId.value != null &&
     strategyDraftPendingJobId.value !== selectedId.value,
 )
-const useLlm = ref(false)
-/** 与报告页「仅规则稿」一致：勾选则本次只出规则策略稿，不调用大模型润色 */
+/** 勾选则本次仅规则稿（不调用大模型）；默认不勾选即走大模型 */
 const rulesOnlyThisRun = ref(false)
-const strategyDefaults = ref({ use_llm_default: false })
-const strategySaveLoading = ref(false)
-const strategySaveErr = ref('')
 
 const decisions = reactive({
   product_role: '',
@@ -83,7 +74,7 @@ const stanceOptions = [
 ]
 
 function buildPayload() {
-  const generator = rulesOnlyThisRun.value ? 'rules' : useLlm.value ? 'llm' : 'rules'
+  const generator = rulesOnlyThisRun.value ? 'rules' : 'llm'
   return {
     generator,
     business_notes: businessNotes.value,
@@ -110,59 +101,6 @@ function formatJobOption(j) {
   const t = j.created_at
   const tail = t ? String(t).replace('T', ' ').slice(0, 16) : ''
   return tail ? `#${j.id} · ${j.keyword} · ${tail}` : `#${j.id} · ${j.keyword}`
-}
-
-function applyStrategyConfigFromJob(job) {
-  const stored =
-    job && typeof job.strategy_config === 'object' && job.strategy_config !== null
-      ? job.strategy_config
-      : {}
-  const eff = { ...strategyDefaults.value, ...stored }
-  useLlm.value = !!eff.use_llm_default
-}
-
-async function loadStrategyDefaults() {
-  try {
-    const r = await api(strategyConfigDefaultsUrl())
-    if (r.ok) {
-      strategyDefaults.value = await r.json()
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-async function saveStrategyPreferences() {
-  const id = selectedId.value
-  if (!id) return
-  strategySaveErr.value = ''
-  strategySaveLoading.value = true
-  try {
-    const r = await api(`/api/jobs/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        strategy_config: { use_llm_default: useLlm.value },
-      }),
-    })
-    const text = await r.text()
-    if (!r.ok) {
-      try {
-        const j = JSON.parse(text)
-        strategySaveErr.value = j.detail || text
-      } catch {
-        strategySaveErr.value = text || `HTTP ${r.status}`
-      }
-      return
-    }
-    const updated = JSON.parse(text)
-    const idx = jobs.value.findIndex((x) => x.id === updated.id)
-    if (idx >= 0) jobs.value[idx] = updated
-    applyStrategyConfigFromJob(updated)
-  } catch (e) {
-    strategySaveErr.value = String(e)
-  } finally {
-    strategySaveLoading.value = false
-  }
 }
 
 async function loadList() {
@@ -210,10 +148,7 @@ async function generateAndGoPreview() {
   })
 }
 
-onMounted(async () => {
-  await loadStrategyDefaults()
-  await loadList()
-})
+onMounted(loadList)
 
 watch(
   () => route.query.job,
@@ -232,23 +167,6 @@ watch(
   },
   { immediate: true },
 )
-
-watch(selectedId, async () => {
-  strategySaveErr.value = ''
-  const id = selectedId.value
-  if (!id) return
-  try {
-    const r = await api(`/api/jobs/${id}/`)
-    if (r.ok) {
-      const j = await r.json()
-      const idx = jobs.value.findIndex((x) => x.id === j.id)
-      if (idx >= 0) jobs.value[idx] = j
-      applyStrategyConfigFromJob(j)
-    }
-  } catch {
-    /* ignore */
-  }
-})
 </script>
 
 <template>
@@ -256,19 +174,15 @@ watch(selectedId, async () => {
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，在下方填空与勾选。策略页的默认选项保存在本任务的<strong>策略配置</strong>中（与「分析报告生成」页的<strong>报告配置</strong>相互独立）。未勾选大模型时由规则生成策略底稿；勾选后由大模型在底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>（无需在此勾选）。提交后跳转到
+        选择<strong>已成功</strong>任务，在下方填空与勾选。<strong>默认</strong>使用大模型在规则底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。若需更快、不调用智能服务，可勾选「本次仅生成规则稿」。策略配置与「分析报告生成」页的<strong>报告配置</strong>相互独立。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>。提交后跳转到
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
         。未填项在文稿中仍保留占位提示。
       </p>
 
-      <div class="toolbar toolbar-col">
+      <div class="toolbar">
         <label class="chk-inline">
           <input v-model="rulesOnlyThisRun" type="checkbox" />
           本次仅生成规则稿（不做大模型全文润色，更快、不调用智能服务）
-        </label>
-        <label class="chk-inline">
-          <input v-model="useLlm" type="checkbox" :disabled="rulesOnlyThisRun" />
-          使用大模型生成（与上项互斥：勾选上一项时本项无效）
         </label>
       </div>
       <div class="toolbar">
@@ -281,14 +195,6 @@ watch(selectedId, async () => {
         </select>
         <button
           type="button"
-          class="ma-btn ma-btn-secondary"
-          :disabled="!selectedId || strategySaveLoading"
-          @click="saveStrategyPreferences"
-        >
-          {{ strategySaveLoading ? '保存中…' : '保存策略偏好' }}
-        </button>
-        <button
-          type="button"
           class="ma-btn ma-btn-primary"
           :disabled="!selectedId || strategyGeneratingAny"
           @click="generateAndGoPreview"
@@ -296,7 +202,6 @@ watch(selectedId, async () => {
           {{ strategyGeneratingThisTask ? '生成中…' : '生成并前往预览' }}
         </button>
       </div>
-      <p v-if="strategySaveErr" class="ma-err">{{ strategySaveErr }}</p>
       <p v-if="strategyGeneratingOtherTask" class="ma-warn-banner">
         任务 #{{ strategyDraftPendingJobId }} 的策略稿正在生成中，请稍候再切换任务或重复提交。
       </p>
@@ -428,10 +333,6 @@ watch(selectedId, async () => {
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
-}
-.toolbar-col {
-  flex-direction: column;
-  align-items: stretch;
 }
 .sel-label {
   font-size: 0.85rem;

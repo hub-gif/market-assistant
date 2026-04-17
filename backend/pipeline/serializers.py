@@ -87,7 +87,7 @@ def validate_report_config_body(value: dict) -> dict:
 
 
 _STRATEGY_CONFIG_ALLOWED_KEYS = frozenset({"use_llm_default"})
-_DEFAULT_STRATEGY_CONFIG: dict[str, bool] = {"use_llm_default": False}
+_DEFAULT_STRATEGY_CONFIG: dict[str, bool] = {"use_llm_default": True}
 
 
 def validate_strategy_config_body(value: dict) -> dict:
