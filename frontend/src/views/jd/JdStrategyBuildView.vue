@@ -188,6 +188,9 @@ watch(
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
         。<strong>决策在本页完成</strong>：已填项会写入底稿并由大模型落实为执行句；未填项由大模型结合数据补全。成稿不再重复「请再选」式表述。
       </p>
+      <p class="hint-top hint-flow">
+        <strong>成稿章节顺序</strong>：一 目标与边界 → 二 战场与样本 → 三 竞争与本品态势 → 四 价格带与定位 → 五 用户与评论侧（由报告 §8/摘要支撑，本页无单独表单项）→ 六 营销与总体方向 → 七 4P 支柱 → 八 风险 → 九 业务约束 → 十 下一步。
+      </p>
 
       <div class="toolbar">
         <label class="chk-inline">
@@ -299,7 +302,7 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>五、营销策略与总体策略</legend>
+        <legend>六、营销策略与总体策略</legend>
         <label class="fld fld-block">
           <span>营销策略</span>
           <textarea
@@ -319,7 +322,7 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>六、策略支柱 — 本品打算怎么做（可先填一列）</legend>
+        <legend>七、策略支柱（4P）— 本品打算怎么做（可先填一列）</legend>
         <label class="fld fld-block">
           <span>产品</span>
           <textarea v-model="decisions.pillar_product" rows="2" />
@@ -339,7 +342,7 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>七、风险确认（已知晓则勾选）</legend>
+        <legend>八、风险确认（已知晓则勾选）</legend>
         <label class="chk">
           <input v-model="decisions.ack_risk_keywords" type="checkbox" />
           关注词 / 场景可能以偏概全（需原评论抽样）
@@ -355,7 +358,7 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>八、业务约束与内部判断</legend>
+        <legend>九、业务约束与内部判断</legend>
         <label class="fld fld-block">
           <span>业务备注</span>
           <textarea
@@ -375,6 +378,12 @@ watch(
   font-size: 0.88rem;
   color: #4b5563;
   line-height: 1.55;
+}
+.hint-flow {
+  margin-top: -0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.84rem;
 }
 .hint-top a,
 .hint-top :deep(a) {

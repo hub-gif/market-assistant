@@ -172,6 +172,7 @@ def build_strategy_draft_markdown(
         "",
         "> **骨架说明**：本页为**规则骨架**（占位与少量摘录）。勾选大模型生成时，在骨架与数据上写**短、可执行**成稿。"
         "**决策在策略生成表单完成**；未填项由模型结合本任务摘要与报告节选补全，**成稿不再写「请再选 / 请决策」式套话**。",
+        "> **阅读顺序**：目标与边界 → 战场与样本 → 竞争与本品态势 → 价格带与定位 → 用户与评论侧 → 营销与总体方向 → 机会与 4P 支柱 → 风险 → 业务约束 → 下一步行动。",
         "",
     ]
     if generated_at_iso:
@@ -211,30 +212,12 @@ def build_strategy_draft_markdown(
         ]
     )
 
-    lines.extend(
-        [
-            "## 二、营销策略与总体方向",
-            "",
-            _goal_bullet(
-                "营销策略",
-                str(d.get("marketing_strategy") or ""),
-                "传播、活动、投放、内容主线等（可选）",
-            ),
-            _goal_bullet(
-                "总体策略",
-                str(d.get("general_strategy") or ""),
-                "增长/品类/经营层面的总原则，可与 4P 支柱呼应（可选）",
-            ),
-            "",
-        ]
-    )
-
     scope = brief.get("scope") or {}
     merged_n = scope.get("merged_sku_count")
     comm_n = scope.get("comment_flat_rows")
     lines.extend(
         [
-            "## 三、战场与样本",
+            "## 二、战场与样本",
             "",
             f"- **监测关键词 / 货架语境**：{kw}",
             f"- **批次**：{_esc(brief.get('batch_label')) or '—'}",
@@ -256,7 +239,7 @@ def build_strategy_draft_markdown(
     conc = brief.get("concentration") or {}
     shops = conc.get("shops_from_list") or {}
     dbrand = conc.get("detail_brand_among_merged") or {}
-    lines.extend(["## 四、竞争结构（摘录）", ""])
+    lines.extend(["## 三、竞争结构与本品态势（摘录）", ""])
     n_shop = _cr_narrative(
         "列表侧店铺集中度",
         concentration_first_share(shops),
@@ -284,6 +267,8 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
+    lines.append("### 本品竞争态势（与表单「竞争态势自判」一致）")
+    lines.append("")
     stance = _esc(d.get("competitive_stance") or "").strip()
     stance_line = {
         "flank": "- **本品倾向**：侧翼切入，避免与头部正面硬碰。",
@@ -305,7 +290,7 @@ def build_strategy_draft_markdown(
         lines.append("")
 
     pst = brief.get("price_stats") or {}
-    lines.extend(["## 五、价格带与定位（业务已选）", ""])
+    lines.extend(["## 四、价格带与定位（业务已选）", ""])
     if pst.get("n"):
         src = _esc(brief.get("price_stats_source")) or "—"
         lines.extend(
@@ -339,7 +324,7 @@ def build_strategy_draft_markdown(
 
     ckw = brief.get("comment_focus_keywords") or []
     usc = brief.get("usage_scenarios") or []
-    lines.extend(["## 六、用户与评论侧", ""])
+    lines.extend(["## 五、用户与评论侧", ""])
     if use_ch8_probe:
         lines.extend(
             [
@@ -375,6 +360,24 @@ def build_strategy_draft_markdown(
             lines.append("*摘要中无关注词/场景组，请结合评论侧分析补全本节。*")
     lines.append("")
 
+    lines.extend(
+        [
+            "## 六、营销策略与总体方向",
+            "",
+            _goal_bullet(
+                "营销策略",
+                str(d.get("marketing_strategy") or ""),
+                "传播、活动、投放、内容主线等（可选）",
+            ),
+            _goal_bullet(
+                "总体策略",
+                str(d.get("general_strategy") or ""),
+                "增长/品类/经营层面的总原则，可与下方 4P 支柱呼应（可选）",
+            ),
+            "",
+        ]
+    )
+
     raw_hints = brief.get("strategy_hints") or []
     hints = (
         filter_strategy_hints_for_ch8_probe(raw_hints)
@@ -383,7 +386,7 @@ def build_strategy_draft_markdown(
     )
     lines.extend(
         [
-            "## 七、机会与策略支柱",
+            "## 七、机会与策略支柱（4P 落地）",
             "",
             (
                 "### 摘要提示（`strategy_hints`，已按探针口径过滤）"
@@ -405,7 +408,7 @@ def build_strategy_draft_markdown(
     lines.extend(
         [
             "",
-            "### 策略支柱（表单已填优先）",
+            "### 4P 策略支柱（表单已填优先）",
             "",
             "| 支柱 | 本品动作 | 与头部差异 | 证据 / 出处 |",
             "|------|----------|------------|-------------|",
