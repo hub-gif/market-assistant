@@ -461,3 +461,15 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
         default="rules",
         required=False,
     )
+    strategy_matrix_group_index = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
+    strategy_matrix_group = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=200,
+        trim_whitespace=True,
+    )

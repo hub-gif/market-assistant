@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import mimetypes
+from typing import Any
 from pathlib import Path
 
 import requests
@@ -21,6 +22,11 @@ from ..jd.runner import (
 from ..llm.generate import generate_strategy_draft_markdown_llm
 from ..models import JobStatus, PipelineJob
 from ..reporting.brief_pack import build_brief_pack_zip_bytes
+from ..reporting.brief_strategy_scope import (
+    filter_brief_for_strategy_matrix_group,
+    list_matrix_groups_for_api,
+    resolve_strategy_matrix_group_index,
+)
 from ..reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 from ..reporting.report_strategy_excerpt import load_report_strategy_excerpt
 from ..reporting.strategy_draft import build_strategy_draft_markdown
@@ -57,6 +63,9 @@ class JobCompetitorBriefView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(data, dict):
+            data = dict(data)
+            data["matrix_groups"] = list_matrix_groups_for_api(data)
         return Response(data)
 
 
@@ -155,6 +164,26 @@ class JobStrategyDraftView(APIView):
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        matrix_groups = list_matrix_groups_for_api(brief)
+        sg_idx = vd.get("strategy_matrix_group_index")
+        sg_lbl = (vd.get("strategy_matrix_group") or "").strip()
+        scope_idx, scope_err = resolve_strategy_matrix_group_index(
+            brief,
+            matrix_group_index=sg_idx,
+            matrix_group_label=sg_lbl or None,
+        )
+        if scope_err:
+            return Response({"detail": scope_err}, status=status.HTTP_400_BAD_REQUEST)
+        strategy_scope_applied: dict[str, Any] | None = None
+        if scope_idx is not None:
+            brief = filter_brief_for_strategy_matrix_group(
+                brief, matrix_group_index=scope_idx
+            )
+            raw_sa = brief.get("strategy_scope_applied")
+            strategy_scope_applied = (
+                raw_sa if isinstance(raw_sa, dict) else None
+            )
+
         gen_at = timezone.now().isoformat()
         generator = (vd.get("generator") or "rules").strip()
         excerpt_src = "none"
@@ -204,6 +233,8 @@ class JobStrategyDraftView(APIView):
             "markdown": md,
             "report_strategy_excerpt_source": excerpt_src,
             "report_strategy_excerpt_chars": len(report_excerpt or ""),
+            "matrix_groups": matrix_groups,
+            "strategy_scope_applied": strategy_scope_applied,
         }
         return Response(body)
 
