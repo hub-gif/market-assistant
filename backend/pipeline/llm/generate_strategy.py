@@ -14,7 +14,7 @@ from ..reporting.strategy_draft import (
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
 
 STRATEGY_DATA_RULES = """**全局禁止编造（适用于输出全文各节、各表、各段；独立策略稿与报告第九章策略归纳**共用**本段，硬性）**：
-- **事实与数字**：销量、GMV、占比、价带、条数、份额、券面额、满减/满折门槛、到手价、店铺/品牌计数与排名、SKU 数、接口返回量等，**仅可**来自**本次调用输入 JSON** 中已给出的字段（策略稿为 `structured_brief`、`rules_draft_markdown` 内摘录、`report_strategy_excerpt`、`strategy_decisions`、`business_notes`；第九章嵌入为 `competitor_brief`、可选 `prior_chapter_llm_narratives`）；**禁止**凭空新增、改口径或写成「已监测证实」而无字段支撑。
+- **事实与数字**：销量、GMV、占比、价带、条数、份额、券面额、满减/满折门槛、到手价、店铺/品牌计数与排名、SKU 数、接口返回量等，**仅可**来自**本次调用输入 JSON** 中已给出的字段（策略稿为 `structured_brief`、`rules_draft_markdown` 内摘录、`report_strategy_excerpt`、可选 **`report_matrix_group_evidence_md`**（与同任务报告第五～第八章细类大模型小节同源）、`strategy_decisions`、`business_notes`；第九章嵌入为 `competitor_brief`、可选 `prior_chapter_llm_narratives`）；**禁止**凭空新增、改口径或写成「已监测证实」而无字段支撑。
 - **主体与名称**：**禁止**引入上述输入中**未出现**的**具体**品牌名、店铺名、SKU 名、商品标题作为**事实陈述**；若 `strategy_decisions`/备注/brief/节选已含则可写；否则用「头部/同类竞品」等泛称或「待业务指定对标」。
 - **用户侧表述**：**禁止**虚构评价原文、访谈引语、带引号的「用户说…」；细则见下文「§2 针对痛点要怎么做」表**痛点简述**列。
 - **促销与活动**：**禁止**编造活动名、具体规则、补贴比例；细则见下文促销与第八章探针相关条款。
@@ -44,7 +44,12 @@ STRATEGY_DATA_RULES = """**全局禁止编造（适用于输出全文各节、�
 
 STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**与业务侧填写的**决策字段**，把「规则底稿」写成**短、可执行**的策略 Markdown **独立成稿**。
 
-**输入**：`rules_draft_markdown`（规则骨架，**六主轴 + 品牌四线**结构，与 `docs/demo` 市场策略稿示例同构）、`structured_brief`、`strategy_decisions`、`business_notes`；可选 `report_strategy_excerpt`。
+**输入**：`rules_draft_markdown`（规则骨架，**六主轴 + 品牌四线**结构，与 `docs/demo` 市场策略稿示例同构）、`structured_brief`、`strategy_decisions`、`business_notes`；可选 `report_strategy_excerpt`；可选 **`report_matrix_group_evidence_md`**（与所选细类对齐的宿主报告大模型归纳摘录）。
+
+**与细类收窄配套（当 JSON 含 `report_matrix_group_evidence_md` 且非空时，硬性）**：
+- **定性主题**（用户讨论焦点、卖点/配料叙事、负向体验类型、场景与关注词归纳方向等）须与该节选及 `structured_brief` **方向一致**，**禁止**另写一套与节选**明显矛盾**的品类判断。
+- **数字、份额、价带、条数**仍以 **`structured_brief` 为准**；节选与 brief 数字冲突时**采纳 brief**，勿复述冲突数字句。
+- **`report_strategy_excerpt`（第九章）** 为**全关键词任务**下的策略归纳，可能与「仅选某细类」并行存在：写**该细类**策略时以 `structured_brief` + `report_matrix_group_evidence_md` 为主；第九章仅作检索池整体方向参考，**不得**把全池结论套成该细类已证实事实。
 
 {STRATEGY_DATA_RULES}
 
@@ -114,11 +119,15 @@ def generate_strategy_draft_markdown_llm(
     generated_at_iso: str,
     strategy_decisions: dict[str, Any],
     report_strategy_excerpt: str | None = None,
+    report_matrix_group_evidence_md: str | None = None,
     report_config: dict[str, Any] | None = None,
 ) -> str:
     """
     ``report_strategy_excerpt``：与同任务宿主报告第九章「策略与机会」正文对齐的节选（见
     ``reporting.report_strategy_excerpt.load_report_strategy_excerpt``）；空字符串表示未生成或未重跑第九章大模型。
+
+    ``report_matrix_group_evidence_md``：按所选矩阵细类从 ``competitor_analysis.md`` 抽取的第五～第八章大模型小节摘录（见
+    ``reporting.report_matrix_group_evidence.load_report_matrix_group_evidence_markdown``）；用于与收窄后的 ``structured_brief`` 一并支撑策略叙事。
     """
     rules_md = build_strategy_draft_markdown(
         job_id=job_id,
@@ -130,6 +139,7 @@ def generate_strategy_draft_markdown_llm(
         report_config=report_config,
     )
     excerpt_raw = (report_strategy_excerpt or "").strip()
+    group_evidence_raw = (report_matrix_group_evidence_md or "").strip()
     sys_prompt = STRATEGY_SYSTEM
     min_comp = _min_strategy_completion_tokens()
     min_comp_relaxed = max(256, min_comp // 2)
@@ -159,6 +169,12 @@ def generate_strategy_draft_markdown_llm(
             if excerpt_raw
             else ""
         )
+        ev_max = min(24_000, max(3_000, excerpt_max + excerpt_max // 2))
+        gm = (
+            _truncate_strategy_narrative(group_evidence_raw, ev_max)
+            if group_evidence_raw
+            else ""
+        )
         if rules_max is None:
             rd = rules_md
         else:
@@ -172,6 +188,7 @@ def generate_strategy_draft_markdown_llm(
             "structured_brief": compact,
             "rules_draft_markdown": rd,
             "report_strategy_excerpt": ex,
+            "report_matrix_group_evidence_md": gm,
             "chapter8_text_mining_probe": bool(
                 report_uses_chapter8_text_mining_probe(report_config)
             ),

@@ -28,6 +28,9 @@ from ..reporting.brief_strategy_scope import (
     resolve_strategy_matrix_group_index,
 )
 from ..reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
+from ..reporting.report_matrix_group_evidence import (
+    load_report_matrix_group_evidence_markdown,
+)
 from ..reporting.report_strategy_excerpt import load_report_strategy_excerpt
 from ..reporting.strategy_draft import build_strategy_draft_markdown
 from ..serializers import PipelineJobSerializer, StrategyDraftRequestSerializer
@@ -184,6 +187,18 @@ class JobStrategyDraftView(APIView):
                 raw_sa if isinstance(raw_sa, dict) else None
             )
 
+        report_matrix_evidence_md = ""
+        report_matrix_evidence_src = "none"
+        if scope_idx is not None and 0 <= scope_idx < len(matrix_groups):
+            gnm = (matrix_groups[scope_idx].get("group") or "").strip()
+            if gnm:
+                report_matrix_evidence_md, report_matrix_evidence_src = (
+                    load_report_matrix_group_evidence_markdown(
+                        job.run_dir,
+                        gnm,
+                    )
+                )
+
         gen_at = timezone.now().isoformat()
         generator = (vd.get("generator") or "rules").strip()
         excerpt_src = "none"
@@ -203,6 +218,8 @@ class JobStrategyDraftView(APIView):
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
                     report_strategy_excerpt=report_excerpt,
+                    report_matrix_group_evidence_md=report_matrix_evidence_md
+                    or None,
                     report_config=rc_job,
                 )
                 src = "llm_text_ai_crawler_v1"
@@ -235,6 +252,8 @@ class JobStrategyDraftView(APIView):
             "report_strategy_excerpt_chars": len(report_excerpt or ""),
             "matrix_groups": matrix_groups,
             "strategy_scope_applied": strategy_scope_applied,
+            "report_matrix_group_evidence_source": report_matrix_evidence_src,
+            "report_matrix_group_evidence_chars": len(report_matrix_evidence_md or ""),
         }
         return Response(body)
 
