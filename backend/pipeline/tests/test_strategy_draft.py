@@ -28,6 +28,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("重点：华东", md)
         self.assertIn("## 摘要", md)
         self.assertIn("针对痛点要怎么做", md)
+        self.assertIn("类目/细类", md)
         self.assertIn("全局禁止编造", md)
         self.assertNotIn("### 3.2 转化障碍与应对", md)
         self.assertIn("## 一、顾客是谁", md)
