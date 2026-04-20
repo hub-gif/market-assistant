@@ -182,8 +182,33 @@ def build_strategy_draft_markdown(
     merged_n = scope.get("merged_sku_count")
     comm_n = scope.get("comment_flat_rows")
 
+    pr_role = _esc(d.get("product_role") or "").strip()
+    bf_line = _esc(d.get("battlefield_one_line") or "").strip()
+    aud = _esc(d.get("audience_segment") or "").strip()
+    th = _esc(d.get("time_horizon") or "").strip()
+    sc = _esc(d.get("success_criteria") or "").strip()
+
+    def _scope_cell(val: str, placeholder: str) -> str:
+        return val if val else f"*（{placeholder}）*"
+
     lines.extend(
         [
+            "## 策略范围与前提（生成前先对齐）",
+            "",
+            "*回答：**这份策略是针对什么、在什么边界里做的**——属「立项靶心」，不是执行摘要。表单已填则写成短句；未填保留占位，**勿**编造。*",
+            "*业务侧在动策略稿之前，应先对齐本节；可选目标类型见 `docs/planning/策略生成-框架确定.md`「启动前：须先明确的项」。*",
+            "",
+            "| 须明确项 | 填写或待确认 |",
+            "|----------|----------------|",
+            f"| **监测任务（数据同源）** | 关键词「{kw}」；批次 **{batch}**；与同任务《竞品分析报告》一致 |",
+            f"| **策略服务对象（本品角色）** | {_scope_cell(pr_role, '待填：新品 / 追赶 / 防守 / 拓品类 …')} |",
+            f"| **一句话战场** | {_scope_cell(bf_line, '在哪个需求场景、与谁抢同一批用户？')} |",
+            f"| **目标客群/场景** | {_scope_cell(aud, '可选')} |",
+            "| **主推类目/细类** | *（待填：如饼干线 / 面包线 / 多线并行；未定写「待业务定类」）* |",
+            "| **本阶段策略目标类型** | *（成稿从规划文档「目标类型选项」择一或组合，并与下列成功标准一致）* |",
+            f"| **时间范围** | {_scope_cell(th, '如本季度 / 未来 12 周')} |",
+            f"| **成功标准（可量化）** | {_scope_cell(sc, '搜索位次、转化、复购等')} |",
+            "",
             "---",
             "",
             "## 摘要",

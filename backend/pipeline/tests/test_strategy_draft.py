@@ -27,6 +27,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("假设A", md)
         self.assertIn("重点：华东", md)
         self.assertIn("## 摘要", md)
+        self.assertIn("策略范围与前提", md)
         self.assertIn("针对痛点要怎么做", md)
         self.assertIn("类目/细类", md)
         self.assertIn("全局禁止编造", md)
