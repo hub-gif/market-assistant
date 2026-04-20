@@ -162,84 +162,263 @@ def build_strategy_draft_markdown(
     strategy_decisions: dict[str, Any] | None = None,
     report_config: dict[str, Any] | None = None,
 ) -> str:
-    """生成可下载的 Markdown：策略骨架为主，附录为数据速览。"""
+    """生成可下载的 Markdown：与「六主轴 + 品牌四线」示例稿同构的规则骨架，附录为数据速览。"""
     use_ch8_probe = report_uses_chapter8_text_mining_probe(report_config)
     d = strategy_decisions or {}
     pos = _esc(d.get("positioning_choice") or "").strip()
     kw = _esc(brief.get("keyword")) or _esc(keyword) or "—"
+    batch = _esc(brief.get("batch_label")) or "—"
     lines: list[str] = [
         f"# 市场策略制定草稿 · 「{kw}」",
         "",
-        "> **骨架说明**：本页为**规则骨架**（占位与少量摘录）。勾选大模型生成时，在骨架与数据上写**短、可执行**成稿。"
-        "**决策在策略生成表单完成**；未填项由模型结合本任务摘要与报告节选补全，**成稿不再写「请再选 / 请决策」式套话**。",
-        "> **阅读顺序**：目标与边界 → 战场与样本 → 竞争与本品态势 → 价格带与定位 → 用户与评论侧 → 营销与总体方向 → 机会与 4P 支柱 → 风险 → 业务约束 → 下一步行动。",
+        "> **骨架说明**：本页为**规则骨架**（占位与少量摘录）。大模型成稿时须写成**短、可执行**的完整策略稿，结构与 [`docs/demo` 市场策略稿示例](docs/demo) 一致：**摘要 → 一～十 → 附录**。"
+        "**不与《竞品分析报告》重复**：统计表、词频/共现、细类样本量、文本挖掘方法等以报告为准；策略稿只写**结论要点 + 怎么做**，可写「详见报告 §×」。"
+        "**决策在策略生成表单完成**；未填项由模型结合本任务摘要与可选节选补全，**成稿不再写「请再选 / 请决策」式套话**。",
         "",
     ]
     if generated_at_iso:
         lines.append(f"> **生成时间**：{_esc(generated_at_iso)}  ·  **任务 ID**：{job_id}")
         lines.append("")
 
+    scope = brief.get("scope") or {}
+    merged_n = scope.get("merged_sku_count")
+    comm_n = scope.get("comment_flat_rows")
+
     lines.extend(
         [
             "---",
             "",
-            "## 一、目标与边界",
+            "## 摘要",
+            "",
+            f"- **范围与样本**：监测词「{kw}」；批次 **{batch}**；"
+            + (
+                f"深入 SKU ≈ {_num(merged_n)}；评价条数 ≈ {_num(comm_n)}。"
+                if merged_n is not None or comm_n is not None
+                else "样本规模见附录。"
+            ),
+            "- **用户侧**：*（一两句结论即可：讨论焦点与负向主题；**勿**展开与报告重复的细类统计、词频。）*",
+            "- **阶段重点**：*（须含 1～2 条**可执行动作**，回扣 §2 优先痛点；勿仅写「加强运营」。）*",
+            "",
+            "## 一、顾客是谁",
+            "",
+            "### 1.1 人群与决策路径",
+            "",
+            f"- **检索与货架语境**：{kw}；批次 {batch}。",
+        ]
+    )
+    bf = _esc(d.get("battlefield_one_line") or "").strip()
+    if bf:
+        lines.append(f"- **一句话战场**：{bf}")
+    else:
+        lines.append("- **一句话战场**：*（在哪个需求场景、与谁抢同一批用户？）*")
+    lines.extend(
+        [
+            "- **典型路径**：*（成稿：搜索 → 列表比价 → 详情与配料 → 评价 → 下单/复购。）*",
+            "",
+            "*成稿须与 §2 痛点一致：写清「谁在什么任务下检索、决策」，为后文「针对痛点怎么做」埋伏笔。*",
+            "",
+            "### 1.2 细类讨论焦点（评论文本分析）",
+            "",
+        ]
+    )
+    if use_ch8_probe:
+        lines.extend(
+            [
+                "*当前任务以**第八章评论侧文本挖掘**为主呈现时，此处**不**逐条罗列关注词子串命中次数。*",
+                "",
+                "- **饼干 / 糕点 / 面点等**：*（骨架占位；成稿用**一句归纳**/用户关心点，**勿**复述 §8 词频与条数。）*",
+                "",
+            ]
+        )
+    else:
+        ckw = brief.get("comment_focus_keywords") or []
+        usc = brief.get("usage_scenarios") or []
+        lines.append("*下列为关注词/场景**统计摘录**（仅底稿审计用）；**成稿删除逐条枚举**，只保留对策略有用的一两句结论，避免与同任务竞品分析报告重复。*")
+        lines.append("")
+        if ckw:
+            for item in ckw[:8]:
+                if isinstance(item, dict):
+                    w = _esc(item.get("word"))
+                    c = _num(item.get("count"))
+                    lines.append(
+                        f"- 「{w}」：子串统计命中约 **{c}** 次（口径同报告关注词）。"
+                    )
+        if usc:
+            for item in usc[:6]:
+                if isinstance(item, dict):
+                    sc = _esc(item.get("scenario"))
+                    cn = _num(item.get("count"))
+                    sh = _pct(item.get("share_of_text_units"))
+                    lines.append(
+                        f"- 场景「{sc}」：约 **{cn}** 条，约占 **{sh}** 文本单元（预设场景分组）。"
+                    )
+        if not ckw and not usc:
+            lines.append("*摘要中无关注词/场景组，请结合评论侧分析补全本节。*")
+        lines.append("")
+
+    mix = brief.get("category_mix_top") or []
+    if mix:
+        lines.append("### 类目结构（摘录）")
+        lines.append("")
+        for item in mix[:6]:
+            if isinstance(item, dict):
+                lines.append(f"- {_esc(item.get('label'))}：{_num(item.get('count'))}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "### 1.3 本品聚焦（占位）",
+            "",
+            "*成稿写清本期**主攻人群/场景**与 §2.1 痛点的对应关系。*",
             "",
             _goal_bullet("本品角色", str(d.get("product_role") or ""), "新品 / 追赶 / 防守 / 拓品类 …"),
-            _goal_bullet("时间范围", str(d.get("time_horizon") or ""), "如：本季度 / 未来 12 周"),
-            _goal_bullet(
-                "成功标准（可量化）",
-                str(d.get("success_criteria") or ""),
-                "如：搜索位次、转化率、声量、复购 …",
-            ),
-            _goal_bullet("非目标", str(d.get("non_goals") or ""), "明确不做什么（可选）"),
             _goal_bullet(
                 "目标客群",
                 str(d.get("audience_segment") or ""),
-                "一句话：为谁、什么场景（可选）",
+                "为谁、什么场景（可选）",
             ),
             _goal_bullet(
                 "主要对标",
                 str(d.get("competitor_reference") or ""),
                 "品牌或价位带参照（可选）",
             ),
-            _goal_bullet(
-                "资源与预算备注",
-                str(d.get("resource_notes") or ""),
-                "人力、投放、产能等量级（可选）",
-            ),
             "",
         ]
     )
 
-    scope = brief.get("scope") or {}
-    merged_n = scope.get("merged_sku_count")
-    comm_n = scope.get("comment_flat_rows")
     lines.extend(
         [
-            "## 二、战场与样本",
+            "## 二、产品价值与用户痛点",
             "",
-            f"- **监测关键词 / 货架语境**：{kw}",
-            f"- **批次**：{_esc(brief.get('batch_label')) or '—'}",
+            "### 2.1 痛点与证据",
+            "",
+            "| 痛点 | 证据信号 | 优先级 |",
+            "|------|----------|--------|",
+            "| *（成稿依数据与评论归纳）* | | |",
+            "",
+            "### 2.2 本品价值（占位）",
+            "",
+            "- **功能**：*（占位）*",
+            "- **情感/社会价值**：*（占位；对外须合规）*",
+            "",
+            "### 2.3 痛点—价值—证据",
+            "",
+            "| 痛点 | 本品价值（占位） | 素材 |",
+            "|------|------------------|------|",
+            "| | | |",
+            "",
+            "### 2.4 负向评价主题归因（若有）",
+            "",
+            "*成稿只写**归因结论**（如分量、口感适配）；**勿**复述报告中的案例枚举与统计细节。*",
+            "",
+            "### 2.5 策略动作总表（痛点 → 怎么做）",
+            "",
+            "*成稿须**逐行填写**：针对用户哪条痛点，采取什么策略动作，在具体触点怎么做，如何验证。*",
+            "",
+            "| 用户痛点 | 策略动作（做什么） | 具体怎么做（触点/话术/规格/渠道） | 如何验证 |",
+            "|----------|-------------------|-----------------------------------|----------|",
+            "| *（与 §2.1 对应）* | *（动词句）* | *（可执行）* | *（指标或抽样）* |",
+            "| | | | |",
+            "",
         ]
     )
-    if merged_n is not None or comm_n is not None:
+
+    raw_hints = brief.get("strategy_hints") or []
+    hints = (
+        filter_strategy_hints_for_ch8_probe(raw_hints)
+        if use_ch8_probe
+        else (list(raw_hints) if isinstance(raw_hints, list) else [])
+    )
+    if hints:
+        lines.append("**摘要自动线索（`strategy_hints`）**")
+        lines.append("")
+        for h in hints:
+            lines.append(f"- {_esc(h)}")
+        lines.append("")
+
+    pst = brief.get("price_stats") or {}
+    lines.extend(
+        [
+            "## 三、为什么要买「这款产品」",
+            "",
+            "### 3.1 品类与时机",
+            "",
+        ]
+    )
+    raw = brief.get("pc_search_raw") or {}
+    if raw.get("result_count_consensus") is not None:
         lines.append(
-            f"- **深入样本**：深入 SKU ≈ {_num(merged_n)}；评价扁平条数 ≈ {_num(comm_n)}。"
+            f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}（非销售额）"
         )
-    bf = _esc(d.get("battlefield_one_line") or "").strip()
-    if bf:
-        lines.append(f"- **一句话战场**：{bf}")
+    elif merged_n is not None:
+        lines.append(f"- **深入样本 SKU 数**：{_num(merged_n)}")
     else:
-        lines.append(
-            "- **一句话战场**：*（在哪个需求场景、与谁抢同一批用户？）*"
-        )
+        lines.append("- **品类与时机**：*（成稿结合摘要与监测范围。）*")
     lines.append("")
+    lines.append(
+        "*成稿在§3.1 末尾用 1～2 句**承接** §2 中优先解决的痛点（再写购买理由）。*"
+    )
+    lines.append("")
+    lines.extend(
+        [
+            "### 3.2 转化障碍与应对",
+            "",
+        ]
+    )
+    if pst.get("n"):
+        src = _esc(brief.get("price_stats_source")) or "—"
+        lines.extend(
+            [
+                f"- **价格摘录**：来源 {src}，n = {_num(pst.get('n'))}；"
+                f"区间 {_num(pst.get('min'))}～{_num(pst.get('max'))}；中位数 {_num(pst.get('median'))}。",
+                "- **障碍与应对**：*（**每条障碍**对应**至少一条应对动作**：谁、在哪个页面/环节、改什么；含价带锚点、规格、信任等。）*",
+                "",
+            ]
+        )
+    else:
+        lines.append("*摘要中无价带统计，请结合本批次价格数据补全。*")
+        lines.append("")
+    lines.append(
+        "*若无价带摘录，成稿仍须写障碍与应对，并与 §2 痛点挂钩。*"
+    )
+    lines.append("")
+
+    lines.extend(
+        [
+            "## 四、为什么要选「这个品牌」",
+            "",
+            "### 4.1 品牌承诺与调性（占位）",
+            "",
+            "*成稿：承诺与调性须能落到**触点**（商详/包装/客服首句等）上的**具体句子**，勿仅形容词。*",
+            "",
+            "- **一句话**：*（占位）*",
+            "- **调性**：透明、可验证、合规控糖叙事（成稿可细化）。",
+            "",
+            "### 4.2 信任与证据",
+            "",
+            "- *（成稿：评价、配料、可核验表述边界。）*",
+            "",
+            "**主定位（与表单一致）**",
+            "",
+            f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带。",
+            f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带。",
+            f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限。",
+            f"- {_pos_mark(pos, 'different')} **另起带**：规格/组合/服务差异化。",
+            "",
+        ]
+    )
 
     conc = brief.get("concentration") or {}
     shops = conc.get("shops_from_list") or {}
     dbrand = conc.get("detail_brand_among_merged") or {}
-    lines.extend(["## 三、竞争结构与本品态势（摘录）", ""])
+    lines.extend(
+        [
+            "## 五、与其它品牌有何不同",
+            "",
+            "### 5.1 对比对象（摘录）",
+            "",
+        ]
+    )
     n_shop = _cr_narrative(
         "列表侧店铺集中度",
         concentration_first_share(shops),
@@ -263,11 +442,23 @@ def build_strategy_draft_markdown(
     lines.extend(
         [
             "",
-            "- **自测**：头部已占稳心智时，侧翼还是正面替代？分散时是否用细分场景或内容教育切入？",
+            "- **环境自测**：头部强势时是侧翼还是正面替代？格局分散时是否用细分场景切入？",
+            "",
+            "### 5.2 差异化方向（占位）",
+            "",
+            "*成稿：相对竞品**多做什么/少做什么**，写**可执行的一步**（非空泛「更好」）。*",
+            "",
+            "| 差异点 | 说明 | 风险 |",
+            "|--------|------|------|",
+            "| | *待填* | |",
             "",
         ]
     )
-    lines.append("### 本品竞争态势（与表单「竞争态势自判」一致）")
+    lines.append("### 5.3 竞争应对")
+    lines.append("")
+    lines.append(
+        "*成稿：在表单倾向基础上，写清**跟价/不跟价时具体话术或机制**（一句即可）。*"
+    )
     lines.append("")
     stance = _esc(d.get("competitive_stance") or "").strip()
     stance_line = {
@@ -278,163 +469,113 @@ def build_strategy_draft_markdown(
     }.get(stance)
     if stance_line:
         lines.append(stance_line)
-        lines.append("")
-
-    mix = brief.get("category_mix_top") or []
-    if mix:
-        lines.append("### 类目结构（Top）")
-        lines.append("")
-        for item in mix[:6]:
-            if isinstance(item, dict):
-                lines.append(f"- {_esc(item.get('label'))}：{_num(item.get('count'))}")
-        lines.append("")
-
-    pst = brief.get("price_stats") or {}
-    lines.extend(["## 四、价格带与定位（业务已选）", ""])
-    if pst.get("n"):
-        src = _esc(brief.get("price_stats_source")) or "—"
-        lines.extend(
-            [
-                f"- **价格来源**：{src}，有效价样本 n = {_num(pst.get('n'))}。",
-                f"- **展示价区间**：{_num(pst.get('min'))} ～ {_num(pst.get('max'))}；**中位数** {_num(pst.get('median'))}。",
-                "",
-                "**主定位（与表单一致）**",
-                "",
-                f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带，强调品质/成分/背书。",
-                f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带，强调性价比与场景匹配。",
-                f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限，强调入门与拉新（注意毛利与调性）。",
-                f"- {_pos_mark(pos, 'different')} **另起带**：避开主价格带，用规格/组合/服务差异化。",
-                "",
-            ]
-        )
-    else:
-        lines.append("*摘要中无价带统计，请结合本批次价格数据补全。*")
-        lines.append("")
-        lines.extend(
-            [
-                "**主定位（与表单一致）**",
-                "",
-                f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带，强调品质/成分/背书。",
-                f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带，强调性价比与场景匹配。",
-                f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限，强调入门与拉新（注意毛利与调性）。",
-                f"- {_pos_mark(pos, 'different')} **另起带**：避开主价格带，用规格/组合/服务差异化。",
-                "",
-            ]
-        )
-
-    ckw = brief.get("comment_focus_keywords") or []
-    usc = brief.get("usage_scenarios") or []
-    lines.extend(["## 五、用户与评论侧", ""])
-    if use_ch8_probe:
-        lines.extend(
-            [
-                "*当前任务报告以**第八章评论侧文本挖掘**为主呈现时，此处**不**逐条罗列子串命中次数（与报告 §8 口径一致）。*",
-                "",
-                "- **需求焦点**：*（骨架占位；成稿写 1～2 句可执行结论）*",
-                "- **场景侧重**：*（骨架占位）*",
-                "- **传播切入点**：*（骨架占位）*",
-                "",
-            ]
-        )
-    else:
-        lines.append("*下列为关注词/场景**统计摘录**（口径同本批次摘要）；成稿时写成具体动作，勿重复统计句。*")
-        lines.append("")
-        if ckw:
-            for item in ckw[:8]:
-                if isinstance(item, dict):
-                    w = _esc(item.get("word"))
-                    c = _num(item.get("count"))
-                    lines.append(
-                        f"- 「{w}」：子串统计命中约 **{c}** 次（口径同报告关注词）。"
-                    )
-        if usc:
-            for item in usc[:6]:
-                if isinstance(item, dict):
-                    sc = _esc(item.get("scenario"))
-                    cn = _num(item.get("count"))
-                    sh = _pct(item.get("share_of_text_units"))
-                    lines.append(
-                        f"- 场景「{sc}」：约 **{cn}** 条，约占 **{sh}** 文本单元（预设场景分组）。"
-                    )
-        if not ckw and not usc:
-            lines.append("*摘要中无关注词/场景组，请结合评论侧分析补全本节。*")
     lines.append("")
 
     lines.extend(
         [
-            "## 六、营销策略与总体方向",
+            "## 六、阶段目标与路径",
+            "",
+            "### 6.1 本阶段定义",
+            "",
+            _goal_bullet("时间范围", str(d.get("time_horizon") or ""), "如：本季度 / 未来 12 周"),
+            _goal_bullet(
+                "成功标准（可量化）",
+                str(d.get("success_criteria") or ""),
+                "搜索位次、转化、复购等",
+            ),
+            _goal_bullet("非目标", str(d.get("non_goals") or ""), "明确不做什么（可选）"),
+            "",
+            "### 6.2 路径",
+            "",
+            "*成稿：路径须与 **§2.5** 动作可对齐；营销/总体策略为**动词句**，回扣痛点。*",
             "",
             _goal_bullet(
                 "营销策略",
                 str(d.get("marketing_strategy") or ""),
-                "传播、活动、投放、内容主线等（可选）",
+                "传播、活动、投放、内容主线（可选）",
             ),
             _goal_bullet(
                 "总体策略",
                 str(d.get("general_strategy") or ""),
-                "增长/品类/经营层面的总原则，可与下方 4P 支柱呼应（可选）",
+                "增长/品类/经营总原则（可选）",
+            ),
+            _goal_bullet(
+                "资源与预算备注",
+                str(d.get("resource_notes") or ""),
+                "人力、投放、产能等（可选）",
             ),
             "",
         ]
     )
 
-    raw_hints = brief.get("strategy_hints") or []
-    hints = (
-        filter_strategy_hints_for_ch8_probe(raw_hints)
-        if use_ch8_probe
-        else (list(raw_hints) if isinstance(raw_hints, list) else [])
-    )
-    lines.extend(
-        [
-            "## 七、机会与策略支柱（4P 落地）",
-            "",
-            (
-                "### 摘要提示（`strategy_hints`，已按探针口径过滤）"
-                if use_ch8_probe
-                else "### 摘要提示（`strategy_hints`）"
-            ),
-            "",
-        ]
-    )
-    if hints:
-        for h in hints:
-            lines.append(f"- {_esc(h)}")
-    else:
-        lines.append("*（当前无自动线索）*")
     pp = str(d.get("pillar_product") or "")
     pr = str(d.get("pillar_price") or "")
     pch = str(d.get("pillar_channel") or "")
     pcm = str(d.get("pillar_comm") or "")
     lines.extend(
         [
+            "## 七、品牌四线：建设 · 打造 · 运营 · 体验",
             "",
-            "### 4P 策略支柱（表单已填优先）",
+            "*（与表单「4P 策略支柱」对应：产品 / 定价 / 渠道 / 传播。）*",
+            "*成稿：**每条线**至少一句——服务哪类痛点、本阶段**具体做哪一步**。*",
             "",
-            "| 支柱 | 本品动作 | 与头部差异 | 证据 / 出处 |",
-            "|------|----------|------------|-------------|",
-            f"| 产品 | {_pillar_cell(pp)} | *待填* | *§* |",
-            f"| 价格 | {_pillar_cell(pr)} | *待填* | *§* |",
-            f"| 渠道/触点 | {_pillar_cell(pch)} | *待填* | *§* |",
-            f"| 传播与内容 | {_pillar_cell(pcm)} | *待填* | *§* |",
+            "### 7.1 品牌建设",
+            "",
+            f"- {_pillar_cell(pp)}",
+            "",
+            "### 7.2 品牌打造",
+            "",
+            f"- {_pillar_cell(pr)}",
+            "",
+            "### 7.3 品牌运营",
+            "",
+            f"- {_pillar_cell(pch)}",
+            "",
+            "### 7.4 品牌体验",
+            "",
+            f"- {_pillar_cell(pcm)}",
             "",
         ]
     )
+
     if use_ch8_probe:
         pst_sig = brief.get("price_promotion_signals") or {}
         has_promo = isinstance(pst_sig, dict) and bool(pst_sig)
         lines.extend(
             [
-                "### 促销与活动（须与报告对齐）",
                 "",
-                "*评论侧需求与场景以报告 **§8 文本挖掘** 为准，**不以**关注词/场景子串统计为论据。*",
-                (
-                    "*促销、满减、券后价差等：须与报告 **第六章** 及摘要 `price_promotion_signals`、**第九章**节选一致；成稿须承接报告已写明的活动与价差线索。*"
-                    if has_promo
-                    else "*促销与价差：若报告 **第六章/第九章** 或摘要 `price_promotion_signals` 有归纳，成稿须承接；无则勿编造具体满减门槛。*"
-                ),
+                "*促销与活动线索：须与摘要 `price_promotion_signals` 及第六章/第九章已有归纳一致；无则勿编造具体满减门槛。*"
+                if has_promo
+                else "*促销与价差：若摘要或价格信号有归纳则承接；无则勿编造。*",
                 "",
             ]
         )
+
+    lines.extend(
+        [
+            "## 八、战术支柱",
+            "",
+            "*成稿：四支柱分别回扣 **痛点→动作→落地**（可与 §2.5 呼应，避免纯重复）。*",
+            "",
+            "### 8.1 产品策略",
+            "",
+            f"- *（表单产品支柱：{_pillar_cell(pp)}）*",
+            "",
+            "### 8.2 定价策略",
+            "",
+            f"- *（表单价格支柱：{_pillar_cell(pr)}）*",
+            "",
+            "### 8.3 促销与活动策略",
+            "",
+            "*须写促销**原则**（券/到手价/跟价节奏）；**满减、满折、跨店**等：能引用的写清来源；监测未捕获具体门槛时写「待与运营/后台对齐」，**勿**整节留空，**勿**编造门槛数字。*",
+            "*与 `price_promotion_signals`、报告第六章一致；勿虚构活动。*",
+            "",
+            "### 8.4 渠道与传播",
+            "",
+            f"- *（渠道/传播：{_pillar_cell(pch)} / {_pillar_cell(pcm)}）*",
+            "",
+        ]
+    )
 
     rk = bool(d.get("ack_risk_keywords"))
     rp = bool(d.get("ack_risk_price"))
@@ -446,11 +587,23 @@ def build_strategy_draft_markdown(
     )
     lines.extend(
         [
-            "## 八、风险核对项",
+            "## 九、风险、假设与待验证",
             "",
             _risk_line(rk, rk_kw),
             _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗规则）"),
             _risk_line(rc, "列表集中度与深入样本品牌是否不一致？（需解释渠道差异）"),
+            "",
+            "*成稿：每条风险尽量带**应对动作或验证计划**（抽样、核对规则），勿只列标题。*",
+            "",
+            "*业务备注见下节。*",
+            "",
+            "## 十、下一步与节奏",
+            "",
+            "*成稿：下列为**可执行任务**（可补负责人/时间）；与 §2.5 / §六 优先级一致。*",
+            "",
+            "- [ ] 锁定主推款与对标；过法务与合规。",
+            "- [ ] 统一对外数据口径与话术。",
+            "- [ ] 下轮监测更新后迭代策略。",
             "",
         ]
     )
@@ -458,25 +611,15 @@ def build_strategy_draft_markdown(
     notes = _esc(business_notes)
     lines.extend(
         [
-            "## 九、业务约束与备注",
+            "### 业务约束与备注",
             "",
             (notes if notes else "*（未填写业务备注。）*"),
             "",
-        ]
-    )
-
-    lines.extend(
-        [
-            "## 十、下一步（可执行）",
-            "",
-            "- [ ] 对齐 **§一** 目标与 **§九** 约束，锁定 1～2 条主命题。",
-            "- [ ] 为 **§七** 支柱各补 **1 条数据证据** + **12 周内可交付动作**（负责人 + 时间）。",
-            "",
             "---",
             "",
-            "## 附录 · 本任务关键数据速览",
+            "## 附录：本任务关键数据一览",
             "",
-            f"- **关键词**：{kw}  ·  **摘要版本**：v{_num(brief.get('schema_version'))}",
+            f"- **关键词**：{kw}  ·  **批次**：{batch}  ·  **摘要版本**：v{_num(brief.get('schema_version'))}",
         ]
     )
     meta = brief.get("meta")
