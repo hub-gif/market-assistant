@@ -21,7 +21,7 @@
 | 维度 | 要求 |
 |------|------|
 | **事实源** | 仅允许来自：同任务 `build_competitor_brief` 产物、已落盘的 `competitor_analysis.md` 中与策略相关的既定小节、各章 LLM 节选 JSON、`strategy_hints`、第九章策略相关落盘（如 `strategy_opportunities_llm.json`）。 |
-| **策略稿** | 以规则底稿为骨架；LLM 仅做可读性润色与衔接，**不得新增** brief/底稿中不存在的数字、品牌、销量、价格。 |
+| **策略稿** | 以规则底稿为骨架；LLM 仅做可读性润色与衔接，**不得新增** brief/底稿中不存在的数字、品牌、销量、价格。全文还须遵守 `generate_strategy.py` 中 `STRATEGY_DATA_RULES` 段首「**全局禁止编造**」（用户引语、活动规则、无依据的落地结果等）。 |
 | **报告第九章** | 继续遵守 `STRATEGY_OPPORTUNITIES_SYSTEM`（`generate_strategy.py`）中的硬性条款：brief 优先、与 `prior_chapter_llm_narratives` 不矛盾、假设性表述等。 |
 | **营销内容** | 视为**表达层**：不新增事实；把同一批证据改写成面向某类受众的叙事；可核验结论须能指回 brief 或报告节选。 |
 
