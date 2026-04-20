@@ -29,6 +29,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("## 摘要", md)
         self.assertIn("「证据信号」须与", md)
         self.assertIn("全局禁止编造", md)
+        self.assertIn("与 §2.4 分工", md)
         self.assertIn("## 一、顾客是谁", md)
         self.assertIn("## 七、品牌四线", md)
         self.assertIn("市场策略制定草稿", md)
