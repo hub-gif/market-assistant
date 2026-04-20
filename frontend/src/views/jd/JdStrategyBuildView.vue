@@ -36,6 +36,12 @@ const strategyGeneratingOtherTask = computed(
 /** 勾选则本次仅规则稿（不调用大模型）；默认不勾选即走大模型 */
 const rulesOnlyThisRun = ref(false)
 
+/** 与竞品矩阵细类一致；空字符串表示不收窄（全关键词样本） */
+const strategyMatrixScope = ref('')
+const matrixGroups = ref([])
+const briefMatrixLoading = ref(false)
+const briefMatrixErr = ref('')
+
 const decisions = reactive({
   product_role: '',
   time_horizon: '',
@@ -102,6 +108,9 @@ function buildPayload() {
     ack_risk_keywords: decisions.ack_risk_keywords,
     ack_risk_price: decisions.ack_risk_price,
     ack_risk_concentration: decisions.ack_risk_concentration,
+    ...(strategyMatrixScope.value
+      ? { strategy_matrix_group: strategyMatrixScope.value }
+      : {}),
   }
 }
 
@@ -118,6 +127,37 @@ async function loadList() {
     await refreshJobs()
   } catch {
     /* ignore */
+  }
+}
+
+async function loadMatrixGroupsForJob(id) {
+  matrixGroups.value = []
+  strategyMatrixScope.value = ''
+  briefMatrixErr.value = ''
+  if (!id) return
+  briefMatrixLoading.value = true
+  try {
+    const r = await api(`/api/jobs/${id}/competitor-brief/`)
+    const text = await r.text()
+    if (!r.ok) {
+      try {
+        briefMatrixErr.value = JSON.parse(text).detail || text
+      } catch {
+        briefMatrixErr.value = text || `HTTP ${r.status}`
+      }
+      return
+    }
+    const data = JSON.parse(text)
+    const mg = data.matrix_groups
+    matrixGroups.value = Array.isArray(mg) ? mg : []
+    const saved = sessionStorage.getItem(`ma_strategy_scope_${id}`)
+    if (saved && matrixGroups.value.some((g) => g.group === saved)) {
+      strategyMatrixScope.value = saved
+    }
+  } catch (e) {
+    briefMatrixErr.value = String(e)
+  } finally {
+    briefMatrixLoading.value = false
   }
 }
 
@@ -160,6 +200,17 @@ async function generateAndGoPreview() {
 
 onMounted(loadList)
 
+watch(selectedId, (id) => {
+  loadMatrixGroupsForJob(id)
+})
+
+watch(strategyMatrixScope, (v) => {
+  const jid = selectedId.value
+  if (!jid) return
+  if (v) sessionStorage.setItem(`ma_strategy_scope_${jid}`, v)
+  else sessionStorage.removeItem(`ma_strategy_scope_${jid}`)
+})
+
 watch(
   () => route.query.job,
   (j) => {
@@ -184,7 +235,7 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，在下方填空与勾选。<strong>默认</strong>使用大模型在规则底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。若需更快、不调用智能服务，可勾选「本次仅生成规则稿」。策略配置与「分析报告生成」页的<strong>报告配置</strong>相互独立。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>。提交后跳转到
+        选择<strong>已成功</strong>任务，在下方选择<strong>策略类目</strong>（与竞品矩阵细类一致；选「全部分类」则与全关键词样本一致）。其余填空与勾选。<strong>默认</strong>使用大模型在规则底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。若需更快、不调用智能服务，可勾选「本次仅生成规则稿」。策略配置与「分析报告生成」页的<strong>报告配置</strong>相互独立。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>；收窄类目时另并入该细类在报告中的大模型归纳节选。提交后跳转到
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
         。<strong>决策在本页完成</strong>：已填项会写入底稿并由大模型落实为执行句；未填项由大模型结合数据补全。成稿不再重复「请再选」式表述。
       </p>
@@ -209,12 +260,27 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-primary"
-          :disabled="!selectedId || strategyGeneratingAny"
+          :disabled="!selectedId || strategyGeneratingAny || briefMatrixLoading"
           @click="generateAndGoPreview"
         >
           {{ strategyGeneratingThisTask ? '生成中…' : '生成并前往预览' }}
         </button>
       </div>
+      <div v-if="selectedId" class="toolbar toolbar-stack">
+        <label class="sel-label">策略类目</label>
+        <select
+          v-model="strategyMatrixScope"
+          class="job-select"
+          :disabled="briefMatrixLoading || strategyGeneratingAny"
+        >
+          <option value="">全部分类（不收窄 · 全关键词样本）</option>
+          <option v-for="g in matrixGroups" :key="g.index" :value="g.group">
+            {{ g.group }}（{{ g.sku_count }} 款）
+          </option>
+        </select>
+        <span v-if="briefMatrixLoading" class="ma-muted">正在加载矩阵分组…</span>
+      </div>
+      <p v-if="briefMatrixErr" class="ma-err">{{ briefMatrixErr }}</p>
       <p v-if="strategyGeneratingOtherTask" class="ma-warn-banner">
         任务 #{{ strategyDraftPendingJobId }} 的策略稿正在生成中，请稍候再切换任务或重复提交。
       </p>
@@ -396,6 +462,13 @@ watch(
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+}
+.toolbar-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.toolbar-stack .sel-label {
+  margin-bottom: -0.25rem;
 }
 .sel-label {
   font-size: 0.85rem;
