@@ -161,6 +161,32 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertNotIn("子串统计命中约 **501**", md)
         self.assertNotIn("场景「控糖", md)
 
+    def test_matrix_scope_concentration_not_list_rows_wording(self) -> None:
+        """收窄矩阵时 concentration 来自分组内 SKU，§5.1 勿写「列表行」。"""
+        brief = {
+            "schema_version": 1,
+            "keyword": "低GI",
+            "strategy_scope_applied": {"group": "饼干"},
+            "concentration": {
+                "shops_from_list": {
+                    "first_share": 0.238,
+                    "top_three_combined_share": 0.571,
+                    "top_label": "碧翠园京东自营旗舰店",
+                },
+                "detail_brand_among_merged": {
+                    "first_share": 0.238,
+                    "top_three_combined_share": 0.667,
+                    "top_label": "碧翠园",
+                },
+            },
+        }
+        md = build_strategy_draft_markdown(job_id=1, keyword="低GI", brief=brief)
+        self.assertIn("与全关键词 **PC 搜索列表行** 集中度**不是同一口径**", md)
+        self.assertIn("店铺分布（「饼干」内样本 SKU）", md)
+        self.assertIn("该分组样本 SKU 的", md)
+        self.assertNotIn("列表侧店铺集中度", md)
+        self.assertNotIn("第一大店铺约占列表行的", md)
+
     def test_shops_unique_sku_basis_rendered(self) -> None:
         brief = {
             "schema_version": 1,

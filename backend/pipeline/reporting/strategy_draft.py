@@ -48,8 +48,19 @@ def _num(x: Any) -> str:
     return str(x)
 
 
-def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
-    """从集中度生成一句策略向描述，无数据则返回 None（正文避免英文缩写）。"""
+def _cr_narrative(
+    label: str,
+    cr1: Any,
+    cr3: Any,
+    top: Any,
+    *,
+    first_share_wording: tuple[str, str] | None = None,
+) -> str | None:
+    """从集中度生成一句策略向描述，无数据则返回 None（正文避免英文缩写）。
+
+    ``first_share_wording`` 为 ``(第一大句前缀, 前三大句前缀)`` 时覆盖默认措辞（用于矩阵收窄口径，
+    避免误写「列表行」）。
+    """
     try:
         c1 = float(cr1) if cr1 is not None else None
     except (TypeError, ValueError):
@@ -57,7 +68,9 @@ def _cr_narrative(label: str, cr1: Any, cr3: Any, top: Any) -> str | None:
     if c1 is None and not (top or "").strip():
         return None
     top_s = _esc(top) or "—"
-    if "店铺" in label:
+    if first_share_wording is not None:
+        w1, w3 = first_share_wording
+    elif "店铺" in label:
         w1, w3 = "第一大店铺约占列表行的", "前三大店铺合计约占"
     elif "品牌" in label:
         w1, w3 = "第一大品牌约占", "前三大品牌合计约占"
@@ -480,6 +493,9 @@ def build_strategy_draft_markdown(
     conc = brief.get("concentration") or {}
     shops = conc.get("shops_from_list") or {}
     dbrand = conc.get("detail_brand_among_merged") or {}
+    scope_ap = brief.get("strategy_scope_applied")
+    scoped_matrix = isinstance(scope_ap, dict) and bool(scope_ap.get("group"))
+    gname_scoped = _esc(scope_ap.get("group")) if scoped_matrix else ""
     lines.extend(
         [
             "## 五、与其它品牌有何不同",
@@ -488,17 +504,47 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
+    if scoped_matrix:
+        lines.append(
+            "*本任务已按矩阵细类收窄：**下列店铺/品牌占比均按该分组内「深入合并 SKU」条数统计**，"
+            "与全关键词 **PC 搜索列表行** 集中度**不是同一口径**；亦非销量或市占。*"
+            if not for_llm_input
+            else "*集中度：按所选矩阵分组内合并 SKU 条数；非全站列表行。*"
+        )
+        lines.append("")
+    shop_label = (
+        f"店铺分布（「{gname_scoped}」内样本 SKU）"
+        if scoped_matrix
+        else "列表侧店铺集中度"
+    )
+    brand_label = (
+        f"品牌分布（「{gname_scoped}」内样本 SKU）"
+        if scoped_matrix
+        else "深入样本内品牌集中度"
+    )
+    scoped_wording: tuple[str, str] | None = (
+        ("第一大店铺约占该分组样本 SKU 的", "前三大店铺合计约占")
+        if scoped_matrix
+        else None
+    )
+    scoped_brand_wording: tuple[str, str] | None = (
+        ("第一大品牌约占该分组样本 SKU 的", "前三大品牌合计约占")
+        if scoped_matrix
+        else None
+    )
     n_shop = _cr_narrative(
-        "列表侧店铺集中度",
+        shop_label,
         concentration_first_share(shops),
         concentration_top_three_share(shops),
         shops.get("top_label"),
+        first_share_wording=scoped_wording,
     )
     n_brand = _cr_narrative(
-        "深入样本内品牌集中度",
+        brand_label,
         concentration_first_share(dbrand),
         concentration_top_three_share(dbrand),
         dbrand.get("top_label"),
+        first_share_wording=scoped_brand_wording,
     )
     if n_shop:
         lines.append(n_shop)
