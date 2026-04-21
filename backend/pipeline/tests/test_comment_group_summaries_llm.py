@@ -1,4 +1,4 @@
-"""§8 末「细类评论与关注词要点归纳」大模型：单细类烟测（mock 网关，不调真实 API）。"""
+"""§8 末「细类评论要点归纳」大模型：单细类烟测（mock 网关，不调真实 API）。"""
 from __future__ import annotations
 
 import json
@@ -44,7 +44,6 @@ def _payload_single_category_biscuit() -> tuple[list[dict], str, str]:
     )
     pl = jcr.build_comment_groups_llm_payload(
         feedback_groups=fb,
-        focus_words=jcr.COMMENT_FOCUS_WORDS,
         merged_rows=merged,
         sku_header=sku_h,
         title_h=title_h,
@@ -68,7 +67,7 @@ class CommentGroupSummariesLlmTests(SimpleTestCase):
 
         mock_llm.assert_called_once()
         _sys, user = mock_llm.call_args[0]
-        self.assertIn("细类评论与关注词要点归纳", user)
+        self.assertIn("细类评论要点归纳", user)
         self.assertIn("低GI测试", user)
         raw = user.split("正文（Markdown）。\n\n", 1)[-1]
         data = json.loads(raw.strip())

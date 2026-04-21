@@ -100,14 +100,14 @@ PROBE_TEXT_MINING_SYSTEM = """你是用户研究与文本挖掘方向的助手�
 - ``probe_status``：``ok`` 表示该细类已完成分词与统计；``skipped`` 表示样本过少等未下钻。
 - ``word_freq_top`` / ``tfidf_top`` / ``cooccurrence_top``：统计型特征（开放词表）。
 - ``lda``：无监督自动归纳的主题词；**仅为探索**，同一词可出现在多主题，**禁止**当作严格品类或固定标签。
-- ``focus_hit_lines`` / ``sample_text_snippets``：与正式管线摘取方式**类似**，仅用于**对照语境**；若与关键词突出度焦点冲突，以**整句原文**为准，并在段末或「使用注意」中可点明「统计与语义可能不一致」。
+- ``sample_text_snippets``：与正式报告管线同源的评价短摘录（若有），仅用于**对照语境**；若与关键词突出度焦点冲突，以**整句原文**为准，并在段末或「使用注意」中可点明「统计与语义可能不一致」。
 
 **任务**：对 ``groups`` 中**每一项**输出对应 Markdown（**顺序与输入一致**）：
 - 对 ``probe_status == "ok"``：以 ``#### `` + 与该条 ``group`` 字段**完全一致**的细类名作为小节标题（勿用 ``##`` 一级标题）；每段约 **100～260 字**。
-- 内容须包含：①用 **1～2 句**概括该细类评论**主要讨论焦点**（综合词频与关键词突出度，**不要罗列具体数字**）；② **1～2 句**说明共现词对**暗示**哪些维度常一起出现（**非因果**）；③若 ``lda.topics`` 非空，**1～2 句**说明主题粗分侧重点，并**明确**算法无监督、**不**与矩阵细类一一对应；④用 **1～2 句**体现 ``sample_text_snippets`` / ``focus_hit_lines`` 中的**用户语气与关切**（以**转述**为主）；若必须引用原文，**全小节合计**仅 **一处**极短引号内容（**≤40 字**，**不要**输出 ``【细类…SKU…店铺…】`` 等长前缀）；若无可用摘录则写明；⑤ **使用场景（仅从评论推断）**：用 **0～2 句**概括**何时、何地、何人、如何搭配**等（如早餐、加餐、控糖人群、配牛奶等）——**只能**依据本细类 ``word_freq``/``tfidf``/``cooccurrence``/``lda`` 与摘录中**已出现或可合理概括**的信息；**禁止**套用正式报告「场景分组」或其它外部场景分类；若统计与摘录中**均无**场景线索，**一句**写明「评论中未体现清晰使用场景」即可。
+- 内容须包含：①用 **1～2 句**概括该细类评论**主要讨论焦点**（综合词频与关键词突出度，**不要罗列具体数字**）；② **1～2 句**说明共现词对**暗示**哪些维度常一起出现（**非因果**）；③若 ``lda.topics`` 非空，**1～2 句**说明主题粗分侧重点，并**明确**算法无监督、**不**与矩阵细类一一对应；④用 **1～2 句**体现 ``sample_text_snippets`` 中的**用户语气与关切**（以**转述**为主）；若必须引用原文，**全小节合计**仅 **一处**极短引号内容（**≤40 字**，**不要**输出 ``【细类…SKU…店铺…】`` 等长前缀）；若无可用摘录则写明；⑤ **使用场景（仅从评论推断）**：用 **0～2 句**概括**何时、何地、何人、如何搭配**等（如早餐、加餐、控糖人群、配牛奶等）——**只能**依据本细类 ``word_freq``/``tfidf``/``cooccurrence``/``lda`` 与摘录中**已出现或可合理概括**的信息；**禁止**套用正式报告「场景分组」或其它外部场景分类；若统计与摘录中**均无**场景线索，**一句**写明「评论中未体现清晰使用场景」即可。
 - 对 ``probe_status == "skipped"``：该小节仅 **一句**说明原因。
 
-**禁止**：编造数据中未出现的品牌、价格、医学功效或疗效承诺；不要把 ``keyword`` 监测词写进「用户原话」；不要输出 Markdown 表格；不要声称本段与「正式报告第八章末」完全同源——本任务为**补充分析解读**。**禁止**把输入里的 ``sample_text_snippets`` / ``focus_hit_lines`` **逐条罗列**、**多条整段复制**到输出（那不是归纳，是重复贴评论）。
+**禁止**：编造数据中未出现的品牌、价格、医学功效或疗效承诺；不要把 ``keyword`` 监测词写进「用户原话」；不要输出 Markdown 表格；不要声称本段与「正式报告第八章末」完全同源——本任务为**补充分析解读**。**禁止**把输入里的 ``sample_text_snippets`` **逐条罗列**、**多条整段复制**到输出（那不是归纳，是重复贴评论）。
 
 全文末可另起一段 **「使用注意」**（简短）：点明开放词表统计与人工阅读差异、主题归纳局限、小样本细类不可靠。
 
@@ -381,23 +381,6 @@ def _narrative_stub(
     return "\n".join(lines)
 
 
-def _effective_focus_words(run_dir: Path) -> tuple[str, ...]:
-    """与 ``runner.write_competitor_analysis_for_run_dir`` 一致：优先 ``effective_report_config.json``。"""
-    p = run_dir / "effective_report_config.json"
-    if p.is_file():
-        try:
-            eff = json.loads(p.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            eff = None
-        if isinstance(eff, dict):
-            fw_src = eff.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
-            fw_tuple = tuple(
-                str(x).strip() for x in fw_src if str(x).strip()
-            ) or jcr.COMMENT_FOCUS_WORDS
-            return fw_tuple
-    return jcr.COMMENT_FOCUS_WORDS
-
-
 def _truncate_probe_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """压缩摘录长度，避免单次 JSON 顶满上下文。"""
     out: dict[str, Any] = dict(payload)
@@ -407,6 +390,7 @@ def _truncate_probe_payload(payload: dict[str, Any]) -> dict[str, Any]:
             groups.append(g)
             continue
         g2 = dict(g)
+        g2.pop("focus_hit_lines", None)
         sn = g2.get("sample_text_snippets")
         if isinstance(sn, list):
             # 条数略减，降低模型「照抄罗列」倾向；仍以转述为主见系统提示
@@ -421,7 +405,6 @@ def _merge_snippets_from_comment_groups(
     *,
     merged_rows: list[dict[str, str]],
     comment_rows: list[dict[str, str]],
-    run_dir: Path,
 ) -> None:
     """把正式 ``build_comment_groups_llm_payload`` 中的摘录并入补充分析行（原地修改）。"""
     sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
@@ -431,10 +414,8 @@ def _merge_snippets_from_comment_groups(
         comment_rows=comment_rows,
         sku_header=sku_h,
     )
-    fw = _effective_focus_words(run_dir)
     pl = jcr.build_comment_groups_llm_payload(
         feedback_groups=fb,
-        focus_words=fw,
         merged_rows=merged_rows,
         sku_header=sku_h,
         title_h=title_h,
@@ -448,9 +429,6 @@ def _merge_snippets_from_comment_groups(
         if not src:
             continue
         row["comment_flat_rows"] = src.get("comment_flat_rows")
-        fh = src.get("focus_hit_lines")
-        if isinstance(fh, list):
-            row["focus_hit_lines"] = [str(x) for x in fh[:8]]
         sn = src.get("sample_text_snippets")
         if isinstance(sn, list):
             row["sample_text_snippets"] = [str(x)[:220] for x in sn[:8]]
@@ -689,15 +667,14 @@ def build_markdown(
         probe_rows,
         merged_rows=merged,
         comment_rows=comments,
-        run_dir=run_dir,
     )
     llm_payload: dict[str, Any] = {
         "schema_version": 1,
         "keyword": kw,
         "probe_note": (
             "中文分词 + 停用词；关键词突出度/共现/主题归纳为统计库；"
-            "与正式报告的关注词规则统计、已废弃的预设口语短语情感口径均不同；"
-            "评价摘录字段合并自 build_comment_groups_llm_payload，供语境对照；"
+            "与正式报告第八章第二节图表中的关注词计数等规则统计、已废弃的预设口语短语情感口径均不同；"
+            "评价短摘录合并自 build_comment_groups_llm_payload（与正式管线同源，不含关注词子串计数摘要），供语境对照；"
             "「使用场景」若出现，须仅能从本 JSON 内统计与摘录推断，不接入正式场景分组。"
         ),
         "groups": probe_rows,

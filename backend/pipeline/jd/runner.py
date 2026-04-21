@@ -679,13 +679,8 @@ def write_competitor_analysis_for_run_dir(
             comment_rows=comment_rows,
             sku_header=sku_h,
         )
-        fw_src = eff_rc.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
-        fw_tuple = tuple(
-            str(x).strip() for x in fw_src if str(x).strip()
-        ) or jcr.COMMENT_FOCUS_WORDS
         pl_cg = jcr.build_comment_groups_llm_payload(
             feedback_groups=fb_cg,
-            focus_words=fw_tuple,
             merged_rows=merged_rows,
             sku_header=sku_h,
             title_h=title_h,

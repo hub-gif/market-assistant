@@ -220,12 +220,11 @@ def build_promo_groups_llm_payload(
 def build_comment_groups_llm_payload(
     *,
     feedback_groups: list[tuple[str, list[dict[str, str]], list[str]]],
-    focus_words: tuple[str, ...],
     merged_rows: list[dict[str, str]],
     sku_header: str,
     title_h: str,
 ) -> list[dict[str, Any]]:
-    """供 ``generate_comment_group_summaries_llm``。"""
+    """供 ``generate_comment_group_summaries_llm``：仅含评价文本单元与短摘录，不含关注词子串计数摘要。"""
     if not feedback_groups:
         return []
     sku_meta: dict[str, tuple[str, str, str]] = {}
@@ -245,10 +244,6 @@ def build_comment_groups_llm_payload(
     for gname, cr, tu in feedback_groups:
         if not tu and not cr:
             continue
-        gh = _group_keyword_hits(cr, tu, focus_words=focus_words)
-        focus_hit_lines = [
-            f"「{w}」{n} 次" for w, n in gh.most_common(14) if n > 0
-        ]
         snippets: list[str] = []
         for row in cr[:48]:
             txt = _cell(row, _COMMENT_CSV_BODY, "tagCommentContent")
@@ -277,7 +272,6 @@ def build_comment_groups_llm_payload(
                 "group": gname,
                 "comment_flat_rows": f"评价行 {len(cr)}；有效文本单元 {len(tu)}",
                 "effective_text_lines": eff,
-                "focus_hit_lines": focus_hit_lines,
                 "sample_text_snippets": snippets,
             }
         )

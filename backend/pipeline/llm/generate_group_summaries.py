@@ -50,15 +50,14 @@ def generate_matrix_group_summaries_llm(
 
 
 COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：``keyword`` 与 ``groups``。
-每个 group 含 ``group``（与 第五章矩阵一致的细分类目名）、``comment_flat_rows``、``effective_text_lines``、
-``focus_hit_lines``（关注词子串命中摘要，与 **第八章第二节**（关注词与场景路径）左栏同源）、``sample_text_snippets``（评价短摘录，已截断）。
-摘录行通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头：细类可与本 group 名对照，**品名/SKU/店铺**表示该句具体出自哪条链接；归纳时若引用原话，**须交代是「哪家店、哪条 SKU、哪款品名」上的反馈**，勿只写「有用户说口感差」而不指代产品。
-关注词命中为子串统计，可能与句意不一致；**请以整句语义**判断褒贬（如「软硬适中」「没那么甜」常为满意表述，不得据此写成质地问题）。
+每个 group 含 ``group``（与 第五章矩阵一致的细分类目名）、``comment_flat_rows``、``effective_text_lines``（该细类下从评价中抽取的短文本单元）、``sample_text_snippets``（带 SKU/品名/店铺前缀的评价短摘录，已截断）。
+摘录行通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头：**品名/SKU/店铺**表示该句具体出自哪条链接；归纳时若引用原话，**须交代是「哪家店、哪条 SKU、哪款品名」上的反馈**，勿只写「有用户说口感差」而不指代产品。
+请**以整句语义**判断褒贬（如「软硬适中」「没那么甜」常为满意表述），不得仅凭片段词就写成负面结论。
 
 请**为每个细类**输出一小段 Markdown（全部 groups 都要写，顺序与输入一致）：
 - 以 ``#### `` + 与该 group 字段**完全一致**的细类名作为小节标题（不要使用 ``##`` 一级标题）；
-- 每段约 **100～220 字**中文：归纳该细类下**消费者在讨论什么**（口感、价格、物流、功效疑虑等）、**关注词命中反映的诉求**；勿编造摘录中未出现的品牌、医学结论；
-- **去重与可证（本章仅评论侧）**：本段**只**依据评价/关注词摘录，**禁止**把 ``keyword``、品类常识或商品标题卖点套话写成「用户评价」；**禁止**各细类段首复用同一句总括（如「整体上满足了消费者对低 GI、高蛋白、便携性的需求」）；每段开头句式须**有变化**，并至少一句体现**该细类与相邻细类在讨论焦点上的差异**。**利益/诉求词**（低 GI、高蛋白、便携、代餐、控糖等）**仅当**在 ``sample_text_snippets``、``effective_text_lines`` 或 ``focus_hit_lines`` 的**原文**中可子串命中或可明确同义（便携↔随身、小包装、单片、独立装等）时才写；若上述字段中**未**出现「蛋白」「便携」「随身」「小包装」「单片」等，则**不得**写「高蛋白」「便携性」等；**禁止**为凑齐常见卖点组合而脑补未在输入中出现的词。
+- 每段约 **100～220 字**中文：归纳该细类下**消费者在讨论什么**（口感、价格、物流、功效疑虑等）；勿编造摘录中未出现的品牌、医学结论；
+- **去重与可证（本章仅评论侧）**：本段**只**依据 ``sample_text_snippets`` 与 ``effective_text_lines`` 中的**原文**，**禁止**把 ``keyword``、品类常识或商品标题卖点套话写成「用户评价」；**禁止**各细类段首复用同一句总括（如「整体上满足了消费者对低 GI、高蛋白、便携性的需求」）；每段开头句式须**有变化**，并至少一句体现**该细类与相邻细类在讨论焦点上的差异**。**利益/诉求词**（低 GI、高蛋白、便携、代餐、控糖等）**仅当**在上述字段的**原文**中可子串命中或可明确同义（便携↔随身、小包装、单片、独立装等）时才写；若**未**出现「蛋白」「便携」「随身」「小包装」「单片」等，则**不得**写「高蛋白」「便携性」等；**禁止**为凑齐常见卖点组合而脑补未在输入中出现的词。
 - **禁止**输出 Markdown 表格、禁止逐条复述全部评价；
 - 若 ``effective_text_lines`` 很少，明确写「样本较少，归纳供启发」。
 
@@ -66,7 +65,7 @@ COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：
 
 
 COMMENT_GROUPS_USER_PREFIX = (
-    "请根据以下 JSON 撰写竞品报告第八章末「细类评论与关注词要点归纳」正文（Markdown）。\n\n"
+    "请根据以下 JSON 撰写竞品报告第八章末「细类评论要点归纳」正文（Markdown）。\n\n"
 )
 
 
@@ -85,7 +84,6 @@ def generate_comment_group_summaries_llm(
         eff_max: int,
         sn_n: int,
         sn_max: int,
-        fh_n: int,
     ) -> dict[str, Any]:
         g2: dict[str, Any] = {
             "group": g.get("group"),
@@ -101,11 +99,6 @@ def generate_comment_group_summaries_llm(
             g2["sample_text_snippets"] = [str(x)[:sn_max] for x in sn[:sn_n]]
         else:
             g2["sample_text_snippets"] = []
-        fh = g.get("focus_hit_lines")
-        if isinstance(fh, list):
-            g2["focus_hit_lines"] = [str(x) for x in fh[:fh_n]]
-        else:
-            g2["focus_hit_lines"] = []
         return g2
 
     ctx = llm_context_window_size()
@@ -115,24 +108,24 @@ def generate_comment_group_summaries_llm(
         est = estimate_chat_input_tokens(system, user_p)
         return est < 15_500
 
-    levels: list[tuple[int, int, int, int, int]] = [
-        (14, 260, 10, 200, 10),
-        (12, 220, 8, 180, 8),
-        (10, 180, 8, 160, 6),
-        (8, 150, 6, 140, 6),
-        (6, 120, 5, 120, 5),
-        (5, 100, 4, 100, 4),
-        (4, 80, 3, 80, 3),
-        (3, 70, 3, 70, 3),
-        (3, 50, 2, 60, 2),
+    levels: list[tuple[int, int, int, int]] = [
+        (14, 260, 10, 200),
+        (12, 220, 8, 180),
+        (10, 180, 8, 160),
+        (8, 150, 6, 140),
+        (6, 120, 5, 120),
+        (5, 100, 4, 100),
+        (4, 80, 3, 80),
+        (3, 70, 3, 70),
+        (3, 50, 2, 60),
     ]
     user = ""
     chosen = levels[-1]
     for level in levels:
         chosen = level
-        eff_n, eff_max, sn_n, sn_max, fh_n = level
+        eff_n, eff_max, sn_n, sn_max = level
         trimmed = [
-            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max, fh_n=fh_n)
+            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max)
             for g in groups
             if isinstance(g, dict)
         ]
@@ -144,9 +137,9 @@ def generate_comment_group_summaries_llm(
             break
     else:
         tail = "\n\n…（JSON 已截断以适配上下文；仅依据可见字段撰写。）\n"
-        eff_n, eff_max, sn_n, sn_max, fh_n = chosen
+        eff_n, eff_max, sn_n, sn_max = chosen
         trimmed = [
-            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max, fh_n=fh_n)
+            _compact_one(g, eff_n=eff_n, eff_max=eff_max, sn_n=sn_n, sn_max=sn_max)
             for g in groups
             if isinstance(g, dict)
         ]

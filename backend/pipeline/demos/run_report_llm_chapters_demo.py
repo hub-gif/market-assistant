@@ -354,13 +354,8 @@ def main() -> None:
             comment_rows=comment_rows,
             sku_header=sku_h,
         )
-        fw_src = eff_rc.get("comment_focus_words") or list(jcr.COMMENT_FOCUS_WORDS)
-        fw_tuple = tuple(
-            str(x).strip() for x in fw_src if str(x).strip()
-        ) or jcr.COMMENT_FOCUS_WORDS
         pl_cg = jcr.build_comment_groups_llm_payload(
             feedback_groups=fb,
-            focus_words=fw_tuple,
             merged_rows=merged,
             sku_header=sku_h,
             title_h=title_h,
@@ -374,7 +369,7 @@ def main() -> None:
             return generate_comment_group_summaries_llm(pl_cg, keyword=keyword)
 
         _run_one(
-            "§8 细类评价与关注词（comment_groups）",
+            "§8 细类评价要点（comment_groups）",
             _cg,
             live=args.live,
             preview_chars=args.preview_chars,
