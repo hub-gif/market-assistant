@@ -51,7 +51,7 @@ def generate_matrix_group_summaries_llm(
 
 COMMENT_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：``keyword`` 与 ``groups``。
 每个 group 含 ``group``（与 第五章矩阵一致的细分类目名）、``comment_flat_rows``、``effective_text_lines``、
-``focus_hit_lines``（关注词子串命中摘要，与 第八章第三节 同源）、``sample_text_snippets``（评价短摘录，已截断）。
+``focus_hit_lines``（关注词子串命中摘要，与 **第八章第二节**（关注词与场景路径）左栏同源）、``sample_text_snippets``（评价短摘录，已截断）。
 摘录行通常以 ``【细类：…｜SKU：…｜品名：…｜店铺：…】`` 开头：细类可与本 group 名对照，**品名/SKU/店铺**表示该句具体出自哪条链接；归纳时若引用原话，**须交代是「哪家店、哪条 SKU、哪款品名」上的反馈**，勿只写「有用户说口感差」而不指代产品。
 关注词命中为子串统计，可能与句意不一致；**请以整句语义**判断褒贬（如「软硬适中」「没那么甜」常为满意表述，不得据此写成质地问题）。
 
@@ -163,9 +163,9 @@ def generate_comment_group_summaries_llm(
 
 
 SCENARIO_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON：``keyword``、``scenario_lexicon``、``groups``。
-``scenario_lexicon`` 列出各场景标签及示例触发子串（与报告 **第八章第三节** 右栏统计规则一致）。
+``scenario_lexicon`` 列出各场景标签及示例触发子串（与报告 **第八章第二节**（关注词与场景路径）右栏统计规则一致）。
 ``groups`` 每项含 ``group``（与 第五章矩阵一致的细分类目名）、``effective_text_count``（有效评价文本条数）、
-``scenario_distribution``（各预设场景的 ``mention_rows`` 与 ``share_of_effective_texts``；**一条评价可计入多场景**；与 第八章第三节 图右栏同源）、
+``scenario_distribution``（各预设场景的 ``mention_rows`` 与 ``share_of_effective_texts``；**一条评价可计入多场景**；与 **第八章第二节** 图右栏同源）、
 ``sample_text_snippets``（摘录行常含细类、SKU、品名、店铺等前缀的短引文，已截断）。
 统计为**子串命中**，不是语义主题模型。
 
@@ -179,7 +179,7 @@ SCENARIO_GROUPS_SYSTEM = """你是用户研究与品类顾问。输入为 JSON�
 
 
 SCENARIO_GROUPS_USER_PREFIX = (
-    "请根据以下 JSON 撰写竞品报告 第八章第三节（右栏：使用场景）之后的「使用场景要点归纳」正文（Markdown）。\n\n"
+    "请根据以下 JSON 撰写竞品报告 第八章第二节（右栏：使用场景）之后的「使用场景要点归纳」正文（Markdown）。\n\n"
 )
 
 

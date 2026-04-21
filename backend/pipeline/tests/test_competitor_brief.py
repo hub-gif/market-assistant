@@ -145,7 +145,9 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertIn("店铺：", lines[0])
         self.assertIn("整体口感还差点意思", lines[0])
 
-    def test_scenario_groups_llm_payload_matches_section_8_4_counts(self) -> None:
+    def test_scenario_groups_llm_payload_matches_chapter8_sec2_right_rail_counts(
+        self,
+    ) -> None:
         sku_h = "SKU(skuId)"
         merged = [
             {

@@ -292,7 +292,7 @@ def build_scenario_groups_llm_payload(
     sku_header: str,
     title_h: str,
 ) -> dict[str, Any]:
-    """供 ``generate_scenario_group_summaries_llm``；计数与 §8.3 图右栏（场景）一致。"""
+    """供 ``generate_scenario_group_summaries_llm``；计数与 **§8.2** 关注词/场景路径下图右栏（场景）一致。"""
     if not feedback_groups:
         return {}
     sku_meta: dict[str, tuple[str, str, str]] = {}

@@ -409,7 +409,7 @@ def build_comment_sentiment_llm_payload(
     （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
 
     ``sentiment_bucket_method``：有有效评分列时为 ``score_then_lexeme``，否则为 ``keyword_substring_heuristic``；
-    条形图与 ``comment_sentiment_lexicon`` 计数方式与之一致，正文归纳仍以整句语义为准。
+    ``comment_sentiment_lexicon`` 与各象限计数一致（竞品报告与 brief **已不再**发布同口径图）；正文归纳仍以整句语义为准。
     """
     use_score_column = bool(
         scores is not None
