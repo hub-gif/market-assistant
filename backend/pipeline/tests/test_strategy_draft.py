@@ -42,6 +42,9 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertNotIn("strategy_hints", md)
         self.assertIn("监测摘要自动线索", md)
         self.assertIn("列表页约第 1～3 页", md)
+        self.assertNotIn("埋伏笔", md)
+        self.assertNotIn("成稿须与 §2", md)
+        self.assertNotIn("回扣 §2", md)
 
     def test_build_contains_sections_and_notes(self) -> None:
         brief = {
