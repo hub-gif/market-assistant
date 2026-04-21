@@ -196,7 +196,7 @@ def main() -> int:
     if report_uses_chapter8_text_mining_probe(rc):
         payload["structured_brief_omission_note"] = (
             "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top、"
-            "`strategy_hints`、`comment_sentiment_lexicon`（规则词表/条形图同源），避免与报告 §8 文本挖掘主口径冲突。**不得**再以这类子串计数或预设场景占比作为论据。"
+            "`strategy_hints` 等；全量 brief 已**不再**包含 ``comment_sentiment_lexicon``。**不得**再以星级子集预设口语短语计数或预设场景占比作为论据。"
             "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及下方 `report_strategy_excerpt`（第九章）对齐，不得省略报告已写明的活动建议。"
         )
 

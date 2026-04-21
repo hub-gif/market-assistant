@@ -3,9 +3,9 @@
 
 - §5 后：``generate_matrix_group_summaries_llm``
 - §6 后：``generate_price_group_summaries_llm``、``generate_promo_group_summaries_llm``
-- §8.2：``generate_comment_sentiment_analysis_llm``
+- （可选、默认关闭）``generate_comment_sentiment_analysis_llm``：已不再嵌入报告正文
 - §8末细类评价：``generate_comment_group_summaries_llm``
-- §8.3 右栏后使用场景：``generate_scenario_group_summaries_llm``
+- §8.2 关注词/场景路径下右栏后使用场景：``generate_scenario_group_summaries_llm``
 - §9 策略与机会：``generate_strategy_opportunities_llm``（``build_competitor_brief`` + 可选 ``chapter_llm_narratives`` 与各章归纳对齐）
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
@@ -38,6 +38,9 @@ if str(JCR_ROOT) not in sys.path:
     sys.path.insert(0, str(JCR_ROOT))
 
 from pipeline.competitor_report import jd_report as jcr  # noqa: E402
+from pipeline.competitor_report.comment_sentiment import (  # noqa: E402
+    build_comment_sentiment_llm_payload,
+)
 import jd_keyword_pipeline as kpl  # noqa: E402
 
 from pipeline.csv.schema import MERGED_FIELD_TO_CSV_HEADER  # noqa: E402
@@ -199,7 +202,7 @@ def main() -> None:
             attr_units = list(comment_units)
 
         def _sent() -> str:
-            pl = jcr.build_comment_sentiment_llm_payload(
+            pl = build_comment_sentiment_llm_payload(
                 comment_units,
                 scores=comment_scores,
                 attributed_texts=attr_units,
@@ -210,7 +213,7 @@ def main() -> None:
             return generate_comment_sentiment_analysis_llm(pl)
 
         _run_one(
-            "§8.2 评价正负面（llm_comment_sentiment）",
+            "已弃用嵌入 · 评价情感 LLM 演示（llm_comment_sentiment）",
             _sent,
             live=args.live,
             preview_chars=args.preview_chars,
@@ -333,7 +336,7 @@ def main() -> None:
             return generate_scenario_group_summaries_llm(pl_sg, keyword=keyword)
 
         _run_one(
-            "§8.3 使用场景归纳（scenario_groups）",
+            "§8.2 路径 · 使用场景归纳（scenario_groups）",
             _sg,
             live=args.live,
             preview_chars=args.preview_chars,

@@ -220,7 +220,7 @@ def generate_strategy_draft_markdown_llm(
         if report_uses_chapter8_text_mining_probe(report_config):
             payload["structured_brief_omission_note"] = (
                 "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top、"
-                "``strategy_hints``、``comment_sentiment_lexicon``（规则词表/条形图同源），避免与报告 §8 文本挖掘主口径冲突。**不得**再以这类子串计数、短语条形图或预设场景占比作为论据。"
+                "``strategy_hints`` 等；报告已**不再**输出 ``comment_sentiment_lexicon``（星级子集预设口语短语）及同口径图。**不得**再以这类子串计数、短语条形图或预设场景占比作为论据。"
                 "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及下方 `report_strategy_excerpt`（第九章）对齐，不得省略报告已写明的活动建议。"
             )
         raw = json.dumps(payload, ensure_ascii=False)
@@ -290,7 +290,7 @@ STRATEGY_OPPORTUNITIES_SYSTEM = (
 - **定性主题**（各细类讨论焦点、正负向体验、场景与关注词归纳、配料/卖点叙事、促销形态描述等）须与 ``prior_chapter_llm_narratives`` 中已出现的表述**方向一致**，**禁止**另写一套与节选**明显矛盾**的品类判断、品牌举例或用户痛点主题。
 - **定量与可核验事实**（价带分位数、店铺/品牌占比、条数、评论统计字段等）**以** ``competitor_brief`` **为准**；若节选与 brief 数字冲突，**采纳 brief**，且勿复述与数字冲突的节选句。
 - 若某键未出现在 ``prior_chapter_llm_narratives`` 或内容为空，则该维度**不得**编造与可能存在的报告其他章冲突的细节；仅依据 ``competitor_brief`` 或明确写「输入中未体现」。
-- **转化与体验**小节：正负向体验线索须**优先呼应** ``sec8_2_sentiment_theme_attribution`` 与 **第八章第三节 侧**节选（``sec8_3_comment_focus_summaries`` 或 ``sec8_3_text_mining_probe``，视何者存在）；**禁止**将节选未提及的具体抱怨/品类问题写成**主要结论**；可写「假设：待结合业务验证」。
+- **转化与体验**小节：正负向体验线索须**优先呼应** **第八章第二节 侧**节选（``sec8_3_comment_focus_summaries`` 或 ``sec8_3_text_mining_probe``，视何者存在；内部键名仍沿用 ``sec8_3_*``）；**禁止**将节选未提及的具体抱怨/品类问题写成**主要结论**；可写「假设：待结合业务验证」。
 
 **标题与措辞（硬性）**：
 - **禁止**在正文开头或任何位置重复宿主已有章名/小节名，包括但不限于：「第九章」「第9章」「九、」「策略与机会提示」「策略与机会建议」「策略与机会」等；**不要**自造 ``##`` 一级标题；

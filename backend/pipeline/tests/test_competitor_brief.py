@@ -7,6 +7,10 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 from pipeline.competitor_report import jd_report as jcr
+from pipeline.competitor_report.comment_sentiment import (
+    _comment_sentiment_lexicon,
+    build_comment_sentiment_llm_payload,
+)
 from pipeline.csv.schema import infer_total_sales_from_sales_floor
 from pipeline.reporting.charts import _cn_volume_int
 
@@ -30,8 +34,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(out["scope"]["merged_sku_count"], 0)
         self.assertIsInstance(out["strategy_hints"], list)
         self.assertEqual(out["matrix_by_group"], [])
-        self.assertIn("comment_sentiment_lexicon", out)
-        self.assertEqual(out["comment_sentiment_lexicon"].get("text_units"), 0)
+        self.assertNotIn("comment_sentiment_lexicon", out)
         import json
 
         json.dumps(out)
@@ -39,7 +42,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
     def test_comment_sentiment_llm_payload_has_semantic_pool(self) -> None:
         texts = ["口感软硬适中很好吃", "太差了不建议"]
         attr = [f"【细类：A｜SKU：1｜品名：x｜店铺：y】{t}" for t in texts]
-        pl = jcr.build_comment_sentiment_llm_payload(
+        pl = build_comment_sentiment_llm_payload(
             texts,
             attributed_texts=attr,
             shuffle_seed="unit-test-seed",
@@ -52,18 +55,18 @@ class BuildCompetitorBriefTests(SimpleTestCase):
     def test_comment_sentiment_score_then_lexeme(self) -> None:
         texts = ["很好吃", "太差了", "一般般"]
         scores = [5, 1, 3]
-        lex = jcr._comment_sentiment_lexicon(texts, scores)
+        lex = _comment_sentiment_lexicon(texts, scores)
         self.assertEqual(lex.get("method"), "score_then_lexeme")
         self.assertEqual(lex.get("positive_only"), 1)
         self.assertEqual(lex.get("negative_only"), 1)
         self.assertEqual(lex.get("neutral_or_empty"), 1)
-        pl = jcr.build_comment_sentiment_llm_payload(texts, scores=scores)
+        pl = build_comment_sentiment_llm_payload(texts, scores=scores)
         self.assertEqual(pl.get("sentiment_bucket_method"), "score_then_lexeme")
 
     def test_comment_sentiment_all_scores_missing_falls_back_keyword(self) -> None:
         texts = ["好吃推荐", "差评"]
         scores = [None, None]
-        lex = jcr._comment_sentiment_lexicon(texts, scores)
+        lex = _comment_sentiment_lexicon(texts, scores)
         self.assertEqual(lex.get("method"), "keyword_lexicon")
 
     def test_custom_focus_words_in_report_config(self) -> None:

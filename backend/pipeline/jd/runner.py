@@ -34,7 +34,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     marker = "\n---\n\n## 九、策略与机会提示（假设清单，待验证）"
     insert = (
         "\n\n---\n\n"
-        "### 8.5 大模型深度补充（与第二章至第八章第三节正文中的定量内容互补）\n\n"
+        "### 8.5 大模型深度补充（与第二章至第八章第二节正文中的定量内容互补）\n\n"
         "> **说明**：本段位于**第八章末**；**竞品矩阵、价盘表、统计图与第八章第二、三节等各节正文以相应章节为准**，"
         "此处为跨小节语义整合，便于衔接第九章。\n\n"
         f"{sup.strip()}\n"
@@ -50,7 +50,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
         if alt in body and marker not in body:
             return body.replace(
                 alt,
-                "\n\n---\n\n### 8.5 大模型深度补充（与第二章至第八章第三节正文中的定量内容互补）\n\n"
+                "\n\n---\n\n### 8.5 大模型深度补充（与第二章至第八章第二节正文中的定量内容互补）\n\n"
                 "> **说明**：位于第八章末；**矩阵与图表以正文为准**。\n\n"
                 f"{sup.strip()}\n"
                 + alt,
@@ -59,7 +59,7 @@ def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
     app = "\n## 附录 A：数据留存说明"
     if app in body:
         tail = (
-            "\n\n---\n\n### 8.5 大模型深度补充（与第二章至第八章第三节正文中的定量内容互补）\n\n"
+            "\n\n---\n\n### 8.5 大模型深度补充（与第二章至第八章第二节正文中的定量内容互补）\n\n"
             f"{sup.strip()}\n"
         )
         return body.replace(app, tail + app, 1)
@@ -167,7 +167,7 @@ def get_default_report_config() -> dict[str, Any]:
     """与 ``pipeline.competitor_report.jd_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
     return {
-        "llm_comment_sentiment": True,
+        "llm_comment_sentiment": False,
         "llm_matrix_group_summaries": True,
         "llm_comment_group_summaries": True,
         "llm_scenario_group_summaries": True,
@@ -728,10 +728,6 @@ def write_competitor_analysis_for_run_dir(
             from ..llm.generate import generate_strategy_opportunities_llm
 
             _strategy_narratives: dict[str, str] = {}
-            if (llm_sentiment_md or "").strip():
-                _strategy_narratives["sec8_2_sentiment_theme_attribution"] = (
-                    llm_sentiment_md
-                )
             if (llm_matrix_md or "").strip():
                 _strategy_narratives["sec5_matrix_group_summaries"] = llm_matrix_md
             if (llm_price_md or "").strip():

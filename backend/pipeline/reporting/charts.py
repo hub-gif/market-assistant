@@ -225,6 +225,10 @@ _OBSOLETE_REPORT_ASSETS: frozenset[str] = frozenset(
         "chart_focus_keywords_pie.png",
         "chart_comment_focus_global_bar.png",
         "chart_usage_scenarios_global_bar.png",
+        "chart_sentiment_overview_pie.png",
+        "chart_sentiment.png",
+        "chart_positive_lexemes_bar.png",
+        "chart_negative_lexemes_bar.png",
     }
 )
 
@@ -265,7 +269,7 @@ def generate_report_charts(
     """生成扇形/条形 PNG。返回已写入的文件名列表（不含路径）。
 
     若 ``report_config["chapter8_text_mining_probe"]`` 为真，**不**生成 ``chart_focus_and_scenarios_bar__*.png``
-   （与竞品报告 §8.3 文本挖掘探针互斥，避免无效产出）。
+   （与竞品报告 §8.2 文本挖掘探针互斥，避免无效产出）。
     """
     _setup_matplotlib_cjk()
     import matplotlib.pyplot as plt
@@ -633,62 +637,6 @@ def generate_report_charts(
                     gv=gv,
                     n_texts=n_texts,
                 )
-
-    sent = brief.get("comment_sentiment_lexicon") or {}
-    if isinstance(sent, dict):
-        _score_mode = (sent.get("method") or "") == "score_then_lexeme"
-        pie_labs = (
-            ["偏正向(4～5星)", "偏负向(1～2星)", "关键词混合", "中性/空"]
-            if _score_mode
-            else ["偏正向", "偏负向", "正负混合", "中性/空"]
-        )
-        pie_vals = [
-            float(sent.get("positive_only") or 0),
-            float(sent.get("negative_only") or 0),
-            float(sent.get("mixed_positive_and_negative") or 0),
-            float(sent.get("neutral_or_empty") or 0),
-        ]
-        pl = [a for a, b in zip(pie_labs, pie_vals) if b > 0]
-        pv = [b for b in pie_vals if b > 0]
-        save_pie(pl, pv, "评价语气四象限占比", "chart_sentiment_overview_pie.png")
-        save_bar_h(
-            pl,
-            pv,
-            "评价正负面粗判（条数）",
-            "chart_sentiment.png",
-            "条数",
-        )
-
-        pos_h = sent.get("positive_tone_lexeme_hits") or []
-        neg_h = sent.get("negative_tone_lexeme_hits") or []
-        plx, pvx = _label_count_pairs(
-            pos_h, key_label="word", key_count="texts_matched", cap=16
-        )
-        save_bar_h(
-            plx,
-            pvx,
-            (
-                "4～5星语境 · 正向口语短语命中条数"
-                if _score_mode
-                else "正向/混合语境 · 正向口语短语命中条数"
-            ),
-            "chart_positive_lexemes_bar.png",
-            "条数",
-        )
-        nlx, nvx = _label_count_pairs(
-            neg_h, key_label="word", key_count="texts_matched", cap=16
-        )
-        save_bar_h(
-            nlx,
-            nvx,
-            (
-                "1～2星语境 · 负向口语短语命中条数"
-                if _score_mode
-                else "负向/混合语境 · 负向口语短语命中条数"
-            ),
-            "chart_negative_lexemes_bar.png",
-            "条数",
-        )
 
     matrix_groups = brief.get("matrix_by_group") or []
     if isinstance(matrix_groups, list):

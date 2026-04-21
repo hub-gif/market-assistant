@@ -61,7 +61,7 @@ _COMMENT_CSV_SKU = COMMENT_CSV_COLUMNS[0]
 _COMMENT_CSV_BODY = COMMENT_CSV_COLUMNS[3]
 _COMMENT_CSV_SCORE = COMMENT_CSV_COLUMNS[7]  # 「评分」→ commentScore
 
-# 评价星级与 §8.2 分桶：先按评分筛正负，再在对应子集内统计口语短语（无评分时回退关键词）
+# 评价星级分桶（comment_sentiment 模块）：仍用于可选的情感 LLM 载荷；报告正文与 brief 已不再输出同口径图
 _COMMENT_SCORE_NEG_MAX = 2  # 1～2 星 → 偏负向
 _COMMENT_SCORE_POS_MIN = 4  # 4～5 星 → 偏正向（3 星为中评，归入中性）
 

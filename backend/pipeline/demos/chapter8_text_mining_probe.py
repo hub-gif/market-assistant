@@ -2,7 +2,7 @@
 第八章「评论文本补充分析」独立脚本（**不修改**主报告核心逻辑）。
 
 流程（按细类分组）：清洗（中文分词 + 停用词）→ **词云图（可选）** → 词频 / 关键词突出度 → 词对共现 → 主题归纳
-→ 规则化叙事小结 → 文末可选 **专用 LLM**（结构化 JSON + ``PROBE_TEXT_MINING_SYSTEM`` + ``_call_llm``；**非** ``COMMENT_GROUPS_SYSTEM``、**非**第八章第二节情感）。
+→ 规则化叙事小结 → 文末可选 **专用 LLM**（结构化 JSON + ``PROBE_TEXT_MINING_SYSTEM`` + ``_call_llm``；**非** ``COMMENT_GROUPS_SYSTEM``、**非**已废弃的星级子集预设口语短语情感条形图）。
 
 依赖（请自行安装）::
 
@@ -17,7 +17,7 @@
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
 
-嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **第八章第三节**，替代原「关注词 + 场景」条图及对应两段大模型；**第八章第二节与「大模型深入解读（主题归因…）」保留**。
+嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **第八章第二节（评论文本补充分析）**，替代原「关注词 + 场景」条图及对应两段大模型；**不再**嵌入原「评价正负面粗判」预设口语短语扇形图/条形图及同口径大模型块。
 """
 from __future__ import annotations
 
@@ -91,10 +91,10 @@ _STOP_BASIC: frozenset[str] = frozenset(
     """.split()
 )
 
-# --- 评论文本补充分析 · 专用 LLM（与正式报告 ``COMMENT_GROUPS_SYSTEM`` / 第八章第二节均不同）---
+# --- 评论文本补充分析 · 专用 LLM（与正式报告 ``COMMENT_GROUPS_SYSTEM`` / 已废弃的预设口语短语情感口径均不同）---
 PROBE_TEXT_MINING_SYSTEM = """你是用户研究与文本挖掘方向的助手。
 
-输入 JSON 为「第八章第三节评论文本补充分析」的**专用**结果（``schema_version``=1），**不是**正式竞品报告里的关注词规则统计、也不是第八章第二节情感 Lexicon。其中的数字与词表来自**中文分词 + 统计工具**（词频、关键词突出度、共现、主题归纳），与业务侧子串计数**口径不同**。
+输入 JSON 为「第八章第二节评论文本补充分析」的**专用**结果（``schema_version``=1），**不是**正式竞品报告里的关注词规则统计、也不是已废弃的星级子集预设口语短语 Lexicon。其中的数字与词表来自**中文分词 + 统计工具**（词频、关键词突出度、共现、主题归纳），与业务侧子串计数**口径不同**。
 
 每个 ``groups`` 元素含：
 - ``probe_status``：``ok`` 表示该细类已完成分词与统计；``skipped`` 表示样本过少等未下钻。
@@ -551,7 +551,7 @@ def build_markdown(
         "## 8.0 说明",
         "",
         "本稿为**独立补充分析**，流程为：清洗评论 → 词云（可选）→ 词频与关键词 → 词对共现 → 主题归纳 → 文字小结；"
-        "文末可选用**专用提示词**由大模型解读（与第八章第二节所用口径不同）。"
+        "文末可选用**专用提示词**由大模型解读（与已废弃的预设口语短语情感口径不同）。"
         "**细类划分与 SKU 归因**与主报告一致；其余为中文分词与统计工具做的开放词表分析，**不替代**正式报告中的规则统计。",
         "",
         "---",
@@ -696,7 +696,7 @@ def build_markdown(
         "keyword": kw,
         "probe_note": (
             "中文分词 + 停用词；关键词突出度/共现/主题归纳为统计库；"
-            "与正式报告的关注词规则统计、第八章第二节情感口径均不同；"
+            "与正式报告的关注词规则统计、已废弃的预设口语短语情感口径均不同；"
             "评价摘录字段合并自 build_comment_groups_llm_payload，供语境对照；"
             "「使用场景」若出现，须仅能从本 JSON 内统计与摘录推断，不接入正式场景分组。"
         ),
@@ -730,7 +730,7 @@ def build_markdown(
 
 def markdown_embed_body_for_competitor_report(full_probe_md: str) -> str:
     """
-    将独立补充分析稿转为可嵌入 ``build_competitor_markdown`` 的 **第八章第三节正文**（不含 ``### 8.3`` 标题行）：
+    将独立补充分析稿转为可嵌入 ``build_competitor_markdown`` 的 **第八章第二节正文**（不含 ``### 8.2`` 标题行；由 ``jd_report`` 统一加标题）：
     从 ``## 8.0 说明`` 起至文末，并把 ``## …`` 降为 ``#### …``，避免与宿主 ``## 八、`` 冲突。
     """
     lines = (full_probe_md or "").splitlines()

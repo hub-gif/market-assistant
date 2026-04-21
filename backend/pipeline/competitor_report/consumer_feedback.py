@@ -20,7 +20,7 @@ def _comment_lines_with_product_context(
     sku_header: str,
     title_h: str,
 ) -> list[str]:
-    """与 ``comment_rows`` 顺序对齐：带细类/SKU/品名/店铺前缀，供 §8.2 大模型抽样。"""
+    """与 ``comment_rows`` 顺序对齐：带细类/SKU/品名/店铺前缀，供可选的情感/评论 LLM 载荷抽样。"""
     sku_meta: dict[str, tuple[str, str, str]] = {}
     for row in merged_rows:
         sku = _cell(row, sku_header).strip()

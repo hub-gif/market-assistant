@@ -58,9 +58,7 @@ from pipeline.competitor_report.price_promo import (  # noqa: E402
     _markdown_price_promotion_section,
 )
 from pipeline.competitor_report.comment_sentiment import (  # noqa: E402
-    build_comment_sentiment_llm_payload,
     _comment_keyword_hits,
-    _comment_sentiment_lexicon,
     _iter_comment_text_units,
     _iter_comment_text_units_and_scores,
     _merge_comment_previews,
@@ -225,7 +223,6 @@ def build_competitor_markdown(
     comment_texts, comment_scores = _iter_comment_text_units_and_scores(
         comment_rows, merged_rows
     )
-    sentiment_lex = _comment_sentiment_lexicon(comment_texts, comment_scores)
     scen_counts, scen_n_texts = _comment_scenario_counts(
         comment_texts, scenario_groups
     )
@@ -292,9 +289,9 @@ def build_competitor_markdown(
             "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
             "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
             (
-                "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；**第八章第三节**另用分词、词频与主题模型等对评论做**补充分析**（与**第八章第二节**条形图口径不同、互为补充），可选词云并由大模型归纳要点。"
+                "- **用户画像（第八章）**：**不再**使用星级子集内**预设口语短语**条形图、正负面扇形图及同口径摘要；**第八章第二节**为分词、词频、共现与主题等**文本补充分析**（可选词云及大模型解读），结论须结合抽样原文理解。"
                 if _ch8_probe_sec
-                else "- **用户画像（第八章）**：正负面粗判含**口语短语**级摘录；关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见**第八章第三节**。"
+                else "- **用户画像（第八章）**：关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见**第八章第二节**。"
             ),
             "- **细类划分（第五至第八章）**：**仅**依据合并表中的**商品详情页类目路径**；该信息缺失或无法读出细类名称的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
@@ -389,7 +386,7 @@ def build_competitor_markdown(
             )
     if multi_feedback_cat and (hits or scen_n_texts > 0):
         exec_bullets.append(
-            "评价侧写（关注词、用途/场景）已按**第五章同一细类划分**分节，见**第八章第三节**（同图并列）。"
+            "评价侧写（关注词、用途/场景）已按**第五章同一细类划分**分节，见**第八章第二节**（同图并列）。"
         )
     elif hits:
         top3 = "、".join(f"「{w}」({n})" for w, n in hits.most_common(3))
@@ -743,13 +740,7 @@ def build_competitor_markdown(
             ]
         )
 
-    _sm_score = sentiment_lex.get("method") == "score_then_lexeme"
-    _sec82_title = (
-        "### 8.2 评价正负面粗判（评分优先 + 关键词回退）"
-        if _sm_score
-        else "### 8.2 评价正负面粗判（关键词规则）"
-    )
-    _sec82_block: list[str] = [
+    _sec8_open: list[str] = [
         "---",
         "",
         "## 八、消费者反馈与用户画像（按细分类目）",
@@ -758,123 +749,30 @@ def build_competitor_markdown(
         "",
         "- **细类划分**：与**第五章「竞品矩阵」**相同，**仅**依据合并表中的**商品详情页类目路径**解析为「饼干 / 西式糕点 / …」等（规则见第五章开头说明）。",
         "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺少类目路径或读不出细类名称的，该评价不进入按细类统计**（与第五章**同一条排除规则**）。",
-        "- **正负面粗判（第八章第二节）**：若评价含有效「评分」列则**先按星级**粗分正负与中评，再在对应子集内统计口语短语；无评分时仍按关键词子串；若任务开启**大模型评价情感分析**，可附**大模型对抽样原文的主题归因**，与条形图互补。",
         (
-            "- **文本补充分析（第八章第三节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），与**第八章第二节**规则词表条形图**不同**、**互补**；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
+            "- **评论文本补充分析（第八章第二节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），**不再**在报告中使用「星级子集内预设口语短语」条形图、正负面扇形图及同口径摘要；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
             if _ch8_probe_sec
-            else "- **关注词与使用场景（第八章第三节）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与第五章矩阵细类一一对应。"
+            else "- **关注词与使用场景（第八章第二节）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与第五章矩阵细类一一对应。"
         ),
         "",
-        _sec82_title,
-        "",
-        f"- **有效文本条数**：{sentiment_lex.get('text_units', 0)}（与第八章第一节**归因规则**一致）。",
     ]
-    if _sm_score:
-        _sec82_block.append(
-            "- **正负面粗判规模**：本批存在有效「评分」时——**1～2 星**计为偏负向，**4～5 星**计为偏正向，**3 星**计为中评，**空文本**计为中性；"
-            "无评分的条仍按关键词子串划分；「混合」仅在**无评分**且同条兼含正/负关键词时出现。"
-        )
-    _sec82_block.extend(
-        [
-            f"- **偏正向**：{sentiment_lex.get('positive_only', 0)} 条"
-            + ("（主要为 4～5 星）" if _sm_score else "（仅命中正向词表）")
-            + "；"
-            f"**偏负向**：{sentiment_lex.get('negative_only', 0)} 条"
-            + ("（主要为 1～2 星）" if _sm_score else "（仅命中负向词表）")
-            + "；"
-            f"**混合**：{sentiment_lex.get('mixed_positive_and_negative', 0)} 条"
-            + ("（无评分且同条兼含正/负关键词）" if _sm_score else "（同条兼含正/负词）")
-            + "；"
-            f"**中性或空文本**：{sentiment_lex.get('neutral_or_empty', 0)} 条"
-            + ("（含 3 星中评及无关键词命中）" if _sm_score else "")
-            + "。",
-            "- **说明**："
-            + (
-                "星级与正文可能不一致（如五星长文吐槽）；口语短语条形图仅在对应星级子集内统计；正式结论请**人工抽样**阅读原文。"
-                if _sm_score
-                else "词表为方向性粗判，讽刺、省略与错别字会导致误判；正式结论请**人工抽样**阅读原文。"
-            ),
-        ]
-    )
-    lines.extend(_sec82_block)
-    _scope = (sentiment_lex.get("lexeme_scope_note") or "").strip()
-    if _scope:
-        lines.append(f"- **词根统计说明**：{_scope}")
-    lines.extend(["", ""])
-    lines.extend(
-        _embed_chart(
-            run_dir,
-            "chart_sentiment_overview_pie.png",
-            "评价正负面粗判规模（扇形图；与上表条数一致）",
-        )
-    )
-    lines.extend(
-        _embed_chart(
-            run_dir,
-            "chart_positive_lexemes_bar.png",
-            (
-                "正向评价里**最常出现的口语短语**（在 **4～5 星** 评价条内统计；条形图）"
-                if _sm_score
-                else "正向评价里**最常出现的口语短语**（在偏正向或混合评价条内统计；条形图）"
-            ),
-        )
-    )
-    lines.extend(
-        _embed_chart(
-            run_dir,
-            "chart_negative_lexemes_bar.png",
-            (
-                "负向评价里**最常出现的口语短语**（在 **1～2 星** 评价条内统计；条形图）"
-                if _sm_score
-                else "负向评价里**最常出现的口语短语**（在偏负向或混合评价条内统计；条形图）"
-            ),
-        )
-    )
-    pos_h = sentiment_lex.get("positive_tone_lexeme_hits") or []
-    neg_h = sentiment_lex.get("negative_tone_lexeme_hits") or []
-    if pos_h:
-        frag = "；".join(
-            f"「{x.get('word', '')}」{x.get('texts_matched', 0)} 条"
-            for x in pos_h[:6]
-            if isinstance(x, dict)
-        )
-        lines.append(f"- **正向语境高频短语（摘要）**：{frag}。")
-    if neg_h:
-        frag_n = "；".join(
-            f"「{x.get('word', '')}」{x.get('texts_matched', 0)} 条"
-            for x in neg_h[:6]
-            if isinstance(x, dict)
-        )
-        lines.append(f"- **负向语境高频短语（摘要）**：{frag_n}。")
-    _llm_s = (llm_sentiment_section_md or "").strip()
-    if _llm_s:
-        lines.extend(
-            [
-                "",
-                "#### 大模型深入解读（主题归因，与词频统计互补）",
-                "",
-                "> **说明**：基于与上节**同一套评分优先或关键词归类规则**抽样的评价原文，由大模型归纳**用户在说什么**（尤其是负向的具体事由），与上列条数、条形图**互补**；引文以原评论为准。",
-                "",
-                _llm_s,
-            ]
-        )
-    lines.append("")
+    lines.extend(_sec8_open)
     if _ch8_probe_sec:
         lines.extend(
             [
-                "### 8.3 评论文本补充分析（词频、关键词与共现、主题归纳）",
+                "### 8.2 评论文本补充分析（词频、关键词与共现、主题归纳）",
                 "",
-                "> **说明**：与**第八章第二节**口语短语条形图（规则词表）**口径不同**、**互补**；**不再**输出本章原「关注词 + 场景」左右并列条图；插图位于本批次报告附图文件夹中。",
+                "> **说明**：开放词表统计与分词主题探索；**勿**与已废弃的预设口语短语条形图混读；插图位于本批次报告附图文件夹中。",
                 "",
                 _ch8_probe_sec,
                 "",
             ]
         )
     else:
-        # 仅当未嵌入第八章第三节补充分析（_ch8_probe_sec 为空）时：原「关注词 + 场景」条图与逐细类段落
+        # 仅当未嵌入第八章第二节探针补充分析（_ch8_probe_sec 为空）时：原「关注词 + 场景」条图与逐细类段落
         lines.extend(
             [
-                "### 8.3 关注词与使用场景（按细类）",
+                "### 8.2 关注词与使用场景（按细类）",
                 "",
                 "每细类一张**左右并列图**（与报告附图文件夹中的 ``chart_focus_and_scenarios_bar__*.png`` 同源）："
                 "**左**为配置关注词子串命中次数（同一评价可出现多次，为次数而非去重条数）；"
@@ -931,9 +829,9 @@ def build_competitor_markdown(
             lines.extend(
                 [
                     "",
-                    "#### 使用场景要点归纳（大模型，与第八章第三节右栏图表互补）",
+                    "#### 使用场景要点归纳（大模型，与第八章第二节右栏图表互补）",
                     "",
-                    "> **说明**：与第八章第三节**相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
+                    "> **说明**：与第八章第二节**相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
                     "",
                     _llm_sg,
                     "",
@@ -945,9 +843,9 @@ def build_competitor_markdown(
             lines.extend(
                 [
                     "",
-                    "#### 细类评价与关注词要点归纳（大模型，与第八章第三节左栏图表互补）",
+                    "#### 细类评价与关注词要点归纳（大模型，与第八章第二节左栏图表互补）",
                     "",
-                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与第八章第三节图左栏以正文为准**。",
+                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与第八章第二节图左栏以正文为准**。",
                     "",
                     _llm_cg,
                     "",
@@ -1089,9 +987,6 @@ def build_competitor_brief(
 
     comment_texts, comment_scores = _iter_comment_text_units_and_scores(
         comment_rows, merged_rows
-    )
-    comment_sentiment_lexicon = _comment_sentiment_lexicon(
-        comment_texts, comment_scores
     )
     scen_counts, scen_n_texts = _comment_scenario_counts(
         comment_texts, scenario_groups
@@ -1311,11 +1206,9 @@ def build_competitor_brief(
         "strategy_hints": hints,
         "matrix_by_group": matrix_groups,
         "consumer_feedback_by_matrix_group": feedback_by_group,
-        "comment_sentiment_lexicon": comment_sentiment_lexicon,
         "notes": [
             "与在线分析报告各章**计数规则**一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
             "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
-            "评价语气为关键词粗判，非深度学习情感模型。",
             "「集中度」中：默认按**列表行**计数（同一 SKU 多页曝光会重复计）；`shops_from_list.unique_sku_basis` 为按**去重 SKU** 的对照口径。二者均**不是**销量、库存或全渠道市场份额。",
         ],
     }
