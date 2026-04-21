@@ -12,6 +12,37 @@ from ..reporting.strategy_draft import (
 )
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
 
+# 与策略生成表单 POST 字段一致：任一则视为业务已提供「实质决策」，否则由模型基于数据推断草案。
+_STRATEGY_DECISION_SUBSTANTIVE_KEYS: tuple[str, ...] = (
+    "product_role",
+    "battlefield_one_line",
+    "audience_segment",
+    "time_horizon",
+    "success_criteria",
+    "non_goals",
+    "positioning_choice",
+    "competitive_stance",
+    "pillar_product",
+    "pillar_price",
+    "pillar_channel",
+    "pillar_comm",
+    "marketing_strategy",
+    "general_strategy",
+    "competitor_reference",
+    "resource_notes",
+)
+
+
+def strategy_decisions_substantive(strategy_decisions: dict[str, Any] | None) -> bool:
+    """是否填写了至少一项策略表单文本字段（用于 LLM 是否「自动推断」全稿）。"""
+    if not isinstance(strategy_decisions, dict):
+        return False
+    for k in _STRATEGY_DECISION_SUBSTANTIVE_KEYS:
+        v = strategy_decisions.get(k)
+        if isinstance(v, str) and v.strip():
+            return True
+    return False
+
 
 def _omit_ch8_probe_wordchart_fields(compact: dict[str, Any]) -> None:
     """
@@ -89,10 +120,21 @@ STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**
 
 **落实范围**：上文「全局禁止编造」适用于**摘要、一至十、附录**的每一句话与表格每一格；**不得**因章节不同而放宽。
 
+**对外成稿与禁止技术泄露（硬性）**：
+- 正文须为**可直接对业务或合作方阅读**的正式策略文档（对外前仍须按需脱敏）。**禁止**出现：反引号代码体、JSON 键名、英文字段名、内部数据结构名、源码或仓库路径、类文件名、「任务 ID」「工作台」「规则骨架」等系统痕迹；**禁止**照抄底稿中以 *成稿：*、*回答：*、*占位*、*骨架* 开头的**元说明句**，须改写为正式业务表述。
+- **一级标题**用文书式，例如 `# 「{{keyword}}」市场策略建议书（草案）`，其中 `keyword` 取自本消息 JSON 的同名字段；**勿**使用「草稿」「底稿」「归纳用」等对内用词。
+- **附录**中的采集范围等信息用**中文短句**（如「列表页约采集第 3～10 页」），**禁止** `page_start=` 等键值对或英文键名。
+
+**业务决策未填写时的成稿义务（当 JSON 中 `strategy_decisions_substantive` 为 false 时）**：
+- 视为未提交表单决策：须基于监测摘要、细类报告节选、底稿数据表及 `business_notes`（若有）**主动推断**一套连贯的**假设性**策略；在「策略范围与前提」写清推断前提（「假设：」「待业务确认：」），对阶段目标类型给出 **A～E 类选项及你从数据中归纳的推荐倾向**（不得只列选项而无立场）。
+- **§2.1 针对痛点要怎么做**须含**多行实质内容**，覆盖监测已支撑的主要细类与痛点，**禁止**整表留白或满篇 *（待填）*。
+- 仍须遵守全局禁止编造：数字、品牌、店铺、用户原话、活动规则仅可来自输入依据；无依据处用假设语气。
+
 **决策边界（硬性）**：
-- **业务已在 `strategy_decisions` 中填写的项**（角色、时间、成功标准、战场一句话、定位勾选、竞争倾向、四柱、目标客群/对标/资源备注、**营销策略**与**总体策略**等）视为**已定决策**：成稿须**落实为具体执行句**，**不得**改写成相反结论或再要求用户「请选择」。
-- **表单中为空或占位（如 *待填*、*骨架占位*）的项**：结合 `structured_brief`、节选与数据摘录**补全为可执行表述**；补全须与数据方向一致。**例外**：「**策略范围与前提**」中若仍无依据，**允许**保留「待确认」并**列出** A～E 类目标选项，**禁止**用虚构本品角色或目标补满。
-- **成稿阶段避免**：反复「请业务决策」「待确认后再定」；**不确定时**须在 §2.1 表中用「类目/细类」列 +「待业务定类」「假设：」**分类**写清，**禁止**只写泛化一句带过。
+- **当 `strategy_decisions_substantive` 为 true 时**：业务已在 `strategy_decisions` 中填写的项（角色、时间、成功标准、战场一句话、定位勾选、竞争倾向、四柱、目标客群/对标/资源备注、**营销策略**与**总体策略**等）视为**已定决策**：成稿须**落实为具体执行句**，**不得**改写成相反结论或再要求用户「请选择」。
+- **当 `strategy_decisions_substantive` 为 true** 而部分表单项仍为空或占位：结合监测摘要与节选**补全为可执行表述**，与数据方向一致。
+- **当 `strategy_decisions_substantive` 为 false 时**：适用上文「业务决策未填写时的成稿义务」，**禁止**以「请先填表」类表述搪塞全篇。
+- **成稿阶段避免**：反复「请业务决策」；不确定时在 §2.1 用「类目/细类」+「假设：」「待业务确认：」**写清**，**禁止**只写泛化一句。
 
 **输出结构与阅读顺序（须与 `rules_draft_markdown` 章节一致，勿另起目录）**：
 **策略范围与前提（生成前先对齐）** → **摘要** → **一、顾客是谁**（含人群与路径、细类讨论、本品聚焦）→ **二、产品价值与用户痛点**（**仅 §2.1 针对痛点要怎么做** 表，**勿**再设独立「痛点表/价值对表/负向归因」子节）→ **三、为什么要买「这款产品」**（**仅 §3.1 品类与时机**；**无 §3.2**，转化与价带应对已在 §2 表内则**勿重复**）→ **四、为什么要选「这个品牌」** → **五、与其它品牌有何不同** → **六、阶段目标与路径** → **七、品牌四线**（建设·打造·运营·体验）→ **八、战术支柱**（产品/定价/促销/渠道与传播）→ **九、风险、假设与待验证** → **十、下一步与节奏**（含业务备注）→ **附录**。
@@ -105,7 +147,7 @@ STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**
 - **§2.1 针对痛点要怎么做**（若底稿已有表头）须**填写实质内容**；全稿**动作总锚**为 §2.1。若无表，须在 **§二** 或 **§八** 用等价分条写清「痛点—动作—落地—验证」。
 
 **分节要求（与底稿章节一一对应，勿省略）**：
-- **策略范围与前提**：回答「**这份策略是针对什么做的**」（监测任务、本品角色、战场、主推类目、**本阶段目标类型**、时间、成功标准）。与 `strategy_decisions`、`business_notes` 对齐；表格占位未填时**禁止**编造决策，应保留「待确认」并**列出**可选目标类型（见 `STRATEGY_USER_PREFIX` 与规划文档「启动前」）；可写「建议选项：…」供业务勾选。**禁止**与后文 §2.1、§六 自相矛盾。
+- **策略范围与前提**：回答「**这份策略是针对什么做的**」（监测任务、本品角色、战场、主推类目、**本阶段目标类型**、时间、成功标准）。与业务表单及备注对齐；`strategy_decisions_substantive` 为 false 时须写清假设前提与推荐目标类型（可含 A～E 选项），为 true 时未填项不得与已填决策矛盾。**禁止**与后文 §2.1、§六 自相矛盾。
 - **摘要**：除范围样本外，**阶段重点**须含 1～2 条**可执行动作**，且能回扣 §2 中的优先痛点（非空泛「加强运营」）；须**承接**上文「策略范围与前提」已定的边界。
 - **一、顾客是谁**：**禁止**重复报告中的细类词频、分品类样本量展开、文本挖掘方法；用 **少量结论句**（谁搜、关心什么）即可，**1.3 本品聚焦**须写清「本期主攻人群/场景」与 **§2.1** 的对应关系。
 - **二**：**仅 §2.1** 一张表：「类目/细类（本决策适用）| 用户痛点（简述）| 策略动作 | 具体怎么做 | 如何验证」。须覆盖监测已支撑的主要维度（**按类目分行**，口感/质地分线、分量/规格、信任与价格等，依数据取舍）；**类目列 + 痛点简述列**遵守「§2 表」条款。**禁止**再写独立「痛点与证据表」「价值对表」「负向归因」子节（与 §二 重复的内容一律并入本表或删去）。
@@ -138,9 +180,11 @@ STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**
 **输出**：仅 Markdown 正文（不要 ``` 围栏）；须收束各小节与全文，勿中途截断。"""
 
 STRATEGY_USER_PREFIX = (
-    "请基于以下 JSON 输出最终策略稿（Markdown）。"
-    "输出前自检：全文不得包含输入 JSON 中未出现的具体数字、品牌/店铺名、用户引语与活动规则；不确定处须写「假设」「输入未体现」或「待核对」。"
-    "「策略范围与前提」一节：若 `strategy_decisions` 中本品角色、战场、成功标准、主推类目等大量为空，**不得**编造；须列「待确认」并给出**目标类型选项**供业务选择，例如：**A** 上市/首发前验证 **B** 份额追赶 **C** 利润与价盘防守 **D** 新场景/新人群拓展 **E** 其它（简述）——具体措辞见项目规划文档「策略生成-框架确定」之「启动前」。\n\n"
+    "请基于以下 JSON 输出最终策略稿（Markdown），正文须为对外可读正式文档，不得泄露 JSON 键名、字段名、源码路径或底稿中的编写提示语。\n"
+    "输出前自检：全文不得包含输入中未出现的具体数字、品牌/店铺名、用户引语与活动规则；不确定处须写「假设」「监测未体现」或「待业务核对」。\n"
+    "若 JSON 中 `strategy_decisions_substantive` 为 false：你须基于监测摘要与细类报告节选**主动推断**完整策略草案（含 §2.1 多行实质内容），"
+    "在「策略范围与前提」标明假设前提，并对阶段目标给出 A～E 类型选项及**推荐倾向**；禁止全文停留在待填占位。\n"
+    "若 `strategy_decisions_substantive` 为 true：已填表单项视为已定须落实；空项结合数据补全，并与后文一致。\n\n"
 )
 
 
@@ -171,6 +215,7 @@ def generate_strategy_draft_markdown_llm(
         generated_at_iso=generated_at_iso,
         strategy_decisions=strategy_decisions,
         report_config=report_config,
+        for_llm_input=True,
     )
     excerpt_raw = (report_strategy_excerpt or "").strip()
     group_evidence_raw = (report_matrix_group_evidence_md or "").strip()
@@ -208,6 +253,9 @@ def generate_strategy_draft_markdown_llm(
             "keyword": keyword,
             "generated_at_iso": generated_at_iso,
             "strategy_decisions": strategy_decisions,
+            "strategy_decisions_substantive": strategy_decisions_substantive(
+                strategy_decisions
+            ),
             "business_notes": business_notes,
             "structured_brief": compact,
             "rules_draft_markdown": rd,

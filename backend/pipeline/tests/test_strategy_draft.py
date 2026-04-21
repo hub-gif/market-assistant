@@ -4,10 +4,45 @@ from __future__ import annotations
 from django.test import SimpleTestCase
 
 from pipeline.llm.generate_strategy import _omit_ch8_probe_wordchart_fields
+from pipeline.llm.generate_strategy import strategy_decisions_substantive
 from pipeline.reporting.strategy_draft import build_strategy_draft_markdown
 
 
 class StrategyDraftTests(SimpleTestCase):
+    def test_strategy_decisions_substantive(self) -> None:
+        self.assertFalse(strategy_decisions_substantive(None))
+        self.assertFalse(strategy_decisions_substantive({}))
+        self.assertFalse(
+            strategy_decisions_substantive(
+                {"ack_risk_keywords": True, "product_role": "  "}
+            )
+        )
+        self.assertTrue(
+            strategy_decisions_substantive({"product_role": "新品"})
+        )
+
+    def test_for_llm_input_omits_dev_traces(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "K",
+            "batch_label": "b1",
+            "scope": {"merged_sku_count": 2},
+            "strategy_hints": ["线索1"],
+            "meta": {"page_start": 1, "page_to": 3, "max_skus_config": 100},
+        }
+        md = build_strategy_draft_markdown(
+            job_id=7,
+            keyword="K",
+            brief=brief,
+            generated_at_iso="2026-01-01",
+            for_llm_input=True,
+        )
+        self.assertNotIn("任务 ID", md)
+        self.assertNotIn("generate_strategy.py", md)
+        self.assertNotIn("strategy_hints", md)
+        self.assertIn("监测摘要自动线索", md)
+        self.assertIn("列表页约第 1～3 页", md)
+
     def test_build_contains_sections_and_notes(self) -> None:
         brief = {
             "schema_version": 1,
@@ -65,7 +100,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("侧翼切入", md)
         self.assertIn("做低糖配方", md)
         self.assertIn("### 7.1 品牌建设", md)
-        self.assertIn("- [x] 关注词/场景统计是否以偏概全", md)
+        self.assertIn("- [x] 评论侧归纳是否以偏概全", md)
         self.assertIn("- [ ] 价格带是否含大促", md)
         self.assertIn("- [x] 列表集中度与深入样本品牌是否不一致", md)
 
@@ -92,7 +127,7 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertNotIn("子串统计命中约 **501**", md)
         self.assertNotIn("场景「控糖", md)
 
-    def test_legacy_report_shows_focus_scenario_bullets(self) -> None:
+    def test_non_probe_path_no_preset_focus_enumeration(self) -> None:
         brief = {
             "schema_version": 1,
             "keyword": "低GI",
@@ -111,8 +146,10 @@ class StrategyDraftTests(SimpleTestCase):
             brief=brief,
             report_config={"chapter8_text_mining_probe": False},
         )
-        self.assertIn("「口感」：子串统计命中约 **501** 次", md)
-        self.assertIn("场景「控糖/血糖相关」：约 **305** 条", md)
+        self.assertIn("不再", md)
+        self.assertIn("预设关注词", md)
+        self.assertNotIn("子串统计命中约 **501**", md)
+        self.assertNotIn("场景「控糖", md)
 
     def test_shops_unique_sku_basis_rendered(self) -> None:
         brief = {

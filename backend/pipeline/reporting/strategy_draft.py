@@ -162,22 +162,37 @@ def build_strategy_draft_markdown(
     generated_at_iso: str = "",
     strategy_decisions: dict[str, Any] | None = None,
     report_config: dict[str, Any] | None = None,
+    for_llm_input: bool = False,
 ) -> str:
-    """生成可下载的 Markdown：与「六主轴 + 品牌四线」示例稿同构的规则骨架，附录为数据速览。"""
+    """生成可下载的 Markdown：与「六主轴 + 品牌四线」示例稿同构的规则骨架，附录为数据速览。
+
+    ``for_llm_input=True`` 时供大模型归纳用：弱化源码/路径/任务 ID 等痕迹，减少对外成稿误复述。
+    """
     use_ch8_probe = report_uses_chapter8_text_mining_probe(report_config)
     d = strategy_decisions or {}
     pos = _esc(d.get("positioning_choice") or "").strip()
     kw = _esc(brief.get("keyword")) or _esc(keyword) or "—"
     batch = _esc(brief.get("batch_label")) or "—"
-    lines: list[str] = [
-        f"# 市场策略制定草稿 · 「{kw}」",
-        "",
-        "> **骨架说明**：本页为规则骨架；结构与 [`docs/demo`](docs/demo) 示例一致。**全局禁止编造**见 `generate_strategy.py` 中 `STRATEGY_DATA_RULES`。",
-        "",
-    ]
-    if generated_at_iso:
-        lines.append(f"> **生成时间**：{_esc(generated_at_iso)}  ·  **任务 ID**：{job_id}")
-        lines.append("")
+    if for_llm_input:
+        lines: list[str] = [
+            f"# 「{kw}」",
+            "",
+        ]
+        if generated_at_iso:
+            lines.append(
+                f"> **生成时间**：{_esc(generated_at_iso)}（归纳用，**勿写入对外成稿正文**）"
+            )
+            lines.append("")
+    else:
+        lines = [
+            f"# 市场策略制定草稿 · 「{kw}」",
+            "",
+            "> **骨架说明**：本页为规则骨架；结构与 [`docs/demo`](docs/demo) 示例一致。**全局禁止编造**见 `generate_strategy.py` 中 `STRATEGY_DATA_RULES`。",
+            "",
+        ]
+        if generated_at_iso:
+            lines.append(f"> **生成时间**：{_esc(generated_at_iso)}  ·  **任务 ID**：{job_id}")
+            lines.append("")
 
     scope = brief.get("scope") or {}
     merged_n = scope.get("merged_sku_count")
@@ -192,13 +207,24 @@ def build_strategy_draft_markdown(
     def _scope_cell(val: str, placeholder: str) -> str:
         return val if val else f"*（{placeholder}）*"
 
+    scope_prelude = (
+        [
+            "*回答：**这份策略是针对什么、在什么边界里做的**——属「立项靶心」，不是执行摘要。表单已填则写成短句；未填保留占位，**勿**编造。*",
+            "*业务侧在动策略稿之前，应先对齐本节；可选目标类型见 `docs/planning/策略生成-框架确定.md`「启动前：须先明确的项」。*",
+            "",
+        ]
+        if not for_llm_input
+        else [
+            "*监测任务边界与业务角色：表单已填则写成短句；未填时由归纳稿基于监测摘要提出**假设性**表述。*",
+            "*阶段目标类型可列 A～E 备选（上市验证 / 份额追赶 / 价盘防守 / 新场景或新人群 / 其它），并写明推荐倾向。*",
+            "",
+        ]
+    )
     lines.extend(
         [
             "## 策略范围与前提（生成前先对齐）",
             "",
-            "*回答：**这份策略是针对什么、在什么边界里做的**——属「立项靶心」，不是执行摘要。表单已填则写成短句；未填保留占位，**勿**编造。*",
-            "*业务侧在动策略稿之前，应先对齐本节；可选目标类型见 `docs/planning/策略生成-框架确定.md`「启动前：须先明确的项」。*",
-            "",
+            *scope_prelude,
             "| 须明确项 | 填写或待确认 |",
             "|----------|----------------|",
             f"| **监测任务（数据同源）** | 关键词「{kw}」；批次 **{batch}**；与同任务《竞品分析报告》一致 |",
@@ -296,7 +322,11 @@ def build_strategy_draft_markdown(
             "",
             "*本节**仅**用下表写清**针对痛点要怎么做**（**类目** + 痛点简述 + 动作 + 落地 + 验证）。**不再**单设「痛点表 / 价值对表 / 负向归因」子节，避免与 §三、§八重复。*",
             "",
-            "*「用户痛点（简述）」须与 `structured_brief` / 策略线索 / 报告节选**可核对**；**禁止**编造「用户反馈『……』」式引语，除非原句已出现在上述输入中。*",
+            (
+                "*「用户痛点（简述）」须与监测摘要 / 策略线索 / 报告节选**可核对**；**禁止**编造「用户反馈『……』」式引语，除非原句已出现在上述输入中。*"
+                if for_llm_input
+                else "*「用户痛点（简述）」须与 `structured_brief` / 策略线索 / 报告节选**可核对**；**禁止**编造「用户反馈『……』」式引语，除非原句已出现在上述输入中。*"
+            ),
             "",
             "*「类目/细类」列：写明本行决策**适用于哪一类**（如饼干/面包/全检索池）；多细类须**分行**，**禁止**用一句「全站」覆盖彼此冲突的策略；类目未定可写「待业务定类」并附分类假设。*",
             "",
@@ -317,7 +347,9 @@ def build_strategy_draft_markdown(
         else (list(raw_hints) if isinstance(raw_hints, list) else [])
     )
     if hints:
-        lines.append("**摘要自动线索（`strategy_hints`）**")
+        lines.append(
+            "**监测摘要自动线索**" if for_llm_input else "**摘要自动线索（`strategy_hints`）**"
+        )
         lines.append("")
         for h in hints:
             lines.append(f"- {_esc(h)}")
@@ -335,7 +367,9 @@ def build_strategy_draft_markdown(
     raw = brief.get("pc_search_raw") or {}
     if raw.get("result_count_consensus") is not None:
         lines.append(
-            f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}（非销售额）"
+            f"- **平台申报检索规模**：{_num(raw.get('result_count_consensus'))}（站内匹配条数量级，非销售额）"
+            if for_llm_input
+            else f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}（非销售额）"
         )
     elif merged_n is not None:
         lines.append(f"- **深入样本 SKU 数**：{_num(merged_n)}")
@@ -344,9 +378,10 @@ def build_strategy_draft_markdown(
     lines.append("")
     if pst.get("n"):
         src = _esc(brief.get("price_stats_source")) or "—"
+        src_disp = "本监测样本" if for_llm_input and src == "strategy_scope_matrix_group_skus" else src
         lines.extend(
             [
-                f"- **价格摘录（可支撑购买理由与锚点）**：来源 {src}，n = {_num(pst.get('n'))}；"
+                f"- **价格摘录（可支撑购买理由与锚点）**：来源 {src_disp}，n = {_num(pst.get('n'))}；"
                 f"区间 {_num(pst.get('min'))}～{_num(pst.get('max'))}；中位数 {_num(pst.get('median'))}。",
                 "",
             ]
@@ -517,10 +552,15 @@ def build_strategy_draft_markdown(
     if use_ch8_probe:
         pst_sig = brief.get("price_promotion_signals") or {}
         has_promo = isinstance(pst_sig, dict) and bool(pst_sig)
+        promo_hint = (
+            "*促销与活动线索：须与摘要中的价差与活动信号及报告第六章已有归纳一致；无则勿编造具体满减门槛。*"
+            if for_llm_input
+            else "*促销与活动线索：须与摘要 `price_promotion_signals` 及第六章/第九章已有归纳一致；无则勿编造具体满减门槛。*"
+        )
         lines.extend(
             [
                 "",
-                "*促销与活动线索：须与摘要 `price_promotion_signals` 及第六章/第九章已有归纳一致；无则勿编造具体满减门槛。*"
+                promo_hint
                 if has_promo
                 else "*促销与价差：若摘要或价格信号有归纳则承接；无则勿编造。*",
                 "",
@@ -544,7 +584,11 @@ def build_strategy_draft_markdown(
             "### 8.3 促销与活动策略",
             "",
             "*须写促销**原则**（券/到手价/跟价节奏）；**满减、满折、跨店**等：能引用的写清来源；监测未捕获具体门槛时写「待与运营/后台对齐」，**勿**整节留空，**勿**编造门槛数字。*",
-            "*与 `price_promotion_signals`、报告第六章一致；勿虚构活动。*",
+            (
+                "*与监测摘要中的促销与价差信号、报告第六章一致；勿虚构活动。*"
+                if for_llm_input
+                else "*与 `price_promotion_signals`、报告第六章一致；勿虚构活动。*"
+            ),
             "",
             "### 8.4 渠道与传播",
             "",
@@ -602,27 +646,54 @@ def build_strategy_draft_markdown(
         "scenario_filter_enabled": "场景筛选",
     }
     if isinstance(meta, dict) and meta:
-        bits = []
-        for k in ("page_start", "page_to", "max_skus_config", "scenario_filter_enabled"):
-            if k in meta:
-                label = meta_labels.get(k, k)
-                bits.append(f"{label}={_esc(meta.get(k))}")
-        if bits:
-            lines.append(f"- **采集参数快照**：{'; '.join(bits)}")
+        if for_llm_input:
+            bits_llm: list[str] = []
+            ps, pt = meta.get("page_start"), meta.get("page_to")
+            if ps is not None and pt is not None:
+                bits_llm.append(f"列表页约第 {_esc(ps)}～{_esc(pt)} 页")
+            elif ps is not None:
+                bits_llm.append(f"列表自第 {_esc(ps)} 页起采集")
+            if meta.get("max_skus_config") is not None:
+                bits_llm.append(f"深入样本上限约 {_num(meta.get('max_skus_config'))} 个 SKU")
+            if meta.get("scenario_filter_enabled"):
+                bits_llm.append("已启用场景筛选")
+            if bits_llm:
+                lines.append(f"- **采集范围**：{'；'.join(bits_llm)}")
+        else:
+            bits = []
+            for k in ("page_start", "page_to", "max_skus_config", "scenario_filter_enabled"):
+                if k in meta:
+                    label = meta_labels.get(k, k)
+                    bits.append(f"{label}={_esc(meta.get(k))}")
+            if bits:
+                lines.append(f"- **采集参数快照**：{'; '.join(bits)}")
     raw = brief.get("pc_search_raw") or {}
     if raw.get("result_count_consensus") is not None:
         lines.append(
-            f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}"
+            f"- **平台申报检索规模**：{_num(raw.get('result_count_consensus'))}"
+            if for_llm_input
+            else f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}"
         )
-    lines.extend(
-        [
-            "",
-            "*同目录含本批次 CSV 与分析产出，可对照使用。*",
-            "",
-            "---",
-            "",
-            "*本稿由工作台「市场策略制定」生成；与同任务结构化分析数据一致。*",
-            "",
-        ]
-    )
+    if for_llm_input:
+        lines.extend(
+            [
+                "",
+                "*可与同任务《竞品分析报告》及本批次数据表对照核验。*",
+                "",
+                "---",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "",
+                "*同目录含本批次 CSV 与分析产出，可对照使用。*",
+                "",
+                "---",
+                "",
+                "*本稿由工作台「市场策略制定」生成；与同任务结构化分析数据一致。*",
+                "",
+            ]
+        )
     return "\n".join(lines)

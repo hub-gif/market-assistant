@@ -21,8 +21,6 @@ from .generate_group_summaries import (
     PRICE_GROUPS_USER_PREFIX,
     PROMO_GROUPS_SYSTEM,
     PROMO_GROUPS_USER_PREFIX,
-    SCENARIO_GROUPS_SYSTEM,
-    SCENARIO_GROUPS_USER_PREFIX,
     _join_chunked_group_markdown,
     generate_comment_group_summaries_llm,
     generate_comment_group_summaries_llm_chunked,
@@ -32,8 +30,6 @@ from .generate_group_summaries import (
     generate_price_group_summaries_llm_chunked,
     generate_promo_group_summaries_llm,
     generate_promo_group_summaries_llm_chunked,
-    generate_scenario_group_summaries_llm,
-    generate_scenario_group_summaries_llm_chunked,
 )
 from .generate_sections import (
     BRIDGE_SECTIONS_SYSTEM,
@@ -49,6 +45,7 @@ from .generate_strategy import (
     STRATEGY_USER_PREFIX,
     generate_strategy_draft_markdown_llm,
     generate_strategy_opportunities_llm,
+    strategy_decisions_substantive,
 )
 from .llm_client import call_llm as _call_llm
 
@@ -64,8 +61,6 @@ __all__ = [
     "PROMO_GROUPS_USER_PREFIX",
     "REPORT_SYSTEM",
     "REPORT_USER_PREFIX",
-    "SCENARIO_GROUPS_SYSTEM",
-    "SCENARIO_GROUPS_USER_PREFIX",
     "SENTIMENT_LLM_SYSTEM",
     "STRATEGY_OPPORTUNITIES_SYSTEM",
     "STRATEGY_OPPORTUNITIES_USER_PREFIX",
@@ -83,10 +78,9 @@ __all__ = [
     "generate_price_group_summaries_llm_chunked",
     "generate_promo_group_summaries_llm",
     "generate_promo_group_summaries_llm_chunked",
-    "generate_scenario_group_summaries_llm",
-    "generate_scenario_group_summaries_llm_chunked",
     "generate_section_bridges_llm",
     "generate_strategy_draft_markdown_llm",
     "generate_strategy_opportunities_llm",
     "split_competitor_report_for_bridges",
+    "strategy_decisions_substantive",
 ]
