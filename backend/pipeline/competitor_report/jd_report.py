@@ -58,21 +58,15 @@ from pipeline.competitor_report.price_promo import (  # noqa: E402
     _markdown_price_promotion_section,
 )
 from pipeline.competitor_report.comment_sentiment import (  # noqa: E402
-    _comment_keyword_hits,
-    _iter_comment_text_units,
     _iter_comment_text_units_and_scores,
-    _merge_comment_previews,
     _parse_comment_score,
+    build_comment_sentiment_llm_payload,
 )
 from pipeline.competitor_report.llm_group_payloads import (  # noqa: E402
     build_comment_groups_llm_payload,
     build_matrix_groups_llm_payload,
     build_price_groups_llm_payload,
     build_promo_groups_llm_payload,
-    build_scenario_groups_llm_payload,
-    _comment_scenario_counts,
-    _group_keyword_hits,
-    _text_hits_scenario_triggers,
 )
 from pipeline.competitor_report.matrix_group import (  # noqa: E402
     _category_mix,
@@ -100,13 +94,10 @@ from pipeline.competitor_report.matrix_md import (  # noqa: E402
 )
 from pipeline.competitor_report.report_md_helpers import (  # noqa: E402
     _embed_chart,
-    _focus_scenario_combo_bar_filename,
     _lines_4_reading_brand,
     _lines_4_reading_shop,
     _matrix_prices_sales_chart_filename,
-    _mermaid_pie_focus_keywords,
     _scenario_group_asset_slug,
-    _scenario_summary_bullets,
     _strategy_hints,
 )
 from pipeline.competitor_report.run_context import (  # noqa: E402
@@ -117,7 +108,7 @@ from pipeline.competitor_report.run_context import (  # noqa: E402
 )
 
 # ---------------------------------------------------------------------------
-# 运行配置（按需改这里；与 pipeline.competitor_report.constants 中默认关注词等配合使用）
+# 运行配置（按需改这里；外部市场表等见 constants）
 # ---------------------------------------------------------------------------
 # KEYWORD：京东 PC 搜索词；全量抓取时必填。「仅已有目录」模式下可留空，改从 run_meta / 目录名推断。
 KEYWORD = "低GI"
@@ -148,7 +139,7 @@ def build_competitor_markdown(
     llm_strategy_opportunities_section_md: str | None = None,
     chapter8_text_mining_probe_section_md: str | None = None,
 ) -> str:
-    focus_words, scenario_groups, external_rows = resolve_report_tuning(report_config)
+    (external_rows,) = resolve_report_tuning(report_config)
     _ch8_probe_sec = (chapter8_text_mining_probe_section_md or "").strip()
     sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
@@ -210,23 +201,6 @@ def build_competitor_markdown(
     )
     promo_sig = _analyze_price_promotions(promo_rows)
 
-    hits = _comment_keyword_hits(comment_rows, focus_words)
-    if not hits:
-        blob = _merge_comment_previews(merged_rows)
-        for w in focus_words:
-            if len(w) < 2:
-                continue
-            n = blob.count(w)
-            if n:
-                hits[w] += n
-
-    comment_texts, comment_scores = _iter_comment_text_units_and_scores(
-        comment_rows, merged_rows
-    )
-    scen_counts, scen_n_texts = _comment_scenario_counts(
-        comment_texts, scenario_groups
-    )
-
     feedback_groups = _consumer_feedback_by_matrix_group(
         merged_rows=merged_rows,
         comment_rows=comment_rows,
@@ -286,12 +260,11 @@ def build_competitor_markdown(
             "",
             "- **价格**：自页面「标价 / 券后价 / 详情价」等抽取的**展示价**，含促销与规格差异，**不等于**出厂价或成本。**第六章** 在具备可用的搜索列表导出时，优先以**列表全量**统计；否则使用**已深入 SKU** 的合并数据；**第六章第一节** 归纳标价与券后价差等**列表侧展示价差信号**（不对卖点/腰带字段做预设关键词扫描）。",
             "- **品牌/店铺集中度（第四章）**：有列表全量时按列表行计店铺与品牌占比；无列表导出时按深入 SKU 合并表估算。",
-            "- **评价主题词**：对评价正文做**预设词表子串计数**，非分词主题模型，适合扫方向，**需抽样人工验证**。",
-            "- **用途/场景**：对每条评价独立判断是否命中预设场景词；一条可计入多个场景，统计的是「提及该场景的评价条数」而非用户数。",
+            "- **评价文本**：**不再**使用「预设关注词 / 预设场景词组」子串计数作为报告或简报主指标；**第八章第二节**以中文分词与开放词表统计（词频、关键词突出度、共现、主题探索等，可选词云及大模型解读）为主，结论须结合抽样原文理解。",
             (
-                "- **用户画像（第八章）**：**不再**使用星级子集内**预设口语短语**条形图、正负面扇形图及同口径摘要；**第八章第二节**为分词、词频、共现与主题等**文本补充分析**（可选词云及大模型解读），结论须结合抽样原文理解。"
+                "- **用户画像（第八章）**：**不再**使用星级子集内**预设口语短语**条形图、正负面扇形图及同口径摘要；**第八章第二节**为上述**文本补充分析**（探针）。"
                 if _ch8_probe_sec
-                else "- **用户画像（第八章）**：关注词与场景**仅按细类**以**同图左右并列**展示（左为关注词命中次数，右为场景占有效文本 **%**）；见**第八章第二节**。"
+                else "- **用户画像（第八章）**：若未启用探针，第二节仅说明方法并列出按细类评价条数；**请开启** `chapter8_text_mining_probe` 以生成开放词表统计与插图。"
             ),
             "- **细类划分（第五至第八章）**：**仅**依据合并表中的**商品详情页类目路径**；该信息缺失或无法读出细类名称的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
@@ -384,17 +357,15 @@ def build_competitor_markdown(
             exec_bullets.append(
                 f"列表侧约 **{100.0 * float(sh):.0f}%** 可对齐行呈现「券后/到手」**低于**「标价」，展示价差中位数约 **{float(med):.1f}%**（**第六章第一节** 活动与话术摘录）。"
             )
-    if multi_feedback_cat and (hits or scen_n_texts > 0):
-        exec_bullets.append(
-            "评价侧写（关注词、用途/场景）已按**第五章同一细类划分**分节，见**第八章第二节**（同图并列）。"
-        )
-    elif hits:
-        top3 = "、".join(f"「{w}」({n})" for w, n in hits.most_common(3))
-        exec_bullets.append(f"评价侧写（词频）：{top3}。")
-    if scen_n_texts > 0 and scen_counts and not multi_feedback_cat:
-        top_s = scen_counts.most_common(4)
-        frag = "；".join(f"{lbl} **{n}** 条" for lbl, n in top_s)
-        exec_bullets.append(f"用途/场景（评价自述，可多选）：{frag}（有效文本 **{scen_n_texts}** 条）。")
+    if multi_feedback_cat and n_cmt > 0:
+        if _ch8_probe_sec:
+            exec_bullets.append(
+                "评价侧写已按**第五章同一细类划分**呈现，见**第八章第二节**（文本挖掘探针）。"
+            )
+        else:
+            exec_bullets.append(
+                "评价已按**第五章同一细类**归组；**第八章第二节**定量主题分析依赖探针，可在报告调参中开启 `chapter8_text_mining_probe`。"
+            )
     if api_rc is not None:
         exec_bullets.append(
             f"PC 搜索返回的检索结果规模约 **{api_rc:,}**（站内匹配条数量级，见第三章第二节；**不是**零售额或动销统计）。"
@@ -750,9 +721,9 @@ def build_competitor_markdown(
         "- **细类划分**：与**第五章「竞品矩阵」**相同，**仅**依据合并表中的**商品详情页类目路径**解析为「饼干 / 西式糕点 / …」等（规则见第五章开头说明）。",
         "- **归因**：每条评价按其 SKU 对应到深入样本，再映射到该 SKU 所属细类；SKU 不在合并表中的评价单独归入说明性分组；**在合并表中但该 SKU 缺少类目路径或读不出细类名称的，该评价不进入按细类统计**（与第五章**同一条排除规则**）。",
         (
-            "- **评论文本补充分析（第八章第二节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），**不再**在报告中使用「星级子集内预设口语短语」条形图、正负面扇形图及同口径摘要；**不再**输出原「关注词次数 + 场景占比」左右并列条图。"
+            "- **评论文本补充分析（第八章第二节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），**不再**在报告中使用「星级子集内预设口语短语」条形图、正负面扇形图及同口径摘要；**不再**使用「预设关注词 + 预设场景词组」子串计数与并列条图。"
             if _ch8_probe_sec
-            else "- **关注词与使用场景（第八章第二节）**：对组内评价正文做关注词子串计数（左栏条形图）；对每条有效文本独立扫描**本次任务生效的场景词组**（来自报告调参或系统默认），一条可属多场景，右栏为**占该细类有效文本比例 %**（多标签下可相加 **>** 100%）。二者在 **同一张图左右并列**，与第五章矩阵细类一一对应。"
+            else "- **评论文本补充分析（第八章第二节）**：本任务**未**嵌入探针正文；**不再**输出预设关注词/场景子串统计图。请在 `report_config` 中开启 `chapter8_text_mining_probe` 并重跑以生成开放词表统计与插图。"
         ),
         "",
     ]
@@ -769,15 +740,12 @@ def build_competitor_markdown(
             ]
         )
     else:
-        # 仅当未嵌入第八章第二节探针补充分析（_ch8_probe_sec 为空）时：原「关注词 + 场景」条图与逐细类段落
         lines.extend(
             [
-                "### 8.2 关注词与使用场景（按细类）",
+                "### 8.2 评论文本补充分析（未启用探针时的占位）",
                 "",
-                "每细类一张**左右并列图**（与报告附图文件夹中的 ``chart_focus_and_scenarios_bar__*.png`` 同源）："
-                "**左**为配置关注词子串命中次数（同一评价可出现多次，为次数而非去重条数）；"
-                "**右**为预设场景词组命中占该细类有效文本比例 %（一条可属多场景；多柱比例可相加 **>** 100%）。"
-                "统计均基于评价正文（或兜底预览）子串规则，**不等于**购买动机调研结论。",
+                "> **说明**：本版本**不再**生成「预设关注词 + 预设场景」子串统计与 ``chart_focus_and_scenarios_bar__*.png``。"
+                "开放词表、词频、共现与主题等请开启 ``chapter8_text_mining_probe`` 后重跑。",
                 "",
             ]
         )
@@ -785,72 +753,43 @@ def build_competitor_markdown(
             lines.append("*无评价数据可归组。*")
             lines.append("")
         else:
-            for gi, (gname, cr_g, texts_g) in enumerate(feedback_groups):
+            for _gi, (gname, cr_g, texts_g) in enumerate(feedback_groups):
                 n_flat = len(cr_g)
                 lines.append(f"#### {gname}")
                 lines.append("")
                 lines.append(
-                    f"- **本细类逐条评价**：{n_flat} 条；**用于统计的有效文本条数**：{len(texts_g)}。"
+                    f"- **本细类逐条评价**：{n_flat} 条；**有效文本单元**：{len(texts_g)}。"
                 )
                 lines.append("")
-                hits_g = _group_keyword_hits(cr_g, texts_g, focus_words=focus_words)
-                scen_g, scen_ng = _comment_scenario_counts(texts_g, scenario_groups)
-                has_focus = any(n > 0 for n in hits_g.values()) if hits_g else False
-                has_scen = scen_ng > 0 and any(n > 0 for n in scen_g.values())
-                if scen_ng <= 0:
-                    lines.append("*该细类下无可用评价正文。*")
-                    lines.append("")
-                    continue
-                if has_focus or has_scen:
-                    cap = (
-                        f"「{_md_cell(gname, 24)}」细类 · 关注词与使用场景（左：关注词命中次数；右：场景占有效文本 %；"
-                        f"有效文本 **{scen_ng}** 条）"
-                    )
-                    lines.extend(
-                        _embed_chart(
-                            run_dir,
-                            _focus_scenario_combo_bar_filename(gname, gi),
-                            cap,
-                        )
-                    )
-                else:
-                    lines.append("*该细类无关注词命中且未命中预设场景词组。*")
-                    lines.append("")
-                if has_scen:
-                    for para in _scenario_summary_bullets(scen_g, scen_ng):
-                        lines.append(para)
-                        lines.append("")
-                elif scen_ng > 0:
-                    lines.append("*未命中预设场景词组。*")
-                    lines.append("")
-
-        _llm_sg = (llm_scenario_groups_section_md or "").strip()
-        if _llm_sg:
-            lines.extend(
-                [
-                    "",
-                    "#### 使用场景要点归纳（大模型，与第八章第二节右栏图表互补）",
-                    "",
-                    "> **说明**：与第八章第二节**相同**的预设场景词组与子串命中规则；**各场景条数与占比以正文图右栏为准**。",
-                    "",
-                    _llm_sg,
-                    "",
-                ]
-            )
 
         _llm_cg = (llm_comment_groups_section_md or "").strip()
         if _llm_cg:
             lines.extend(
                 [
                     "",
-                    "#### 细类评价与关注词要点归纳（大模型，与第八章第二节左栏图表互补）",
+                    "#### 细类评论要点归纳（大模型，基于评价摘录）",
                     "",
-                    "> **说明**：归纳各细类反馈主题与配置关注词命中；**次数与第八章第二节图左栏以正文为准**。",
+                    "> **说明**：仅依据输入中的评价短摘录与文本单元归纳，**不**依赖预设关注词表或场景触发词统计。",
                     "",
                     _llm_cg,
                     "",
                 ]
             )
+
+    _llm_sent = (llm_sentiment_section_md or "").strip()
+    if _llm_sent:
+        lines.extend(
+            [
+                "",
+                "### 8.3 评价正/负向主题（按细类 · 大模型）",
+                "",
+                "> **说明**：与 **8.2 评论文本补充分析（探针）** 及 **「细类评论要点归纳（大模型）」** 并列；每段仅使用该细类下评价原文做语境归纳（如正向体验主题、负向评价主题归因）。"
+                "**不替代**探针的开放词表与专用口径，也不替代「细类评论要点归纳」的写法与载荷。",
+                "",
+                _llm_sent,
+                "",
+            ]
+        )
 
     lines.extend(["---", "", "## 九、策略与机会提示（假设清单，待验证）", ""])
     _llm_st = (llm_strategy_opportunities_section_md or "").strip()
@@ -917,7 +856,7 @@ def build_competitor_brief(
     """
     与 ``build_competitor_markdown`` 共用**同一套统计规则**，输出可 JSON 序列化的结构化竞品摘要（**规则驱动**，无 LLM）。
     """
-    focus_words, scenario_groups, _ext = resolve_report_tuning(report_config)
+    (_ext,) = resolve_report_tuning(report_config)
     sku_header = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
     title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
     batch = _run_batch_label(run_dir)
@@ -975,21 +914,8 @@ def build_competitor_brief(
     )
     price_promotion_signals = _analyze_price_promotions(promo_rows_brief)
 
-    hits = _comment_keyword_hits(comment_rows, focus_words)
-    if not hits:
-        blob = _merge_comment_previews(merged_rows)
-        for w in focus_words:
-            if len(w) < 2:
-                continue
-            n = blob.count(w)
-            if n:
-                hits[w] += n
-
-    comment_texts, comment_scores = _iter_comment_text_units_and_scores(
+    comment_texts, _comment_scores = _iter_comment_text_units_and_scores(
         comment_rows, merged_rows
-    )
-    scen_counts, scen_n_texts = _comment_scenario_counts(
-        comment_texts, scenario_groups
     )
 
     (
@@ -1005,10 +931,7 @@ def build_competitor_brief(
     hints = _strategy_hints(
         cr1=cr1_hints,
         pst=pst,
-        hits=hits,
         n_comments=n_cmt,
-        scen_counts=scen_counts,
-        scen_n_texts=scen_n_texts,
     )
 
     matrix_groups: list[dict[str, Any]] = []
@@ -1047,7 +970,6 @@ def build_competitor_brief(
         )
 
     feedback_by_group: list[dict[str, Any]] = []
-    usage_scenarios_by_matrix_group: list[dict[str, Any]] = []
     for gi, (gname, cr, tu) in enumerate(
         _consumer_feedback_by_matrix_group(
             merged_rows=merged_rows,
@@ -1055,8 +977,6 @@ def build_competitor_brief(
             sku_header=sku_header,
         )
     ):
-        gh = _group_keyword_hits(cr, tu, focus_words=focus_words)
-        scen_g, scen_n_g = _comment_scenario_counts(tu, scenario_groups)
         slug_fb = _scenario_group_asset_slug(gname, gi)
         feedback_by_group.append(
             {
@@ -1065,43 +985,8 @@ def build_competitor_brief(
                 "chart_slug": slug_fb,
                 "comment_rows": len(cr),
                 "effective_comment_text_units": len(tu),
-                "focus_keyword_hits": [
-                    {"word": w, "count": n} for w, n in gh.most_common(24)
-                ],
-                "scenarios_top": [
-                    {
-                        "scenario": s,
-                        "count": n,
-                        "share_of_text_units": (
-                            n / scen_n_g if scen_n_g else 0.0
-                        ),
-                    }
-                    for s, n in scen_g.most_common(6)
-                ]
-                if scen_n_g
-                else [],
             }
         )
-        if scen_n_g > 0 and scen_g:
-            usage_scenarios_by_matrix_group.append(
-                {
-                    "group": gname,
-                    "matrix_group_index": gi,
-                    "chart_slug": slug_fb,
-                    "effective_text_units": scen_n_g,
-                    "scenarios": [
-                        {
-                            "scenario": s,
-                            "count": int(n),
-                            "share_of_text_units": (
-                                float(n) / scen_n_g if scen_n_g else 0.0
-                            ),
-                        }
-                        for s, n in scen_g.most_common()
-                        if n > 0
-                    ],
-                }
-            )
 
     meta_slice: dict[str, Any] = {}
     if meta:
@@ -1188,26 +1073,15 @@ def build_competitor_brief(
         "price_stats_merged_sample": pst_merged,
         "price_stats_list_export": pst_list if list_export else {},
         "price_promotion_signals": price_promotion_signals,
-        "comment_focus_keywords": [
-            {"word": w, "count": n} for w, n in hits.most_common(24)
-        ],
-        "usage_scenarios": [
-            {
-                "scenario": lbl,
-                "count": n,
-                "share_of_text_units": (
-                    n / scen_n_texts if scen_n_texts else 0.0
-                ),
-            }
-            for lbl, n in scen_counts.most_common(16)
-        ],
-        "usage_scenarios_denominator": scen_n_texts,
-        "usage_scenarios_by_matrix_group": usage_scenarios_by_matrix_group,
+        "comment_focus_keywords": [],
+        "usage_scenarios": [],
+        "usage_scenarios_denominator": len(comment_texts),
+        "usage_scenarios_by_matrix_group": [],
         "strategy_hints": hints,
         "matrix_by_group": matrix_groups,
         "consumer_feedback_by_matrix_group": feedback_by_group,
         "notes": [
-            "与在线分析报告各章**计数规则**一致；关注词与场景以任务中的分析规则为准（子串命中统计，非深度主题模型）。",
+            "与在线分析报告各章**计数规则**一致；**不再**输出预设关注词/场景子串统计，评论侧主题以第八章文本挖掘探针（若启用）为准。",
             "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
             "「集中度」中：默认按**列表行**计数（同一 SKU 多页曝光会重复计）；`shops_from_list.unique_sku_basis` 为按**去重 SKU** 的对照口径。二者均**不是**销量、库存或全渠道市场份额。",
         ],

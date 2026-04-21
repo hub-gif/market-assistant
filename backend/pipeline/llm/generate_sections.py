@@ -32,12 +32,19 @@ SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON
 3. ``#### 混合评价中的典型张力``（可选）：同一评价里褒贬并存时，说明在争什么；若无则略写。
 4. ``#### 使用注意``：关键词子串统计的局限、``sample_reviews_semantic_pool`` 与词表归类的差异、抽样截断、非医学结论。
 
-总字数约 **700～1600 字**，简体中文，语气客观。"""
+**篇幅**：若 JSON 含 ``matrix_group_focus``（单细类范围），本节总字数约 **500～1200 字**，勿再按全关键词池写「全行业泛化」；若**不含**该字段（全量池），总字数约 **700～1600 字**。简体中文，语气客观。"""
 
 
 def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
     """基于 lexicon 统计 + 语义池与按词表归类的抽样，生成评价情感归纳段落（Markdown）；**默认不**嵌入竞品报告正文。"""
     p = dict(payload)
+    scope_note = ""
+    mg = p.get("matrix_group_focus")
+    if isinstance(mg, str) and mg.strip():
+        scope_note = (
+            f"\n\n【范围】以下评价与统计**仅**来自细类「{mg.strip()}」；"
+            "正向/负向主题须贴合**该细类**语境，勿笼统写成「全关键词下用户普遍…」。\n"
+        )
     raw = json.dumps(p, ensure_ascii=False)
     if len(raw) > 88_000:
         for k, cap, maxlen in (
@@ -52,7 +59,7 @@ def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
         raw = json.dumps(p, ensure_ascii=False)
     if len(raw) > 88_000:
         raw = raw[:82_000] + "\n\n…（输入过长已截断，请勿编造截断外内容）\n"
-    user = "请根据以下 JSON 按系统说明输出 Markdown：\n\n" + raw
+    user = "请根据以下 JSON 按系统说明输出 Markdown：" + scope_note + "\n\n" + raw
     return call_llm(SENTIMENT_LLM_SYSTEM, user)
 
 

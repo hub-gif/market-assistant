@@ -170,7 +170,6 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_comment_sentiment": False,
         "llm_matrix_group_summaries": True,
         "llm_comment_group_summaries": True,
-        "llm_scenario_group_summaries": True,
         "llm_price_group_summaries": True,
         "llm_promo_group_summaries": True,
         "llm_strategy_opportunities": True,
@@ -179,11 +178,6 @@ def get_default_report_config() -> dict[str, Any]:
         "chapter8_text_mining_probe_live_llm": True,
         "chapter8_text_mining_probe_llm_chunked": True,
         "chapter8_text_mining_probe_wordcloud": True,
-        "comment_focus_words": list(jcr.COMMENT_FOCUS_WORDS),
-        "comment_scenario_groups": [
-            {"label": lbl, "triggers": list(trs)}
-            for lbl, trs in jcr.COMMENT_SCENARIO_GROUPS
-        ],
         "external_market_table_rows": [
             {"indicator": a, "value_and_scope": b, "source": c, "year": d}
             for a, b, c, d in jcr.EXTERNAL_MARKET_TABLE_ROWS
@@ -263,10 +257,8 @@ def write_competitor_analysis_for_run_dir(
             )
             brief_slice = {
                 "keyword": brief_pre.get("keyword"),
-                "comment_focus_keywords": (
-                    brief_pre.get("comment_focus_keywords") or []
-                )[:20],
-                "usage_scenarios": (brief_pre.get("usage_scenarios") or [])[:8],
+                "comment_focus_keywords": [],
+                "usage_scenarios": [],
                 "category_mix_top": (brief_pre.get("category_mix_top") or [])[:6],
                 "scope": brief_pre.get("scope"),
             }
@@ -276,13 +268,6 @@ def write_competitor_analysis_for_run_dir(
                 all_comment_texts=all_tx,
             )
             suggest_record.update(sug)
-            base_words = list(eff_rc.get("comment_focus_words") or [])
-            for w in sug.get("suggested_focus_keywords") or []:
-                if isinstance(w, str):
-                    t = w.strip()
-                    if t and t not in base_words:
-                        base_words.append(t)
-            eff_rc["comment_focus_words"] = base_words[:80]
         except Exception as e:
             suggest_record["error"] = str(e)
             suggest_record["suggested_focus_keywords"] = []
@@ -290,60 +275,8 @@ def write_competitor_analysis_for_run_dir(
         suggest_record["skipped"] = True
         suggest_record["suggested_focus_keywords"] = []
 
-    skip_scen = os.environ.get("MA_SKIP_LLM_SCENARIO_SUGGEST", "").strip().lower() in (
-        "1",
-        "true",
-        "yes",
-    )
-    if not skip_scen:
-        try:
-            from ..llm.keyword_suggest import suggest_scenario_groups_llm
-
-            raw_sg = eff_rc.get("comment_scenario_groups")
-            if isinstance(raw_sg, list) and raw_sg:
-                scen_base = [x for x in raw_sg if isinstance(x, dict)]
-            else:
-                scen_base = [
-                    {"label": lbl, "triggers": list(trs)}
-                    for lbl, trs in jcr.COMMENT_SCENARIO_GROUPS
-                ]
-            scen_out = suggest_scenario_groups_llm(
-                keyword=kw,
-                existing_groups=scen_base,
-                all_comment_texts=all_tx,
-            )
-            suggest_record["suggested_scenario_groups"] = scen_out.get(
-                "suggested_scenario_groups"
-            ) or []
-            suggest_record["scenario_rationale"] = scen_out.get("scenario_rationale") or ""
-            exist_labels = {
-                str(x.get("label") or "").strip().lower()
-                for x in scen_base
-                if str(x.get("label") or "").strip()
-            }
-            merged_scen = list(scen_base)
-            for g in suggest_record["suggested_scenario_groups"]:
-                if not isinstance(g, dict):
-                    continue
-                lab = str(g.get("label") or "").strip()
-                tr_in = g.get("triggers")
-                triggers: list[str] = []
-                if isinstance(tr_in, list):
-                    for t in tr_in[:48]:
-                        s = str(t).strip()
-                        if 2 <= len(s) <= 48:
-                            triggers.append(s)
-                if not lab or lab.lower() in exist_labels or len(triggers) < 2:
-                    continue
-                merged_scen.append({"label": lab[:80], "triggers": triggers[:48]})
-                exist_labels.add(lab.lower())
-            eff_rc["comment_scenario_groups"] = merged_scen[:40]
-        except Exception as e:
-            suggest_record["scenario_error"] = str(e)
-            suggest_record["suggested_scenario_groups"] = []
-    else:
-        suggest_record["scenario_skipped"] = True
-        suggest_record["suggested_scenario_groups"] = []
+    suggest_record["suggested_scenario_groups"] = []
+    suggest_record["scenario_note"] = "预设场景词组已废弃，不再写入 report_config。"
 
     suggest_path.write_text(
         json.dumps(suggest_record, ensure_ascii=False, indent=2),
@@ -369,8 +302,9 @@ def write_competitor_analysis_for_run_dir(
 
     llm_sentiment_md = ""
     sentiment_llm_record: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "attempted": False,
+        "groups": [],
     }
     skip_sent = os.environ.get(
         "MA_SKIP_LLM_COMMENT_SENTIMENT", ""
@@ -382,42 +316,81 @@ def write_competitor_analysis_for_run_dir(
     )
     want_sent = bool(eff_rc.get("llm_comment_sentiment")) or env_on
     if want_sent and not skip_sent:
-        comment_units, comment_scores = jcr._iter_comment_text_units_and_scores(
-            comment_rows, merged_rows
+        feedback_groups_sg = jcr._consumer_feedback_by_matrix_group(
+            merged_rows=merged_rows,
+            comment_rows=comment_rows,
+            sku_header=MERGED_FIELD_TO_CSV_HEADER["sku_id"],
         )
-        if len(comment_units) >= 2:
-            sentiment_llm_record["attempted"] = True
-            try:
-                from ..llm.generate import generate_comment_sentiment_analysis_llm
-
-                attr_units = jcr._comment_lines_with_product_context(
-                    comment_rows,
-                    merged_rows,
-                    sku_header=MERGED_FIELD_TO_CSV_HEADER["sku_id"],
-                    title_h=MERGED_FIELD_TO_CSV_HEADER["title"],
-                )
-                if len(attr_units) != len(comment_units):
-                    attr_units = list(comment_units)
-                pl = jcr.build_comment_sentiment_llm_payload(
-                    comment_units,
-                    scores=comment_scores,
-                    attributed_texts=attr_units,
-                    max_samples_positive=16,
-                    max_samples_negative=30,
-                    max_samples_mixed=10,
-                    max_chars_per_review=360,
-                    semantic_pool_max=40,
-                    shuffle_seed=kw,
-                )
-                pl["keyword"] = kw
-                llm_sentiment_md = generate_comment_sentiment_analysis_llm(pl)
-                sentiment_llm_record["ok"] = True
-                sentiment_llm_record["chars"] = len(llm_sentiment_md)
-            except Exception as e:
-                sentiment_llm_record["ok"] = False
-                sentiment_llm_record["error"] = str(e)
+        if not feedback_groups_sg:
+            sentiment_llm_record["skipped"] = "no_feedback_groups"
         else:
-            sentiment_llm_record["skipped"] = "insufficient_comment_texts"
+            sentiment_llm_record["attempted"] = True
+            from ..llm.generate import generate_comment_sentiment_analysis_llm
+
+            parts_sent: list[str] = []
+            grp_logs: list[dict[str, Any]] = []
+            sku_h = MERGED_FIELD_TO_CSV_HEADER["sku_id"]
+            title_h = MERGED_FIELD_TO_CSV_HEADER["title"]
+            for gname, cr_g, _tu in feedback_groups_sg:
+                sub_merged = [
+                    r
+                    for r in merged_rows
+                    if jcr._competitor_matrix_group_key(r) == gname
+                ]
+                units, scores = jcr._iter_comment_text_units_and_scores(
+                    cr_g, sub_merged
+                )
+                if len(units) < 2:
+                    grp_logs.append(
+                        {
+                            "group": gname,
+                            "skipped": "insufficient_comment_texts",
+                            "n_texts": len(units),
+                        }
+                    )
+                    continue
+                try:
+                    attr_units = jcr._comment_lines_with_product_context(
+                        cr_g,
+                        merged_rows,
+                        sku_header=sku_h,
+                        title_h=title_h,
+                    )
+                    if len(attr_units) != len(units):
+                        attr_units = list(units)
+                    pl = jcr.build_comment_sentiment_llm_payload(
+                        units,
+                        scores=scores,
+                        attributed_texts=attr_units,
+                        max_samples_positive=16,
+                        max_samples_negative=30,
+                        max_samples_mixed=10,
+                        max_chars_per_review=360,
+                        semantic_pool_max=40,
+                        shuffle_seed=f"{kw}|{gname}",
+                    )
+                    pl["keyword"] = kw
+                    pl["matrix_group_focus"] = gname
+                    md_one = generate_comment_sentiment_analysis_llm(pl)
+                    parts_sent.append(f"#### {gname}\n\n{md_one.strip()}\n")
+                    grp_logs.append(
+                        {"group": gname, "ok": True, "chars": len(md_one)}
+                    )
+                except Exception as e:
+                    grp_logs.append({"group": gname, "ok": False, "error": str(e)})
+            sentiment_llm_record["groups"] = grp_logs
+            llm_sentiment_md = "\n".join(parts_sent).strip()
+            sentiment_llm_record["chars"] = len(llm_sentiment_md)
+            if llm_sentiment_md:
+                sentiment_llm_record["ok"] = True
+            else:
+                sentiment_llm_record["ok"] = False
+                if grp_logs and all("skipped" in x for x in grp_logs):
+                    sentiment_llm_record["skipped"] = "insufficient_comment_texts"
+                elif grp_logs and any("error" in x for x in grp_logs):
+                    sentiment_llm_record["error"] = "all_groups_failed_or_skipped"
+                else:
+                    sentiment_llm_record["error"] = "no_output"
     elif skip_sent:
         sentiment_llm_record["skipped"] = "MA_SKIP_LLM_COMMENT_SENTIMENT"
     elif not want_sent:
@@ -431,7 +404,6 @@ def write_competitor_analysis_for_run_dir(
     llm_matrix_md = ""
     llm_price_md = ""
     llm_promo_md = ""
-    llm_scenario_gr_md = ""
     llm_comment_gr_md = ""
     llm_strategy_opp_md = ""
     matrix_llm_rec: dict[str, Any] = {"schema_version": 1, "attempted": False}
@@ -449,7 +421,6 @@ def write_competitor_analysis_for_run_dir(
     skip_mx = _env_on("MA_SKIP_LLM_MATRIX_GROUP_SUMMARIES")
     skip_pr = _env_on("MA_SKIP_LLM_PRICE_GROUP_SUMMARIES")
     skip_po = _env_on("MA_SKIP_LLM_PROMO_GROUP_SUMMARIES")
-    skip_sg = _env_on("MA_SKIP_LLM_SCENARIO_GROUP_SUMMARIES")
     skip_cg = _env_on("MA_SKIP_LLM_COMMENT_GROUP_SUMMARIES")
     want_mx = bool(eff_rc.get("llm_matrix_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_MATRIX_GROUP_SUMMARIES"
@@ -459,9 +430,6 @@ def write_competitor_analysis_for_run_dir(
     )
     want_po = bool(eff_rc.get("llm_promo_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_PROMO_GROUP_SUMMARIES"
-    )
-    want_sg = bool(eff_rc.get("llm_scenario_group_summaries")) or _env_on(
-        "MA_ENABLE_LLM_SCENARIO_GROUP_SUMMARIES"
     )
     want_cg = bool(eff_rc.get("llm_comment_group_summaries")) or _env_on(
         "MA_ENABLE_LLM_COMMENT_GROUP_SUMMARIES"
@@ -512,7 +480,6 @@ def write_competitor_analysis_for_run_dir(
             ch8_probe_rec["error"] = str(e)
 
     if use_ch8_probe and chapter8_probe_embed_md:
-        want_sg = False
         want_cg = False
 
     chunk_gr = use_chunked_group_summaries_llm(eff_rc)
@@ -625,53 +592,7 @@ def write_competitor_analysis_for_run_dir(
     elif not want_po:
         promo_llm_rec["skipped"] = "not_enabled"
 
-    if want_sg and not skip_sg and merged_rows:
-        _, scenario_tuple, _ = jcr.resolve_report_tuning(eff_rc)
-        fb_sg = jcr._consumer_feedback_by_matrix_group(
-            merged_rows=merged_rows,
-            comment_rows=comment_rows,
-            sku_header=sku_h,
-        )
-        pl_sg = jcr.build_scenario_groups_llm_payload(
-            feedback_groups=fb_sg,
-            scenario_groups=scenario_tuple,
-            merged_rows=merged_rows,
-            sku_header=sku_h,
-            title_h=title_h,
-        )
-        if pl_sg:
-            scenario_gr_llm_rec["attempted"] = True
-            try:
-                if chunk_gr:
-                    from ..llm.generate import (
-                        generate_scenario_group_summaries_llm_chunked,
-                    )
-
-                    llm_scenario_gr_md = generate_scenario_group_summaries_llm_chunked(
-                        pl_sg, keyword=kw
-                    )
-                else:
-                    from ..llm.generate import generate_scenario_group_summaries_llm
-
-                    llm_scenario_gr_md = generate_scenario_group_summaries_llm(
-                        pl_sg, keyword=kw
-                    )
-                scenario_gr_llm_rec["ok"] = True
-                scenario_gr_llm_rec["chars"] = len(llm_scenario_gr_md)
-                scenario_gr_llm_rec["chunked_by_matrix"] = chunk_gr
-                if chunk_gr:
-                    scenario_gr_llm_rec["chunk_count"] = len(
-                        (pl_sg.get("groups") or [])
-                    )
-            except Exception as e:
-                scenario_gr_llm_rec["ok"] = False
-                scenario_gr_llm_rec["error"] = str(e)
-        else:
-            scenario_gr_llm_rec["skipped"] = "empty_scenario_groups_payload"
-    elif skip_sg:
-        scenario_gr_llm_rec["skipped"] = "MA_SKIP_LLM_SCENARIO_GROUP_SUMMARIES"
-    elif not want_sg:
-        scenario_gr_llm_rec["skipped"] = "not_enabled"
+    scenario_gr_llm_rec["skipped"] = "preset_scenario_summaries_removed"
 
     if want_cg and not skip_cg and merged_rows:
         fb_cg = jcr._consumer_feedback_by_matrix_group(
@@ -729,8 +650,6 @@ def write_competitor_analysis_for_run_dir(
                 _strategy_narratives["sec6_price_group_summaries"] = llm_price_md
             if (llm_promo_md or "").strip():
                 _strategy_narratives["sec6_promo_group_summaries"] = llm_promo_md
-            if (llm_scenario_gr_md or "").strip():
-                _strategy_narratives["sec8_3_scenario_summaries"] = llm_scenario_gr_md
             if use_ch8_probe and (chapter8_probe_embed_md or "").strip():
                 _strategy_narratives["sec8_3_text_mining_probe"] = (
                     chapter8_probe_embed_md
@@ -802,7 +721,7 @@ def write_competitor_analysis_for_run_dir(
         llm_matrix_section_md=llm_matrix_md or None,
         llm_price_groups_section_md=llm_price_md or None,
         llm_promo_groups_section_md=llm_promo_md or None,
-        llm_scenario_groups_section_md=llm_scenario_gr_md or None,
+        llm_scenario_groups_section_md=None,
         llm_comment_groups_section_md=llm_comment_gr_md or None,
         llm_strategy_opportunities_section_md=llm_strategy_opp_md or None,
         chapter8_text_mining_probe_section_md=chapter8_probe_embed_md or None,

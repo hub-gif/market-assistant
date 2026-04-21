@@ -3,9 +3,8 @@
 
 - §5 后：``generate_matrix_group_summaries_llm``
 - §6 后：``generate_price_group_summaries_llm``、``generate_promo_group_summaries_llm``
-- （可选、默认关闭）``generate_comment_sentiment_analysis_llm``：已不再嵌入报告正文
+- （可选、默认关闭）``generate_comment_sentiment_analysis_llm``：按细类多次调用，写入报告 **8.3**（与探针 / 评论要点归纳并列）
 - §8末细类评价：``generate_comment_group_summaries_llm``
-- §8.2 关注词/场景路径下右栏后使用场景：``generate_scenario_group_summaries_llm``
 - §9 策略与机会：``generate_strategy_opportunities_llm``（``build_competitor_brief`` + 可选 ``chapter_llm_narratives`` 与各章归纳对齐）
 - §8.5 类全文补充（独立长文）：``generate_competitor_report_markdown_llm``
 
@@ -132,7 +131,7 @@ def main() -> None:
         "--only",
         type=str,
         default="",
-        help="逗号分隔子集：sentiment,matrix,price,promo,strategy_opp,scenario_groups,comment_groups,report_supplement",
+        help="逗号分隔子集：sentiment,matrix,price,promo,strategy_opp,comment_groups,report_supplement",
     )
     parser.add_argument(
         "--preview-chars",
@@ -153,7 +152,6 @@ def main() -> None:
         "price",
         "promo",
         "strategy_opp",
-        "scenario_groups",
         "comment_groups",
         "report_supplement",
     }
@@ -182,8 +180,6 @@ def main() -> None:
         generate_promo_group_summaries_llm,
         generate_promo_group_summaries_llm_chunked,
         generate_strategy_opportunities_llm,
-        generate_scenario_group_summaries_llm,
-        generate_scenario_group_summaries_llm_chunked,
     )
 
     chunk_gr = use_chunked_group_summaries_llm(eff_rc)
@@ -310,41 +306,6 @@ def main() -> None:
         if not args.live:
             print(
                 f"  brief keys: {len(brief)} top-level fields",
-                flush=True,
-            )
-
-    if "scenario_groups" in only:
-        _, scen_tuple, _ = jcr.resolve_report_tuning(eff_rc)
-        fb_s = jcr._consumer_feedback_by_matrix_group(
-            merged_rows=merged,
-            comment_rows=comment_rows,
-            sku_header=sku_h,
-        )
-        pl_sg = jcr.build_scenario_groups_llm_payload(
-            feedback_groups=fb_s,
-            scenario_groups=scen_tuple,
-            merged_rows=merged,
-            sku_header=sku_h,
-            title_h=title_h,
-        )
-
-        def _sg() -> str:
-            if chunk_gr:
-                return generate_scenario_group_summaries_llm_chunked(
-                    pl_sg, keyword=keyword
-                )
-            return generate_scenario_group_summaries_llm(pl_sg, keyword=keyword)
-
-        _run_one(
-            "§8.2 路径 · 使用场景归纳（scenario_groups）",
-            _sg,
-            live=args.live,
-            preview_chars=args.preview_chars,
-        )
-        if not args.live:
-            n = len((pl_sg or {}).get("groups") or [])
-            print(
-                f"  payload groups={n} chunked_by_matrix={chunk_gr}",
                 flush=True,
             )
 
