@@ -235,12 +235,12 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，在下方选择<strong>策略类目</strong>（与竞品矩阵细类一致；选「全部分类」则与全关键词样本一致）。其余填空与勾选。<strong>默认</strong>使用大模型在规则底稿与同任务数据摘要基础上成稿（需服务端已配置网关）。若需更快、不调用智能服务，可勾选「本次仅生成规则稿」。策略配置与「分析报告生成」页的<strong>报告配置</strong>相互独立。策略稿与宿主报告第九章的归纳<strong>默认对齐</strong>；收窄类目时另并入该细类在报告中的大模型归纳节选。提交后跳转到
+        选择<strong>已成功</strong>任务，在下方选择<strong>策略类目</strong>（与竞品矩阵细类一致，对应成稿中的主推细类；选「全部分类」则与全关键词样本一致）。<strong>默认</strong>使用大模型在规则底稿与同任务监测摘要基础上润色成稿（需服务端已配置网关）。可勾选「本次仅生成规则稿」跳过智能润色。策略配置与「分析报告生成」的<strong>报告配置</strong>相互独立。收窄类目时，成稿会并入该细类在宿主报告<strong>第五～第八章</strong>的大模型归纳节选。提交后跳转
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
-        。<strong>决策在本页完成</strong>：已填项会写入底稿并由大模型落实为执行句；未填项由大模型结合数据补全。成稿不再重复「请再选」式表述。
+        。<strong>已填项</strong>写入底稿并由大模型落实；<strong>未填项</strong>可由大模型结合监测数据推断（仍受「禁止编造」约束）。
       </p>
       <p class="hint-top hint-flow">
-        <strong>成稿章节顺序</strong>：一 目标与边界 → 二 战场与样本 → 三 竞争与本品态势 → 四 价格带与定位 → 五 用户与评论侧（由报告 §8/摘要支撑，本页无单独表单项）→ 六 营销与总体方向 → 七 4P 支柱 → 八 风险 → 九 业务约束 → 十 下一步。
+        <strong>与成稿目录对齐</strong>（对应下载策略稿 Markdown）：「策略范围与前提」→「摘要」→「一、顾客是谁」→「二、针对痛点要怎么做」（主要由数据与模型归纳）→「三～八、购买理由 / 品牌 / 竞品 / 阶段路径 / 品牌四线 / 战术支柱」→「九、风险」→「十、下一步」→「业务约束与备注」→「附录」。下方表单按<strong>同一条目顺序</strong>分组，便于逐项填写。
       </p>
 
       <div class="toolbar">
@@ -267,18 +267,21 @@ watch(
         </button>
       </div>
       <div v-if="selectedId" class="toolbar toolbar-stack">
-        <label class="sel-label">策略类目</label>
+        <label class="sel-label">主推类目（矩阵细类）</label>
         <select
           v-model="strategyMatrixScope"
           class="job-select"
           :disabled="briefMatrixLoading || strategyGeneratingAny"
         >
-          <option value="">全部分类（不收窄 · 全关键词样本）</option>
+          <option value="">全部分类（不收窄 · 与全关键词监测样本一致）</option>
           <option v-for="g in matrixGroups" :key="g.index" :value="g.group">
             {{ g.group }}（{{ g.sku_count }} 款）
           </option>
         </select>
         <span v-if="briefMatrixLoading" class="ma-muted">正在加载矩阵分组…</span>
+        <span v-else class="ma-muted ma-hint-sub"
+          >与成稿「策略范围与前提」中的主推细类及报告第五章矩阵一致；收窄后监测摘要与报告节选仅针对该细类。</span
+        >
       </div>
       <p v-if="briefMatrixErr" class="ma-err">{{ briefMatrixErr }}</p>
       <p v-if="strategyGeneratingOtherTask" class="ma-warn-banner">
@@ -288,29 +291,28 @@ watch(
       <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
 
       <fieldset class="fieldset">
-        <legend>一、战略背景与目标</legend>
+        <legend>策略范围与前提 · 摘要依据</legend>
+        <p class="fieldset-hint">
+          对应成稿章节「<strong>策略范围与前提</strong>」与「<strong>一、顾客是谁 · 本品聚焦</strong>」表格；监测词与批次由任务自动带出。
+        </p>
         <label class="fld">
-          <span>本品角色</span>
-          <input v-model="decisions.product_role" type="text" placeholder="如：追赶 / 新品 / 防守" />
-        </label>
-        <label class="fld">
-          <span>时间范围</span>
-          <input v-model="decisions.time_horizon" type="text" placeholder="如：本季度 / 未来 12 周" />
+          <span>本品角色（策略服务对象）</span>
+          <input v-model="decisions.product_role" type="text" placeholder="如：追赶型 / 新品 / 防守 / 拓品类" />
         </label>
         <label class="fld fld-block">
-          <span>成功标准（可量化）</span>
-          <textarea v-model="decisions.success_criteria" rows="2" placeholder="如：搜索位次、转化率…" />
+          <span>一句话战场</span>
+          <textarea
+            v-model="decisions.battlefield_one_line"
+            rows="2"
+            placeholder="在哪个需求场景、与谁争夺同一批检索与购买用户？"
+          />
         </label>
         <label class="fld fld-block">
-          <span>非目标</span>
-          <textarea v-model="decisions.non_goals" rows="2" placeholder="明确不做什么（可选）" />
-        </label>
-        <label class="fld fld-block">
-          <span>目标客群</span>
+          <span>目标客群 / 场景</span>
           <input
             v-model="decisions.audience_segment"
             type="text"
-            placeholder="一句话：为谁、什么场景（可选）"
+            placeholder="为谁、什么场景（可选）"
           />
         </label>
         <label class="fld fld-block">
@@ -321,44 +323,33 @@ watch(
             placeholder="品牌或价位带参照（可选）"
           />
         </label>
+        <label class="fld">
+          <span>时间范围</span>
+          <input v-model="decisions.time_horizon" type="text" placeholder="如：本季度 / 未来 12 周" />
+        </label>
+        <label class="fld fld-block">
+          <span>成功标准（可量化）</span>
+          <textarea v-model="decisions.success_criteria" rows="2" placeholder="如：搜索位次、转化、复购等（对应「本阶段策略目标」）" />
+        </label>
+        <label class="fld fld-block">
+          <span>非目标</span>
+          <textarea v-model="decisions.non_goals" rows="2" placeholder="明确本阶段不做什么（可选）" />
+        </label>
         <label class="fld fld-block">
           <span>资源与预算备注</span>
           <textarea
             v-model="decisions.resource_notes"
             rows="2"
-            placeholder="人力、投放、产能等量级（可选）"
+            placeholder="人力、投放、产能等（可选；亦进入「六、阶段目标与路径」）"
           />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>二、战场（一句话）</legend>
+        <legend>四、为什么要选「这个品牌」— 主定位</legend>
+        <p class="fieldset-hint">对应成稿「<strong>四、为什么要选这个品牌</strong>」中与价位带相关的定位勾选。</p>
         <label class="fld fld-block">
-          <span>一句话战场</span>
-          <textarea
-            v-model="decisions.battlefield_one_line"
-            rows="2"
-            placeholder="在哪个需求场景、与谁抢同一批用户？"
-          />
-        </label>
-      </fieldset>
-
-      <fieldset class="fieldset">
-        <legend>三、竞争态势自判</legend>
-        <label class="fld fld-block">
-          <span>本品倾向</span>
-          <select v-model="decisions.competitive_stance" class="job-select full">
-            <option v-for="o in stanceOptions" :key="o.value || 'empty'" :value="o.value">
-              {{ o.label }}
-            </option>
-          </select>
-        </label>
-      </fieldset>
-
-      <fieldset class="fieldset">
-        <legend>四、价格带定位选项（勾选一条）</legend>
-        <label class="fld fld-block">
-          <span>主定位</span>
+          <span>主定位（选一条）</span>
           <select v-model="decisions.positioning_choice" class="job-select full">
             <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
               {{ o.label }}
@@ -368,13 +359,29 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>六、营销策略与总体策略</legend>
+        <legend>五、与其它品牌有何不同 — 竞争倾向</legend>
+        <p class="fieldset-hint">对应成稿「<strong>五、与其它品牌有何不同 · 竞争应对</strong>」。</p>
+        <label class="fld fld-block">
+          <span>本品竞争倾向</span>
+          <select v-model="decisions.competitive_stance" class="job-select full">
+            <option v-for="o in stanceOptions" :key="o.value || 'empty'" :value="o.value">
+              {{ o.label }}
+            </option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>六、阶段目标与路径</legend>
+        <p class="fieldset-hint">
+          对应「<strong>六、阶段目标与路径</strong>」；「二、针对痛点要怎么做」表格主要由监测与模型归纳，本页不单独列项。
+        </p>
         <label class="fld fld-block">
           <span>营销策略</span>
           <textarea
             v-model="decisions.marketing_strategy"
             rows="3"
-            placeholder="传播、活动、投放、内容主线等（可选）"
+            placeholder="传播、活动、投放、内容主线（可选）"
           />
         </label>
         <label class="fld fld-block">
@@ -382,33 +389,36 @@ watch(
           <textarea
             v-model="decisions.general_strategy"
             rows="3"
-            placeholder="增长 / 品类 / 经营总原则，可与下方 4P 支柱呼应（可选）"
+            placeholder="增长 / 品类 / 经营总原则（可选）"
           />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>七、策略支柱（4P）— 本品打算怎么做（可先填一列）</legend>
+        <legend>七 · 八、品牌四线与战术支柱（4P）</legend>
+        <p class="fieldset-hint">
+          对应成稿「<strong>七、品牌四线</strong>」与「<strong>八、战术支柱</strong>」（产品 / 定价 / 渠道与传播）。
+        </p>
         <label class="fld fld-block">
           <span>产品</span>
-          <textarea v-model="decisions.pillar_product" rows="2" />
+          <textarea v-model="decisions.pillar_product" rows="2" placeholder="产品侧动作或差异（可选）" />
         </label>
         <label class="fld fld-block">
-          <span>价格</span>
-          <textarea v-model="decisions.pillar_price" rows="2" />
+          <span>定价</span>
+          <textarea v-model="decisions.pillar_price" rows="2" placeholder="价格与价值呈现（可选）" />
         </label>
         <label class="fld fld-block">
-          <span>渠道 / 触点</span>
-          <textarea v-model="decisions.pillar_channel" rows="2" />
+          <span>渠道与触点</span>
+          <textarea v-model="decisions.pillar_channel" rows="2" placeholder="渠道、货架与触点（可选）" />
         </label>
         <label class="fld fld-block">
           <span>传播与内容</span>
-          <textarea v-model="decisions.pillar_comm" rows="2" />
+          <textarea v-model="decisions.pillar_comm" rows="2" placeholder="传播、内容、沟通（可选）" />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>八、风险确认（已知晓则勾选）</legend>
+        <legend>九、风险、假设与待验证（确认知晓）</legend>
         <label class="chk">
           <input v-model="decisions.ack_risk_keywords" type="checkbox" />
           关注词 / 场景可能以偏概全（需原评论抽样）
@@ -424,13 +434,16 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>九、业务约束与内部判断</legend>
+        <legend>业务约束与备注</legend>
+        <p class="fieldset-hint">
+          对应成稿「<strong>十、下一步与节奏</strong>」下的<strong>业务约束与备注</strong>；供法务、渠道红线、内部判断等补充。
+        </p>
         <label class="fld fld-block">
           <span>业务备注</span>
           <textarea
             v-model="businessNotes"
             rows="4"
-            placeholder="渠道红线、价位策略、竞品对标、预算量级等"
+            placeholder="渠道红线、价位策略、竞品对标、预算与组织约束等"
           />
         </label>
       </fieldset>
@@ -513,6 +526,18 @@ watch(
   font-size: 0.88rem;
   font-weight: 600;
   color: #1f2937;
+}
+.fieldset-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+.ma-hint-sub {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 .fld {
   display: flex;
