@@ -466,13 +466,14 @@ def build_strategy_draft_markdown(
                 if for_llm_input
                 else ["- *（成稿：评价、配料、可核验表述边界。）*", ""]
             ),
-            "**主定位（与表单一致）**",
-            "",
-            f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带。",
-            f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带。",
-            f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限。",
-            f"- {_pos_mark(pos, 'different')} **另起带**：规格/组合/服务差异化。",
-            "",
+            *(
+                []
+                if for_llm_input
+                else [
+                    "*本节写**用户为何信任、为何愿意选这个品牌**（承诺、证据、合规边界）；**价位阵地**（表单勾选的四类取向）见 **§8.2 定价策略**，勿混写。*",
+                    "",
+                ]
+            ),
         ]
     )
 
@@ -671,6 +672,13 @@ def build_strategy_draft_markdown(
             f"- *（表单产品支柱：{_pillar_cell(pp)}）*",
             "",
             "### 8.2 定价策略",
+            "",
+            "**价位阵地取向（表单勾选；与监测价带可对读）**",
+            "",
+            f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带。",
+            f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带。",
+            f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限。",
+            f"- {_pos_mark(pos, 'different')} **另起带**：规格/组合/服务差异化。",
             "",
             f"- *（表单价格支柱：{_pillar_cell(pr)}）*",
             "",

@@ -70,7 +70,7 @@ paths:
           description: Not found
     patch:
       tags: [jobs]
-      summary: 仅更新 report_config（报告关注词/场景/外部市场表等）
+      summary: 仅更新 report_config（外部市场表等；预设关注词/场景已废弃的请求字段将被忽略）
       parameters:
         - $ref: "#/components/parameters/JobId"
       requestBody:
@@ -367,23 +367,9 @@ components:
     ReportConfig:
       type: object
       description: |
-        允许键仅限下列三项；可全部省略或 `{}` 表示使用脚本内置默认。
+        允许键以后端 ``validate_report_config_body`` 为准（含各 ``llm_*``、``chapter8_text_mining_probe*``、``external_market_table_rows`` 等）。
+        已废弃：``comment_focus_words``、``comment_scenario_groups``、``llm_scenario_group_summaries``（请求中若出现将被忽略）。
       properties:
-        comment_focus_words:
-          type: array
-          items:
-            type: string
-        comment_scenario_groups:
-          type: array
-          items:
-            type: object
-            properties:
-              label:
-                type: string
-              triggers:
-                type: array
-                items:
-                  type: string
         external_market_table_rows:
           type: array
           items:
@@ -533,7 +519,7 @@ components:
         positioning_choice:
           type: string
           enum: ['', 'top', 'mid', 'entry', 'different']
-          description: 价格带主定位；空字符串表示文稿中四项均为未勾选
+          description: 价位阵地取向（贴顶/卡腰/下探/另起带），写入策略稿「八、战术支柱 · 8.2 定价策略」；与「四、为什么要选这个品牌」（承诺与信任）分离。空字符串表示文稿中四项均为未勾选
         competitive_stance:
           type: string
           enum: ['', 'flank', 'head_on', 'both', 'undecided']

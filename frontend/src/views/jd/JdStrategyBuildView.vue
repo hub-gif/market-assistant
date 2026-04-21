@@ -240,7 +240,7 @@ watch(
         。<strong>已填项</strong>写入底稿并由大模型落实；<strong>未填项</strong>可由大模型结合监测数据推断（仍受「禁止编造」约束）。
       </p>
       <p class="hint-top hint-flow">
-        <strong>与成稿目录对齐</strong>（对应下载策略稿 Markdown）：「策略范围与前提」→「摘要」→「一、顾客是谁」→「二、针对痛点要怎么做」（主要由数据与模型归纳）→「三～八、购买理由 / 品牌 / 竞品 / 阶段路径 / 品牌四线 / 战术支柱」→「九、风险」→「十、下一步」→「业务约束与备注」→「附录」。下方表单按<strong>同一条目顺序</strong>分组，便于逐项填写。
+        <strong>与成稿目录对齐</strong>（对应下载策略稿 Markdown）：「策略范围与前提」→「摘要」→「一、顾客是谁」→「二、针对痛点要怎么做」（主要由数据与模型归纳）→「三、为什么要买这款产品」→「四、为什么要选这个品牌」（承诺与信任；底稿占位为主）→「五～七、竞品 / 阶段路径 / 品牌四线」→「八、战术支柱」（含<strong>价位阵地</strong>勾选与 4P）→「九、风险」→「十、下一步」→「业务约束与备注」→「附录」。第四章叙事本页不设表单项；<strong>贴顶/卡腰等价位取向</strong>归入第八章定价，见下方「战术支柱」分组。
       </p>
 
       <div class="toolbar">
@@ -346,19 +346,6 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>四、为什么要选「这个品牌」— 主定位</legend>
-        <p class="fieldset-hint">对应成稿「<strong>四、为什么要选这个品牌</strong>」中与价位带相关的定位勾选。</p>
-        <label class="fld fld-block">
-          <span>主定位（选一条）</span>
-          <select v-model="decisions.positioning_choice" class="job-select full">
-            <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
-              {{ o.label }}
-            </option>
-          </select>
-        </label>
-      </fieldset>
-
-      <fieldset class="fieldset">
         <legend>五、与其它品牌有何不同 — 竞争倾向</legend>
         <p class="fieldset-hint">对应成稿「<strong>五、与其它品牌有何不同 · 竞争应对</strong>」。</p>
         <label class="fld fld-block">
@@ -397,15 +384,27 @@ watch(
       <fieldset class="fieldset">
         <legend>七 · 八、品牌四线与战术支柱（4P）</legend>
         <p class="fieldset-hint">
-          对应成稿「<strong>七、品牌四线</strong>」与「<strong>八、战术支柱</strong>」（产品 / 定价 / 渠道与传播）。
+          对应成稿「<strong>七、品牌四线</strong>」与「<strong>八、战术支柱</strong>」。其中<strong>价位阵地</strong>（贴顶/卡腰/下探/另起带）写入 <strong>§8.2 定价策略</strong>，回答的是「在什么价位带上打」，不是「用户为什么选这个品牌」——后者在第四章由承诺、证据与调性承载（底稿占位，可由大模型补全）。
         </p>
         <label class="fld fld-block">
           <span>产品</span>
           <textarea v-model="decisions.pillar_product" rows="2" placeholder="产品侧动作或差异（可选）" />
         </label>
         <label class="fld fld-block">
-          <span>定价</span>
-          <textarea v-model="decisions.pillar_price" rows="2" placeholder="价格与价值呈现（可选）" />
+          <span>价位阵地（选一条）</span>
+          <select v-model="decisions.positioning_choice" class="job-select full">
+            <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
+              {{ o.label }}
+            </option>
+          </select>
+        </label>
+        <label class="fld fld-block">
+          <span>定价（战术支柱 · 补充叙述）</span>
+          <textarea
+            v-model="decisions.pillar_price"
+            rows="2"
+            placeholder="除价位阵地外，价格与价值呈现、跟价原则等（可选）"
+          />
         </label>
         <label class="fld fld-block">
           <span>渠道与触点</span>
