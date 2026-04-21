@@ -135,7 +135,7 @@ def filter_strategy_hints_for_ch8_probe(hints: Any) -> list[str]:
             continue
         out.append(s)
     return out if out else [
-        "（与「关注词/预设场景条形图」相关的自动提示已省略；用户洞察请以报告 §8 文本挖掘与第九章节选为准。）"
+        "（与「关注词/预设场景条形图」相关的自动提示已省略；用户洞察请以报告 §8 文本挖掘及第五至第八章细类归纳为准；可执行策略以「策略制定」按细类生成为准。）"
     ]
 
 
@@ -143,7 +143,8 @@ def report_uses_chapter8_text_mining_probe(report_config: dict[str, Any] | None)
     """
     与任务 ``report_config`` 中 ``chapter8_text_mining_probe`` 一致；未显式设置时默认 ``True``
     （与 ``jd.runner.get_default_report_config`` 一致）。
-    为 ``True`` 时，策略稿「用户与评论侧」一节不再逐条列举关注词/场景子串命中，以免与当前报告正文口径冲突。
+    用于 §1.2 文案分支及对 ``strategy_hints`` 的过滤：开启探针时与子串命中枚举相关的自动线索会被压掉；
+    关闭时 §1.2 仍说明「简报不附带预设关注词/场景子串统计」，评论侧以报告第八章探针（若启用）与原文为准。
     """
     if not isinstance(report_config, dict):
         return True
@@ -254,29 +255,9 @@ def build_strategy_draft_markdown(
             ]
         )
     else:
-        ckw = brief.get("comment_focus_keywords") or []
-        usc = brief.get("usage_scenarios") or []
-        lines.append("*下列为关注词/场景**统计摘录**（仅底稿审计用）；**成稿删除逐条枚举**，只保留对策略有用的一两句结论，避免与同任务竞品分析报告重复。*")
-        lines.append("")
-        if ckw:
-            for item in ckw[:8]:
-                if isinstance(item, dict):
-                    w = _esc(item.get("word"))
-                    c = _num(item.get("count"))
-                    lines.append(
-                        f"- 「{w}」：子串统计命中约 **{c}** 次（口径同报告关注词）。"
-                    )
-        if usc:
-            for item in usc[:6]:
-                if isinstance(item, dict):
-                    sc = _esc(item.get("scenario"))
-                    cn = _num(item.get("count"))
-                    sh = _pct(item.get("share_of_text_units"))
-                    lines.append(
-                        f"- 场景「{sc}」：约 **{cn}** 条，约占 **{sh}** 文本单元（预设场景分组）。"
-                    )
-        if not ckw and not usc:
-            lines.append("*摘要中无关注词/场景组，请结合评论侧分析补全本节。*")
+        lines.append(
+            "*简报中**不再**附带预设关注词/场景子串统计；评论侧请依据同任务《竞品分析报告》**第八章第二节**（文本挖掘探针，若已启用）及抽样原文撰写本节。*"
+        )
         lines.append("")
 
     mix = brief.get("category_mix_top") or []
@@ -575,11 +556,7 @@ def build_strategy_draft_markdown(
     rk = bool(d.get("ack_risk_keywords"))
     rp = bool(d.get("ack_risk_price"))
     rc = bool(d.get("ack_risk_concentration"))
-    rk_kw = (
-        "评论侧归纳是否以偏概全？（需原评论抽样）"
-        if use_ch8_probe
-        else "关注词/场景统计是否以偏概全？（需原评论抽样）"
-    )
+    rk_kw = "评论侧归纳是否以偏概全？（需原评论抽样）"
     lines.extend(
         [
             "## 九、风险、假设与待验证",

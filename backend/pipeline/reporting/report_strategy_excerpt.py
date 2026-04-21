@@ -57,6 +57,9 @@ def load_report_strategy_excerpt(
             if md:
                 s = md if len(md) <= cap else md[: cap - 80].rstrip() + "\n\n…（已截断）\n"
                 return s, "json_markdown"
+            # 已存在落盘记录但无大模型正文时，不再回退截取 competitor_analysis.md：
+            # 第九章现为固定读者说明，避免误入策略稿 ``report_strategy_excerpt``。
+            return "", "none"
 
     md_path = root / "competitor_analysis.md"
     if md_path.is_file():

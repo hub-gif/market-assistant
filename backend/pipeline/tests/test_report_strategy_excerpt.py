@@ -48,11 +48,22 @@ def test_load_prefers_json_markdown(tmp_path: Path) -> None:
     assert "JSON 内第九章" in text
 
 
-def test_load_falls_back_to_competitor_md(tmp_path: Path) -> None:
+def test_load_no_fallback_when_json_exists_without_markdown(tmp_path: Path) -> None:
+    """存在 strategy_opportunities_llm.json 但无 markdown 时不再截取 competitor_analysis（第九章可为固定说明）。"""
     (tmp_path / "strategy_opportunities_llm.json").write_text(
         json.dumps({"schema_version": 1, "ok": True}, ensure_ascii=False),
         encoding="utf-8",
     )
+    (tmp_path / "competitor_analysis.md").write_text(
+        f"{CHAPTER_NINE_HEADING}（假设清单，待验证）\n\n从 MD 截取。\n\n## 附录 A\n",
+        encoding="utf-8",
+    )
+    text, src = load_report_strategy_excerpt(tmp_path)
+    assert src == "none"
+    assert text == ""
+
+
+def test_load_falls_back_to_competitor_md_when_no_json(tmp_path: Path) -> None:
     (tmp_path / "competitor_analysis.md").write_text(
         f"{CHAPTER_NINE_HEADING}（假设清单，待验证）\n\n从 MD 截取。\n\n## 附录 A\n",
         encoding="utf-8",

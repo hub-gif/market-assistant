@@ -172,7 +172,8 @@ def get_default_report_config() -> dict[str, Any]:
         "llm_comment_group_summaries": True,
         "llm_price_group_summaries": True,
         "llm_promo_group_summaries": True,
-        "llm_strategy_opportunities": True,
+        # 全任务第九章大模型长文已弃用：可执行策略由「策略制定」按矩阵细类生成（见 jd_report 第九章固定说明）。
+        "llm_strategy_opportunities": False,
         "llm_group_summaries_chunk_by_matrix": True,
         "chapter8_text_mining_probe": True,
         "chapter8_text_mining_probe_live_llm": True,

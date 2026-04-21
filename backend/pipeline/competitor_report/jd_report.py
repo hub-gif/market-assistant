@@ -3,7 +3,7 @@
 关键词 → 调用 ``jd_keyword_pipeline`` 全链路采集 → 生成 **标准化竞品分析报告**（Markdown）。
 
 报告结构对齐常见竞品分析框架：研究范围与方法、执行摘要、**整体市场观察（列表可见度参考）**、
-市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析（含规则化价差/活动信号与可选 **细类价盘·促销** 大模型归纳）、**按细分类目的消费者反馈与用户画像**、**策略与机会提示**（以大模型归纳为主，可选）与附录；并明确数据边界。
+市场与竞争结构、**按细分类目分组的竞品对比矩阵**、价格分析（含规则化价差/活动信号与可选 **细类价盘·促销** 大模型归纳）、**按细分类目的消费者反馈与用户画像**、**策略与机会提示**（固定读者说明，指向产品中按细类「策略制定」；不再默认生成本章大模型长文）与附录；并明确数据边界。
 若运行配置中提供了外部市场规模摘录（``EXTERNAL_MARKET_TABLE_ROWS``），则追加对应表格小节；否则不输出占位行。
 
 依赖：全量抓取时与 ``crawler_copy/jd_pc_search/jd_keyword_pipeline.py`` 相同（Node、h5st、Playwright、``common/jd_cookie.txt``）。
@@ -119,6 +119,22 @@ EXISTING_RUN_DIR = None
 OVERRIDE_MAX_SKUS: int | None = None
 OVERRIDE_PAGE_START: int | None = None
 OVERRIDE_PAGE_TO: int | None = None
+
+# 报告正文面向读者：不写配置键名、文件名、环境变量名或原始异常栈。
+_CH8_PROBE_ENABLE_HINT = (
+    "请在任务配置中开启「第八章评论文本探针」并重新生成报告，以输出词频、共现与主题等开放词表分析。"
+)
+def _strategy_opportunities_reader_fixed_lines() -> list[str]:
+    """
+    第九章不再默认输出全任务大模型长文时的固定读者说明（与产品「策略制定」按细类生成分工）。
+    """
+    return [
+        "本任务**监测与归纳**见前文各章（执行摘要、整体观察、集中度、竞品矩阵、价格与促销、消费者反馈等）。"
+        "**可执行的市场策略稿**请在产品中通过「**策略制定**」**按矩阵细类**逐类生成：与同任务数据及第五章划分对齐，避免仅凭全关键词检索池做一句泛化结论。",
+        "",
+        "本报告**默认不再**附加全任务大模型「策略与机会」长文；若个别历史批次仍含该正文，以当时任务配置与落稿为准。",
+        "",
+    ]
 
 
 def build_competitor_markdown(
@@ -264,7 +280,7 @@ def build_competitor_markdown(
             (
                 "- **用户画像（第八章）**：**不再**使用星级子集内**预设口语短语**条形图、正负面扇形图及同口径摘要；**第八章第二节**为上述**文本补充分析**（探针）。"
                 if _ch8_probe_sec
-                else "- **用户画像（第八章）**：若未启用探针，第二节仅说明方法并列出按细类评价条数；**请开启** `chapter8_text_mining_probe` 以生成开放词表统计与插图。"
+                else f"- **用户画像（第八章）**：若未启用探针，第二节仅说明方法并列出按细类评价条数；{_CH8_PROBE_ENABLE_HINT}"
             ),
             "- **细类划分（第五至第八章）**：**仅**依据合并表中的**商品详情页类目路径**；该信息缺失或无法读出细类名称的 SKU **不参与**竞品矩阵与按细类评价统计（相关评价条亦**不进入**按细类图表）。",
             "- **检索结果规模**：来自京东 PC 搜索返回的「结果条数」类指标，表示平台侧申报的匹配数量级，**不等于**动销、库存或独立 SKU 数。",
@@ -364,7 +380,7 @@ def build_competitor_markdown(
             )
         else:
             exec_bullets.append(
-                "评价已按**第五章同一细类**归组；**第八章第二节**定量主题分析依赖探针，可在报告调参中开启 `chapter8_text_mining_probe`。"
+                f"评价已按**第五章同一细类**归组；**第八章第二节**定量主题分析依赖探针，{_CH8_PROBE_ENABLE_HINT}"
             )
     if api_rc is not None:
         exec_bullets.append(
@@ -608,7 +624,7 @@ def build_competitor_markdown(
         )
         if not (run_dir / "report_assets" / mx_chart).is_file():
             lines.append(
-                f"*（尚未生成 ``report_assets/{mx_chart}``：请确认已执行报告出图流程，或重新生成报告。）*"
+                "*（本细类矩阵价量散点图尚未生成：请确认已执行报告出图流程，或重新生成报告。）*"
             )
             lines.append("")
         lines.append("")
@@ -723,7 +739,7 @@ def build_competitor_markdown(
         (
             "- **评论文本补充分析（第八章第二节）**：本任务已用中文分词与统计工具做了开放词表分析（词频、关键词突出度、词对共现、主题归纳等，可选词云），**不再**在报告中使用「星级子集内预设口语短语」条形图、正负面扇形图及同口径摘要；**不再**使用「预设关注词 + 预设场景词组」子串计数与并列条图。"
             if _ch8_probe_sec
-            else "- **评论文本补充分析（第八章第二节）**：本任务**未**嵌入探针正文；**不再**输出预设关注词/场景子串统计图。请在 `report_config` 中开启 `chapter8_text_mining_probe` 并重跑以生成开放词表统计与插图。"
+            else f"- **评论文本补充分析（第八章第二节）**：本任务**未**嵌入探针正文；**不再**输出预设关注词/场景子串统计图。{_CH8_PROBE_ENABLE_HINT}"
         ),
         "",
     ]
@@ -744,8 +760,8 @@ def build_competitor_markdown(
             [
                 "### 8.2 评论文本补充分析（未启用探针时的占位）",
                 "",
-                "> **说明**：本版本**不再**生成「预设关注词 + 预设场景」子串统计与 ``chart_focus_and_scenarios_bar__*.png``。"
-                "开放词表、词频、共现与主题等请开启 ``chapter8_text_mining_probe`` 后重跑。",
+                "> **说明**：本版本**不再**生成「预设关注词 + 预设场景」子串统计及旧版并列条形图。"
+                f"开放词表、词频、共现与主题等分析需{_CH8_PROBE_ENABLE_HINT}",
                 "",
             ]
         )
@@ -805,12 +821,7 @@ def build_competitor_markdown(
             ]
         )
     else:
-        lines.extend(
-            [
-                "未生成本节大模型正文：请在任务 `report_config` 中开启 `llm_strategy_opportunities` 并重跑产物，或检查 run 目录下 `strategy_opportunities_llm.json` 是否报错。",
-                "",
-            ]
-        )
+        lines.extend(_strategy_opportunities_reader_fixed_lines())
 
     lines.extend(
         [
@@ -1083,7 +1094,7 @@ def build_competitor_brief(
         "notes": [
             "与在线分析报告各章**计数规则**一致；**不再**输出预设关注词/场景子串统计，评论侧主题以第八章文本挖掘探针（若启用）为准。",
             "价格来自页面展示字段抽取，含促销与规格差异；促销与标价对齐等为启发式摘录，仅供对照。",
-            "「集中度」中：默认按**列表行**计数（同一 SKU 多页曝光会重复计）；`shops_from_list.unique_sku_basis` 为按**去重 SKU** 的对照口径。二者均**不是**销量、库存或全渠道市场份额。",
+            "「集中度」中：默认按**列表行**计数（同一 SKU 多页曝光会重复计）；另有按**去重 SKU** 计数的对照口径。二者均**不是**销量、库存或全渠道市场份额。",
         ],
     }
     return _sanitize_json_numbers(out)
