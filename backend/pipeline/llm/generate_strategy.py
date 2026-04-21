@@ -8,7 +8,6 @@ from typing import Any
 from ..reporting.brief_compact import compact_brief_for_llm
 from ..reporting.strategy_draft import (
     build_strategy_draft_markdown,
-    filter_strategy_hints_for_ch8_probe,
     report_uses_chapter8_text_mining_probe,
 )
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
@@ -26,6 +25,8 @@ def _omit_ch8_probe_wordchart_fields(compact: dict[str, Any]) -> None:
         "usage_scenarios",
         "usage_scenarios_denominator",
         "usage_scenarios_by_matrix_group",
+        "comment_sentiment_lexicon",
+        "strategy_hints",
     ):
         compact.pop(k, None)
     cfb = compact.get("consumer_feedback_by_matrix_group")
@@ -187,10 +188,6 @@ def generate_strategy_draft_markdown_llm(
         if report_uses_chapter8_text_mining_probe(report_config):
             compact = dict(compact)
             _omit_ch8_probe_wordchart_fields(compact)
-            if isinstance(compact.get("strategy_hints"), list):
-                compact["strategy_hints"] = filter_strategy_hints_for_ch8_probe(
-                    compact["strategy_hints"]
-                )
         ex = (
             _truncate_strategy_narrative(excerpt_raw, excerpt_max)
             if excerpt_raw
@@ -222,8 +219,8 @@ def generate_strategy_draft_markdown_llm(
         }
         if report_uses_chapter8_text_mining_probe(report_config):
             payload["structured_brief_omission_note"] = (
-                "已启用第八章文本挖掘（探针为主）：structured_brief 已省略顶层「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top，"
-                "以及「与条形图同源的 strategy_hints 句子」，避免与报告 §8 主口径冲突。**不得**再以这类子串计数或预设场景占比作为论据。"
+                "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top、"
+                "``strategy_hints``、``comment_sentiment_lexicon``（规则词表/条形图同源），避免与报告 §8 文本挖掘主口径冲突。**不得**再以这类子串计数、短语条形图或预设场景占比作为论据。"
                 "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及下方 `report_strategy_excerpt`（第九章）对齐，不得省略报告已写明的活动建议。"
             )
         raw = json.dumps(payload, ensure_ascii=False)

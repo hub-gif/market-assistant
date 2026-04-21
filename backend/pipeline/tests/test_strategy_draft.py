@@ -169,6 +169,8 @@ class StrategyDraftTests(SimpleTestCase):
         compact = {
             "comment_focus_keywords": [{"word": "x", "count": 1}],
             "usage_scenarios": [],
+            "comment_sentiment_lexicon": {"pos": ["好"], "neg": ["差"]},
+            "strategy_hints": ["条形图同源句子"],
             "consumer_feedback_by_matrix_group": [
                 {
                     "group": "饼干",
@@ -180,6 +182,8 @@ class StrategyDraftTests(SimpleTestCase):
         }
         _omit_ch8_probe_wordchart_fields(compact)
         self.assertNotIn("comment_focus_keywords", compact)
+        self.assertNotIn("comment_sentiment_lexicon", compact)
+        self.assertNotIn("strategy_hints", compact)
         self.assertNotIn("focus_keyword_hits", compact["consumer_feedback_by_matrix_group"][0])
         self.assertNotIn("scenarios_top", compact["consumer_feedback_by_matrix_group"][0])
         self.assertEqual(
