@@ -34,6 +34,31 @@ SENTIMENT_LLM_SYSTEM = """你是电商/食品类用户研究助手。输入 JSON
 
 **篇幅**：若 JSON 含 ``matrix_group_focus``（单细类范围），本节总字数约 **500～1200 字**，勿再按全关键词池写「全行业泛化」；若**不含**该字段（全量池），总字数约 **700～1600 字**。简体中文，语气客观。"""
 
+# 嵌入报告 8.3 时外层为 ``#### {细类名}``；若内文仍用同级 ``#### 正向体验主题``，
+# ``extract_level4_sections_by_group_title`` 会在第一个子 ``####`` 处截断，导致策略摘录/心得侧「同细类报告摘录」拿不到正文。
+_SENTIMENT_INNER_H4_TITLES: frozenset[str] = frozenset(
+    {
+        "正向体验主题",
+        "负向评价主题归因",
+        "混合评价中的典型张力",
+        "使用注意",
+    }
+)
+
+
+def demote_sentiment_inner_h4_to_h5_for_matrix_group(md: str) -> str:
+    """将情感归纳四个固定小节从 ``####`` 降为 ``#####``，以便嵌在 ``#### 细类`` 下仍能被按细类抽取。"""
+    out_lines: list[str] = []
+    for line in (md or "").splitlines():
+        m = re.match(r"^####\s+(.+)$", line)
+        if m:
+            title = m.group(1).strip()
+            if title in _SENTIMENT_INNER_H4_TITLES:
+                out_lines.append(f"##### {title}")
+                continue
+        out_lines.append(line)
+    return "\n".join(out_lines)
+
 
 def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
     """基于 lexicon 统计 + 语义池与按词表归类的抽样，生成评价情感归纳段落（Markdown）；**默认不**嵌入竞品报告正文。"""
@@ -60,7 +85,10 @@ def generate_comment_sentiment_analysis_llm(payload: dict[str, Any]) -> str:
     if len(raw) > 88_000:
         raw = raw[:82_000] + "\n\n…（输入过长已截断，请勿编造截断外内容）\n"
     user = "请根据以下 JSON 按系统说明输出 Markdown：" + scope_note + "\n\n" + raw
-    return call_llm(SENTIMENT_LLM_SYSTEM, user)
+    out = call_llm(SENTIMENT_LLM_SYSTEM, user)
+    if isinstance(mg, str) and mg.strip():
+        out = demote_sentiment_inner_h4_to_h5_for_matrix_group(out)
+    return out
 
 
 def split_competitor_report_for_bridges(

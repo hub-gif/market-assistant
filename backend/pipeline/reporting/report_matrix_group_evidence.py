@@ -4,6 +4,8 @@
 
 报告生成侧约定：矩阵/价盘/促销/评论/场景等 LLM 小节均以 ``#### `` + 与矩阵一致的细类名为小节标题
 （见 ``generate_group_summaries`` 系统提示）。
+**8.3 评价正/负向主题**：细类下内层小节使用 ``#####``（由 ``demote_sentiment_inner_h4_to_h5_for_matrix_group`` 处理），
+避免与外层 ``#### 细类名`` 同级导致本节正文抽取为空。
 """
 from __future__ import annotations
 
