@@ -13,6 +13,39 @@ from ..reporting.strategy_draft import (
 )
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
 
+
+def _omit_ch8_probe_wordchart_fields(compact: dict[str, Any]) -> None:
+    """
+    第八章文本挖掘（探针）为主时，去掉与**预设关注词/场景条形图**同源的统计字段，
+    避免与报告 §8 文本挖掘主口径「两用数据」。
+
+    仅影响传入大模型的 ``structured_brief``；``brief`` 全量仍可由规则稿使用。
+    """
+    for k in (
+        "comment_focus_keywords",
+        "usage_scenarios",
+        "usage_scenarios_denominator",
+        "usage_scenarios_by_matrix_group",
+    ):
+        compact.pop(k, None)
+    cfb = compact.get("consumer_feedback_by_matrix_group")
+    if not isinstance(cfb, list):
+        return
+    slim: list[Any] = []
+    for g in cfb:
+        if not isinstance(g, dict):
+            slim.append(g)
+            continue
+        slim.append(
+            {
+                k: v
+                for k, v in g.items()
+                if k not in ("focus_keyword_hits", "scenarios_top")
+            }
+        )
+    compact["consumer_feedback_by_matrix_group"] = slim
+
+
 STRATEGY_DATA_RULES = """**全局禁止编造（适用于输出全文各节、各表、各段；独立策略稿与报告第九章策略归纳**共用**本段，硬性）**：
 - **事实与数字**：销量、GMV、占比、价带、条数、份额、券面额、满减/满折门槛、到手价、店铺/品牌计数与排名、SKU 数、接口返回量等，**仅可**来自**本次调用输入 JSON** 中已给出的字段（策略稿为 `structured_brief`、`rules_draft_markdown` 内摘录、`report_strategy_excerpt`、可选 **`report_matrix_group_evidence_md`**（与同任务报告第五～第八章细类大模型小节同源）、`strategy_decisions`、`business_notes`；第九章嵌入为 `competitor_brief`、可选 `prior_chapter_llm_narratives`）；**禁止**凭空新增、改口径或写成「已监测证实」而无字段支撑。
 - **主体与名称**：**禁止**引入上述输入中**未出现**的**具体**品牌名、店铺名、SKU 名、商品标题作为**事实陈述**；若 `strategy_decisions`/备注/brief/节选已含则可写；否则用「头部/同类竞品」等泛称或「待业务指定对标」。
@@ -153,13 +186,7 @@ def generate_strategy_draft_markdown_llm(
         compact = compact_brief_for_llm(brief, max_chars=compact_max)
         if report_uses_chapter8_text_mining_probe(report_config):
             compact = dict(compact)
-            for k in (
-                "comment_focus_keywords",
-                "usage_scenarios",
-                "usage_scenarios_denominator",
-                "usage_scenarios_by_matrix_group",
-            ):
-                compact.pop(k, None)
+            _omit_ch8_probe_wordchart_fields(compact)
             if isinstance(compact.get("strategy_hints"), list):
                 compact["strategy_hints"] = filter_strategy_hints_for_ch8_probe(
                     compact["strategy_hints"]
@@ -195,9 +222,9 @@ def generate_strategy_draft_markdown_llm(
         }
         if report_uses_chapter8_text_mining_probe(report_config):
             payload["structured_brief_omission_note"] = (
-                "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」及「与条形图同源的 strategy_hints 句子」，"
-                "避免与报告 §8 主口径冲突。**不得**再以词频或预设场景占比作为论据。"
-                "用户与评论侧须依报告 §8 文本挖掘归纳；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及下方 `report_strategy_excerpt`（第九章）对齐，不得省略报告已写明的活动建议。"
+                "已启用第八章文本挖掘（探针为主）：structured_brief 已省略顶层「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top，"
+                "以及「与条形图同源的 strategy_hints 句子」，避免与报告 §8 主口径冲突。**不得**再以这类子串计数或预设场景占比作为论据。"
+                "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及下方 `report_strategy_excerpt`（第九章）对齐，不得省略报告已写明的活动建议。"
             )
         raw = json.dumps(payload, ensure_ascii=False)
         if len(raw) > 500_000:

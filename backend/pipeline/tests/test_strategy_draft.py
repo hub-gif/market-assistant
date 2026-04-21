@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from django.test import SimpleTestCase
 
+from pipeline.llm.generate_strategy import _omit_ch8_probe_wordchart_fields
 from pipeline.reporting.strategy_draft import build_strategy_draft_markdown
 
 
@@ -163,3 +164,24 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("样本内品牌较分散", md)
         self.assertIn("price_promotion_signals", md)
         self.assertIn("price_promotion_signals", md)
+
+    def test_ch8_probe_omit_wordchart_nested_in_consumer_feedback(self) -> None:
+        compact = {
+            "comment_focus_keywords": [{"word": "x", "count": 1}],
+            "usage_scenarios": [],
+            "consumer_feedback_by_matrix_group": [
+                {
+                    "group": "饼干",
+                    "comment_rows": 10,
+                    "focus_keyword_hits": [{"word": "口感", "count": 5}],
+                    "scenarios_top": [{"scenario": "早餐", "count": 2}],
+                }
+            ],
+        }
+        _omit_ch8_probe_wordchart_fields(compact)
+        self.assertNotIn("comment_focus_keywords", compact)
+        self.assertNotIn("focus_keyword_hits", compact["consumer_feedback_by_matrix_group"][0])
+        self.assertNotIn("scenarios_top", compact["consumer_feedback_by_matrix_group"][0])
+        self.assertEqual(
+            compact["consumer_feedback_by_matrix_group"][0].get("comment_rows"), 10
+        )
