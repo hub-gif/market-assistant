@@ -167,7 +167,7 @@ def get_default_report_config() -> dict[str, Any]:
     """与 ``pipeline.competitor_report.jd_report`` 模块常量一致的默认报告调参（供前端回填）。"""
     jcr, _ = _jd_crawler_modules()
     return {
-        "llm_comment_sentiment": False,
+        "llm_comment_sentiment": True,
         "llm_matrix_group_summaries": True,
         "llm_comment_group_summaries": True,
         "llm_price_group_summaries": True,
