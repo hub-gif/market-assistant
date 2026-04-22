@@ -90,9 +90,12 @@ const marketingPackDetailList = computed(() =>
     'listing_titles',
     'listing_subtitle',
     'detail_headline',
+    'detail_mid_story_paragraphs',
     'selling_bullets',
+    'usage_and_pairing_tips',
     'spec_sidebar_lines',
     'faq',
+    'short_graphic_post_variants',
   ]),
 )
 
@@ -105,6 +108,7 @@ const marketingPackTouchBlock = computed(() =>
     'text_to_image_prompt_scene',
     'text_to_video_prompt',
     'live_or_short_hook',
+    'live_script_bullets',
     'customer_service_opening',
   ]),
 )

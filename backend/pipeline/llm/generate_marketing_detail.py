@@ -35,6 +35,7 @@ DETAIL_PACK_SYSTEM = """你是京东场景营销内容写手。输入为已定�
 - **仅可**依据核心信息卡展开；**禁止**新增数字、功效、认证、评价引语、竞品具体名（除非信息卡里已有）。
 - 购买者视角，短句；禁止输出 JSON 键名英文给最终读者（值全部为中文**多触点上架**可用文案）。
 - 不要泄露「核心信息卡」「策略稿」等内部词。
+- **更丰富≠编造**：可增加条数与段落，但**每一条**须能从信息卡对应字段找到方向；无依据处写「输入未体现」「待业务核对」，**禁止**为凑字数新增数字、销量、认证、评价引语、具体竞品名。
 - **每条 listing_titles、listing_subtitle、detail_headline、selling_bullets 的前两条**均须让读者能识别**在卖什么品类/什么货**（须与信息卡 **what_we_sell** 一致，可缩写但**禁止**偷换品类或只剩空洞形容词）。若信息卡 `what_we_sell` 已写品类，文案中**至少一处**直接出现该类目词或同义可识别表述。
 - **文生图/文生视频提示词**：须为**可直接复制**到常见文生图、文生视频模型的**中文**描述；**仅可**依据信息卡已有事实与品类，**禁止**在提示词里写「策略稿」「信息卡」「JSON」等元话语；**禁止**要求生成未授权的具体品牌 Logo、真实包装上的可辨认商标、带疗效承诺的贴片字。
 - **文生图须「有货、有卖点画面」**（硬性）：
@@ -44,12 +45,16 @@ DETAIL_PACK_SYSTEM = """你是京东场景营销内容写手。输入为已定�
   - **配料/品类视觉**（如全麦）：可写「麸皮颗粒隐约可见」「浅褐全麦外皮」等，**禁止**疗效字幕、血糖仪、前后对比治病画面。
 
 **JSON 键（须全部出现）**：
-- listing_titles：字符串数组，4～6 条商品短标题备选（每条约 30 字内；**每条须含可识别品类或品名线索**，禁止 6 条全是「安心之选」类）
-- listing_subtitle：一条列表副文案（约 60 字内）
-- detail_headline：商品详情页首屏下 lead，1～2 句（**首句须点明卖的是什么货**，再写价值）
-- selling_bullets：字符串数组，5～8 条卖点（每条约 40 字内）
-- spec_sidebar_lines：字符串数组，0～3 条参数区旁短句（可空数组）
-- faq：对象数组，每项含 question、answer 字符串，3～5 组；答句不得超出信息卡承诺
+- listing_titles：字符串数组，**6～9** 条商品短标题备选（每条约 30 字内；**每条须含可识别品类或品名线索**，禁止多条全是空洞套话；可有 2～3 条侧重不同角度：场景/质地/配料/人群）
+- listing_subtitle：一条列表副文案（约 **60～90** 字内，信息不足则取下限）
+- detail_headline：商品详情页首屏下 lead，**2～3 句**（**首句须点明卖的是什么货**，后接价值与差异；总长约 **80～160** 字）
+- selling_bullets：字符串数组，**8～12** 条卖点（每条约 **40 字内**；须覆盖：品类形态、口感/质地（若信息卡有）、配料/健康表述（合规）、场景、信任点、与同类差异等**不同角度**，**禁止** 12 条重复同一句话换说法）
+- spec_sidebar_lines：字符串数组，**0～5** 条参数区旁短句（可空数组）
+- faq：对象数组，每项含 question、answer 字符串，**5～8** 组；答句不得超出信息卡承诺；可含「怎么保存」「适合谁」「和××区别」（××用泛称除非信息卡有品牌）
+- detail_mid_story_paragraphs：字符串数组，**2～4 段**详情页**首屏之后**的中段叙事；每段 **70～150** 字；**仅**展开信息卡已有卖点与 `what_we_sell`，可分段讲「适合谁—怎么吃—为何值得」；**禁止**新数字、新功效、编造用户故事
+- usage_and_pairing_tips：字符串数组，**2～5** 条食用场景、保存提示、搭配建议（如早餐配牛奶）；信息卡未写保存条件则写「输入未体现具体保质期与保存要求，上架前请核对包装」类中性句，**禁止**编造保质期天数
+- short_graphic_post_variants：字符串数组，**3～5** 条短图文/种草贴变体；每条 **45～110** 字；须**首句或次句**点明品类；适合复制到站内动态；**禁止**销量名次、虚假好评引语
+- live_script_bullets：字符串数组，**4～7** 条直播或短视频**可照读要点**（每条约 **15～40** 字）；按顺序像口播提纲；**禁止**医疗承诺与未证实数据；可与 `live_or_short_hook` 呼应但勿逐句重复
 - traceability_note：**依据与边界**（必填，2～4 句）。用业务可读中文说明：本包与信息卡中**哪些承诺方向一致**、**哪些表述须业务或法务核对**、**输入未体现的不得对外宣称**；**禁止**新数字、新功效、新认证。
 - main_image_three_points：字符串数组，**恰好 3 条**，主图/首图用超短句（每条建议 6～14 字）；须与 **what_we_sell** 品类一致，可来自卖点压缩，禁止空泛口号
 - live_or_short_hook：一条直播或短视频开场钩句（≤40 字）；同一事实约束
@@ -74,6 +79,10 @@ _DETAIL_PAGE_PACK_DEFAULTS: dict[str, Any] = {
     "text_to_image_prompt_main": "",
     "text_to_image_prompt_scene": "",
     "text_to_video_prompt": "",
+    "detail_mid_story_paragraphs": [],
+    "usage_and_pairing_tips": [],
+    "short_graphic_post_variants": [],
+    "live_script_bullets": [],
 }
 
 _DETAIL_PAGE_PACK_LIST_KEYS: frozenset[str] = frozenset(
@@ -83,6 +92,10 @@ _DETAIL_PAGE_PACK_LIST_KEYS: frozenset[str] = frozenset(
         "spec_sidebar_lines",
         "main_image_three_points",
         "faq",
+        "detail_mid_story_paragraphs",
+        "usage_and_pairing_tips",
+        "short_graphic_post_variants",
+        "live_script_bullets",
     }
 )
 
@@ -164,9 +177,11 @@ def generate_detail_page_pack(
     user = (
         "请根据以下 JSON 输出营销内容多触点文案（**仅**一段 JSON 对象）。\n"
         "**必填键名（缺一不可，勿省略）**：listing_titles, listing_subtitle, detail_headline, "
-        "selling_bullets, spec_sidebar_lines, faq, traceability_note, main_image_three_points, "
+        "selling_bullets, spec_sidebar_lines, faq, detail_mid_story_paragraphs, usage_and_pairing_tips, "
+        "short_graphic_post_variants, live_script_bullets, traceability_note, main_image_three_points, "
         "live_or_short_hook, customer_service_opening, text_to_image_prompt_main, "
         "text_to_image_prompt_scene, text_to_video_prompt。\n"
+        "**丰富度**：在遵守信息卡前提下尽量写满条数与段落；**禁止**为凑字编造。\n"
         "**文生图/视频**：须让「货」和卖点**看得见**（如松软→截面气孔、手撕/按压回弹）；禁止整段只有白底健康食品而无具体形态与质地描写。\n"
         "输入数据：\n"
         + json.dumps(payload, ensure_ascii=False)

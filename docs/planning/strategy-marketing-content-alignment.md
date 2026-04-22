@@ -58,7 +58,7 @@
 
 **输出与留痕**
 
-- 现网：`run_dir/marketing/marketing_detail_pack_v1.json`；可下载 / Word / PDF 由前端与 `export-document` 支持。第二步 JSON 含 **文生图**（主图 + 场景备选）与 **文生视频**（短视频）**可复制提示词**字段，供外接 AIGC 工具使用（见 `generate_marketing_detail.py`）。
+- 现网：`run_dir/marketing/marketing_detail_pack_v1.json`；可下载 / Word / PDF 由前端与 `export-document` 支持。第二步 JSON 在**不编造**前提下偏**丰富**：更多标题/卖点/FAQ、详情中段叙事、食用搭配、短图文变体、直播要点提纲，以及 **文生图/文生视频** 可复制提示词（见 `generate_marketing_detail.py`）。
 
 **与旧稿差异说明**
 

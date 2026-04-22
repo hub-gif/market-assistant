@@ -29,6 +29,8 @@ class MarketingDetailPackTests(SimpleTestCase):
         self.assertEqual(n["text_to_image_prompt_scene"], "")
         self.assertEqual(n["text_to_video_prompt"], "")
         self.assertEqual(n["listing_titles"], [])
+        self.assertEqual(n["detail_mid_story_paragraphs"], [])
+        self.assertEqual(n["live_script_bullets"], [])
         self.assertEqual(n["traceability_note"], "x")
 
     def test_parse_llm_json_strips_wrapped(self) -> None:
@@ -67,6 +69,10 @@ class MarketingDetailPackTests(SimpleTestCase):
             "text_to_image_prompt_main": "电商主图，白底，居中摆放一盘低GI早餐饼干，柔和棚拍光，写实，无品牌logo，健康清爽风格",
             "text_to_image_prompt_scene": "早餐餐桌场景，牛奶与饼干搭配，自然窗光，生活感，无文字贴片",
             "text_to_video_prompt": "竖屏9:16，5秒：从俯拍早餐桌缓慢推近至饼干包装，无对白，干净色调，无疗效字幕",
+            "detail_mid_story_paragraphs": ["段落一适合控糖早餐。", "段落二配料可核对。"],
+            "usage_and_pairing_tips": ["配无糖酸奶", "开封后密封防潮"],
+            "short_graphic_post_variants": ["低GI早餐饼干，小包装方便。"],
+            "live_script_bullets": ["大家好看配料表", "独立小包控量", "适合加餐"],
         }
         with patch(
             "pipeline.llm.generate_marketing_detail.call_llm",
