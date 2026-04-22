@@ -190,6 +190,7 @@ async function generateAndGoPreview() {
           markdown: j.markdown || '',
           keyword: j.keyword || '',
           generated_at: j.generated_at || '',
+          last_request: buildPayload(),
         }),
       )
       router.push({ path: '/jd/strategy-view', query: { job: id } })

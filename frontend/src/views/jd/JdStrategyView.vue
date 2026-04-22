@@ -2,7 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
-import { refreshJobs, useJobs, exportStrategyDocument } from '../../composables/useJobs'
+import {
+  api,
+  refreshJobs,
+  useJobs,
+  exportStrategyDocument,
+} from '../../composables/useJobs'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +19,25 @@ const draftMeta = ref(null)
 const viewMode = ref('render')
 const exportErr = ref('')
 const exportBusy = ref(false)
+const marketingBusy = ref(false)
+const marketingErr = ref('')
+const marketingResult = ref(null)
+
+function payloadForMarketing(lastRequest) {
+  if (!lastRequest || typeof lastRequest !== 'object') {
+    return { business_notes: '', strategy_decisions: {} }
+  }
+  const {
+    generator: _g,
+    business_notes: bn,
+    strategy_matrix_group: _mg,
+    ...rest
+  } = lastRequest
+  return {
+    business_notes: (bn || '').trim(),
+    strategy_decisions: rest,
+  }
+}
 
 const STORAGE_KEY = (id) => `ma_strategy_draft_${id}`
 
@@ -44,6 +68,7 @@ function loadDraft() {
     draftMeta.value = {
       keyword: o.keyword || '',
       generated_at: o.generated_at || '',
+      last_request: o.last_request || null,
     }
   } catch {
     draftMd.value = ''
@@ -71,6 +96,41 @@ function downloadDraftMd() {
   a.click()
   a.remove()
   URL.revokeObjectURL(u)
+}
+
+async function generateMarketingDetailPack() {
+  if (!draftMd.value || !selectedId.value) return
+  marketingErr.value = ''
+  marketingResult.value = null
+  marketingBusy.value = true
+  const { business_notes, strategy_decisions } = payloadForMarketing(
+    draftMeta.value?.last_request,
+  )
+  try {
+    const r = await api(`/api/jobs/${selectedId.value}/marketing-detail-pack/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        strategy_markdown: draftMd.value,
+        business_notes,
+        strategy_decisions,
+      }),
+    })
+    const text = await r.text()
+    if (!r.ok) {
+      try {
+        const j = JSON.parse(text)
+        marketingErr.value = j.detail || text
+      } catch {
+        marketingErr.value = text || `HTTP ${r.status}`
+      }
+      return
+    }
+    marketingResult.value = JSON.parse(text)
+  } catch (e) {
+    marketingErr.value = String(e)
+  } finally {
+    marketingBusy.value = false
+  }
 }
 
 async function exportStrategyFmt(fmt) {
@@ -146,7 +206,7 @@ watch(successJobs, (list) => {
     <section class="ma-card">
       <h2>策略稿预览</h2>
       <p class="hint-top">
-        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本浏览器会话内）。需要改决策请回到
+        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本浏览器会话内）。可点击<strong>生成商详包</strong>：先抽核心信息卡，再派生标题与卖点等（两次大模型调用）。需要改决策请回到
         <RouterLink to="/jd/strategy-build">策略生成</RouterLink>
         重新提交。分析数据见
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
@@ -187,6 +247,14 @@ watch(successJobs, (list) => {
         <button type="button" class="ma-btn ma-btn-primary" @click="goBuildSameJob">
           去策略生成
         </button>
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!draftMd || !selectedId || marketingBusy"
+          @click="generateMarketingDetailPack"
+        >
+          {{ marketingBusy ? '商详包生成中…' : '生成商详包' }}
+        </button>
       </div>
 
       <p v-if="draftMeta?.generated_at" class="meta-line ma-muted">
@@ -194,6 +262,21 @@ watch(successJobs, (list) => {
         <template v-if="draftMeta.keyword"> · 关键词：{{ draftMeta.keyword }}</template>
       </p>
       <p v-if="exportErr" class="ma-err">{{ exportErr }}</p>
+      <p v-if="marketingErr" class="ma-err">{{ marketingErr }}</p>
+      <div v-if="marketingResult" class="marketing-pack-out">
+        <h3 class="marketing-pack-h">商详包</h3>
+        <p class="ma-muted marketing-pack-meta">
+          {{ marketingResult.generated_at }} · {{ marketingResult.source }}
+        </p>
+        <details open class="marketing-details">
+          <summary>核心信息卡</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.core_info_card, null, 2) }}</pre>
+        </details>
+        <details open class="marketing-details">
+          <summary>商详字段</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.detail_page_pack, null, 2) }}</pre>
+        </details>
+      </div>
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
         任务目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
@@ -334,5 +417,41 @@ watch(successJobs, (list) => {
   background: #fafafa;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+}
+.marketing-pack-out {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.marketing-pack-h {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: #1e293b;
+}
+.marketing-pack-meta {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+.marketing-details {
+  margin-bottom: 0.65rem;
+}
+.marketing-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #334155;
+}
+.marketing-pre {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow: auto;
+  max-height: 320px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 </style>

@@ -78,6 +78,11 @@ urlpatterns = [
         name="job-strategy-draft",
     ),
     path(
+        "jobs/<int:pk>/marketing-detail-pack/",
+        views.JobMarketingDetailPackView.as_view(),
+        name="job-marketing-detail-pack",
+    ),
+    path(
         "jobs/<int:pk>/export-document/",
         views.JobExportDocumentView.as_view(),
         name="job-export-document",

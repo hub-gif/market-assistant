@@ -14,6 +14,7 @@ from .job_report_views import (
     JobCompetitorBriefPackView,
     JobCompetitorBriefView,
     JobExportDocumentView,
+    JobMarketingDetailPackView,
     JobReportAssetView,
     JobStrategyDraftView,
 )
@@ -46,6 +47,7 @@ __all__ = [
     "JobCompetitorBriefPackView",
     "JobCompetitorBriefView",
     "JobExportDocumentView",
+    "JobMarketingDetailPackView",
     "JobReportAssetView",
     "JobStrategyDraftView",
     "JobCancelView",

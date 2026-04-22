@@ -20,6 +20,7 @@ from ..jd.runner import (
     regenerate_competitor_report,
 )
 from ..llm.generate import generate_strategy_draft_markdown_llm
+from ..llm.generate_marketing_detail import generate_marketing_detail_pack
 from ..models import JobStatus, PipelineJob
 from ..reporting.brief_pack import build_brief_pack_zip_bytes
 from ..reporting.brief_strategy_scope import (
@@ -33,7 +34,11 @@ from ..reporting.report_matrix_group_evidence import (
 )
 from ..reporting.report_strategy_excerpt import load_report_strategy_excerpt
 from ..reporting.strategy_draft import build_strategy_draft_markdown
-from ..serializers import PipelineJobSerializer, StrategyDraftRequestSerializer
+from ..serializers import (
+    MarketingDetailPackRequestSerializer,
+    PipelineJobSerializer,
+    StrategyDraftRequestSerializer,
+)
 from .common import job_run_dir_usable
 
 
@@ -254,6 +259,60 @@ class JobStrategyDraftView(APIView):
             "strategy_scope_applied": strategy_scope_applied,
             "report_matrix_group_evidence_source": report_matrix_evidence_src,
             "report_matrix_group_evidence_chars": len(report_matrix_evidence_md or ""),
+        }
+        return Response(body)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class JobMarketingDetailPackView(APIView):
+    """
+    根据浏览器会话中的策略稿 Markdown，经「核心信息卡」再派生**商详包**（JSON）。
+    两步均走 ``call_llm``；事实约束见提示词。
+    """
+
+    def post(self, request, pk: int):
+        if not (settings.LOW_GI_PROJECT_ROOT or "").strip():
+            return Response(
+                {"detail": "请先在 market_assistant/.env 中配置 LOW_GI_PROJECT_ROOT"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        job = PipelineJob.objects.filter(pk=pk).first()
+        if not job:
+            raise Http404()
+        if job.status != JobStatus.SUCCESS or not (job.run_dir or "").strip():
+            return Response(
+                {"detail": "仅可对已成功且含 run_dir 的任务生成商详包"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ser = MarketingDetailPackRequestSerializer(data=request.data or {})
+        ser.is_valid(raise_exception=True)
+        vd = ser.validated_data
+        md = (vd.get("strategy_markdown") or "").strip()
+        notes = (vd.get("business_notes") or "").strip()
+        raw_sd = vd.get("strategy_decisions")
+        strategy_decisions = raw_sd if isinstance(raw_sd, dict) else {}
+        gen_at = timezone.now().isoformat()
+        try:
+            inner = generate_marketing_detail_pack(
+                keyword=job.keyword,
+                strategy_markdown=md,
+                strategy_decisions=strategy_decisions,
+                business_notes=notes,
+            )
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+        except requests.RequestException as e:
+            return Response(
+                {"detail": f"大模型网关错误：{e}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        body: dict[str, object] = {
+            "schema_version": 1,
+            "job_id": job.id,
+            "keyword": job.keyword,
+            "generated_at": gen_at,
+            "source": "llm_marketing_detail_pack_v1",
+            **inner,
         }
         return Response(body)
 

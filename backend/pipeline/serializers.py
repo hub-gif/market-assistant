@@ -22,7 +22,6 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
         "llm_promo_group_summaries",
         "llm_strategy_opportunities",
         "llm_comment_group_summaries",
-        "llm_scenario_group_summaries",
         "llm_group_summaries_chunk_by_matrix",
         "chapter8_text_mining_probe",
         "chapter8_text_mining_probe_live_llm",
@@ -34,8 +33,6 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
         "chapter8_probe_cooc_vocab",
         "chapter8_probe_cooc_pairs",
         "chapter8_probe_wordcloud_max",
-        "comment_focus_words",
-        "comment_scenario_groups",
         "external_market_table_rows",
     }
 )
@@ -46,6 +43,10 @@ def validate_report_config_body(value: dict) -> dict:
         raise serializers.ValidationError("须为 JSON 对象")
     value = dict(value)
     value.pop("llm_section_bridges", None)
+    # 已废弃字段：静默丢弃，兼容旧任务 JSON
+    value.pop("comment_focus_words", None)
+    value.pop("comment_scenario_groups", None)
+    value.pop("llm_scenario_group_summaries", None)
     extra = set(value.keys()) - _REPORT_CONFIG_ALLOWED_KEYS
     if extra:
         raise serializers.ValidationError(
@@ -60,7 +61,6 @@ def validate_report_config_body(value: dict) -> dict:
         "llm_promo_group_summaries",
         "llm_strategy_opportunities",
         "llm_comment_group_summaries",
-        "llm_scenario_group_summaries",
         "llm_group_summaries_chunk_by_matrix",
         "chapter8_text_mining_probe",
         "chapter8_text_mining_probe_live_llm",
@@ -473,3 +473,30 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
         max_length=200,
         trim_whitespace=True,
     )
+
+
+class MarketingDetailPackRequestSerializer(serializers.Serializer):
+    """策略稿正文 → 核心信息卡 → 商详包（两步 LLM）。"""
+
+    strategy_markdown = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        min_length=20,
+        max_length=600_000,
+        trim_whitespace=False,
+    )
+    business_notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=20_000,
+        trim_whitespace=False,
+    )
+    strategy_decisions = serializers.JSONField(required=False, allow_null=True)
+
+    def validate_strategy_decisions(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("须为 JSON 对象")
+        return value
