@@ -196,6 +196,10 @@ def build_strategy_draft_markdown(
                 f"> **生成时间**：{_esc(generated_at_iso)}（归纳用，**勿写入对外成稿正文**）"
             )
             lines.append("")
+        lines.append(
+            "> **规划 §1.1（归纳用）**：成稿须以「怎么做」为主体，不以「是什么」铺陈代替策略；摘要「阶段重点」须 1～2 条执行句；第一章背景控制在少量结论句。**勿将本行写入对外正文。**"
+        )
+        lines.append("")
     else:
         lines = [
             f"# 市场策略制定草稿 · 「{kw}」",

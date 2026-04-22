@@ -1,9 +1,12 @@
 """
-从任务 run 目录加载「报告第九章 · 策略与机会」正文，供策略稿 LLM 与宿主报告对齐（阶段 S1）。
+从任务 run 目录加载报告「九、策略与机会提示」下的正文片段，供策略稿 LLM **可选**参考（兼容 / 遗留）。
+
+**默认产线**已弃用报告内第九章大模型长文，新任务节选多为空；见 ``jd_report._strategy_opportunities_reader_fixed_lines`` 与规划
+``docs/planning/strategy-marketing-content-alignment.md`` §2。
 
 优先顺序：
 
-1. ``strategy_opportunities_llm.json`` 中的 ``markdown``（与 runner 落盘一致）；
+1. ``strategy_opportunities_llm.json`` 中的 ``markdown``（仅当非空；空壳 json 不回退 md，避免误载固定读者说明）；
 2. 否则从 ``competitor_analysis.md`` 截取 ``## 九、策略与机会提示`` 至 ``## 附录`` 之前。
 """
 from __future__ import annotations
