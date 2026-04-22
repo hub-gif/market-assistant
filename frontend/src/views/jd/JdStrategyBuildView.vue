@@ -76,7 +76,7 @@ const positioningOptions = [
   { value: 'different', label: '另起带' },
 ]
 
-/** 对应后端 competitive_stance / 成稿 §5.3：与头部或主竞品「怎么打」，非价位阵地、亦非泛指的「进市场」。 */
+/** 对应后端 competitive_stance：与头部或主竞品「怎么打」，非价位阵地、亦非泛指的「进市场」。 */
 const stanceOptions = [
   { value: '', label: '暂不填写' },
   { value: 'flank', label: '侧翼切入（避开头部主战场）' },
@@ -236,9 +236,8 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>（对应 §0 主推类目）。下方表单区块<strong>按成稿章节顺序</strong>排列（§0→§1.3→§5→§6→§7～§8→§9→§10）；§2～§4
-        无单独表单项，由监测与模型写入 §2.1 / §3.1 / §4.1。生成结果见
-        <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>。<strong>已填项</strong>进底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
+        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>（主推类目，与报告矩阵一致）。下方字段按策略文档常见顺序排列；成稿里的小节标题与编号由系统自动对应，无需在此对照章节号。有关痛点、购买理由、品牌承诺等段落由监测与模型撰写，本页主要收集<strong>业务决策与战术要点</strong>。生成结果见
+        <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>。<strong>已填项</strong>进入底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
       </p>
 
 
@@ -279,7 +278,7 @@ watch(
         </select>
         <span v-if="briefMatrixLoading" class="ma-muted">正在加载矩阵分组…</span>
         <span v-else class="ma-muted ma-hint-sub"
-          >对应 §0 前提表中「主推类目/细类」及报告第五章矩阵；收窄后监测摘要与报告节选仅针对该细类。</span
+          >与策略稿中的主推类目及报告矩阵一致；收窄后监测摘要与报告节选仅针对该细类。</span
         >
       </div>
       <p v-if="briefMatrixErr" class="ma-err">{{ briefMatrixErr }}</p>
@@ -290,16 +289,16 @@ watch(
       <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
 
       <fieldset class="fieldset">
-        <legend>§0 策略范围与前提</legend>
+        <legend>策略范围与前提</legend>
         <p class="fieldset-hint">
-          下列内容写入成稿首段「<strong>策略范围与前提</strong>」表格。监测词、批次由任务自动带出；<strong>主推类目/细类</strong>以顶部「矩阵细类」为准（与报告矩阵一致）。「本品角色、战场、客群」与 §1.3 列表同源，在底稿中会一并出现。
+          界定本次策略的任务边界与阶段目标。监测词、批次由任务自动带出；<strong>主推类目</strong>以顶部「矩阵细类」为准。角色、战场、客群会进入策略稿开篇，并与下一栏「主要对标」衔接。
         </p>
         <label class="fld">
           <span>本品角色（策略服务对象）</span>
           <input
             v-model="decisions.product_role"
             type="text"
-            placeholder="对应表中「策略服务对象」：如追赶型 / 新品 / 防守 / 拓品类"
+            placeholder="如：追赶型 / 新品 / 防守 / 拓品类"
           />
         </label>
         <label class="fld fld-block">
@@ -307,7 +306,7 @@ watch(
           <textarea
             v-model="decisions.battlefield_one_line"
             rows="2"
-            placeholder="对应表中「一句话战场」：在什么需求场景、与谁争同一批检索与购买用户"
+            placeholder="在什么需求场景、与谁争夺同一批检索与购买用户"
           />
         </label>
         <label class="fld fld-block">
@@ -315,7 +314,7 @@ watch(
           <input
             v-model="decisions.audience_segment"
             type="text"
-            placeholder="对应表中「目标客群/场景」：为谁、在什么情境下买（可选）"
+            placeholder="为谁、在什么情境下买（可选）"
           />
         </label>
         <label class="fld">
@@ -323,7 +322,7 @@ watch(
           <input
             v-model="decisions.time_horizon"
             type="text"
-            placeholder="对应 §6.1「时间范围」与前提表：如本季度 / 未来 12 周"
+            placeholder="如：本季度 / 未来 12 周（与后文阶段目标一致）"
           />
         </label>
         <label class="fld fld-block">
@@ -331,7 +330,7 @@ watch(
           <textarea
             v-model="decisions.success_criteria"
             rows="2"
-            placeholder="对应 §6.1「成功标准」与前提表：如搜索位次、转化、复购等可验证指标"
+            placeholder="如：搜索位次、转化、复购等可验证指标"
           />
         </label>
         <label class="fld fld-block">
@@ -339,38 +338,37 @@ watch(
           <textarea
             v-model="decisions.non_goals"
             rows="2"
-            placeholder="对应 §6.1「非目标」：本阶段明确不做的边界（可选）"
+            placeholder="本阶段明确不做的边界（可选）"
           />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>§1.3 一、顾客是谁 · 本品聚焦</legend>
+        <legend>本品聚焦 · 主要对标</legend>
         <p class="fieldset-hint">
-          成稿「<strong>§1.3 本品聚焦</strong>」中除角色、客群外的<strong>最后一项</strong>。角色与客群请在上文 §0 填写；此处只补<strong>主要对标</strong>，便于 §5 差异化与全文叙述对齐同一参照系。
+          角色与客群已在上文填写；此处补充<strong>主要对标</strong>（品牌或价位参照），便于后文写差异与竞争应对时对齐同一参照系。
         </p>
         <label class="fld fld-block">
-          <span>主要对标（§1.3 · 与 §0 战场一致时最有效）</span>
+          <span>主要对标</span>
           <input
             v-model="decisions.competitor_reference"
             type="text"
-            placeholder="如：具体头部品牌名、或同一价位带的标杆 SKU / 价格带；无则写「待业务指定」或留空由模型泛化"
+            placeholder="如：具体头部品牌、或同价位标杆；与上文战场一致时最有效。可写「待业务指定」或留空"
           />
         </label>
       </fieldset>
 
       <div class="form-skip-note" role="note">
-        <strong>§2～§4</strong>（二、产品价值与用户痛点 · 三、为什么要买这款产品 · 四、为什么要选这个品牌）本页<strong>不设表单项</strong>：§2.1
-        痛点表、§3.1、§4.1 等由<strong>监测摘要、报告节选与大模型</strong>按底稿结构填写；你可通过顶部矩阵收窄与「业务备注」影响归纳范围。
+        <strong>自动撰写部分</strong>：用户痛点、购买理由、品牌承诺与调性等内容<strong>不在本页填写</strong>，将由监测摘要、报告节选与大模型写入策略稿；可通过顶部矩阵收窄与文末「业务备注」影响范围。
       </div>
 
       <fieldset class="fieldset">
-        <legend>§5.3 五、与其它品牌有何不同 · 竞争应对</legend>
+        <legend>与竞品的应对方式</legend>
         <p class="fieldset-hint">
-          写入成稿 <strong>§5.3</strong>「本品倾向」：与 §1.3 主要对标/头部交锋时，优先<strong>侧翼</strong>还是<strong>正面</strong>等。<strong>价位阵地</strong>（贴顶/卡腰/下探）属于 §8.2，在下方填写，勿与此处混淆。
+          面对头部或主竞品时，优先<strong>侧翼</strong>还是<strong>正面</strong>等。下方「价位阵地」回答在哪条价格带上打，与这里不是一回事。
         </p>
         <label class="fld fld-block">
-          <span>面对竞品时的主打法（落入 §5.3 正文）</span>
+          <span>面对竞品时的主打法</span>
           <select v-model="decisions.competitive_stance" class="job-select full">
             <option v-for="o in stanceOptions" :key="o.value || 'empty'" :value="o.value">
               {{ o.label }}
@@ -380,51 +378,51 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>§6 六、阶段目标与路径</legend>
+        <legend>阶段目标与路径（补充）</legend>
         <p class="fieldset-hint">
-          §0 已填「时间 / 成功标准 / 非目标」会进入 <strong>§6.1 本阶段定义</strong>；此处三项写入 <strong>§6.2 路径</strong> 下的分条叙述，请用<strong>可执行的动词句</strong>，并与 §2.1 痛点动作方向一致（多细类可分句）。
+          上文「时间、成功标准、非目标」会进入阶段定义；此处填写营销策略、总体策略与资源备注。尽量用<strong>可执行的动词句</strong>，并与痛点动作方向一致（多细类可分句）。
         </p>
         <label class="fld fld-block">
-          <span>营销策略（§6.2 · 路径）</span>
+          <span>营销策略</span>
           <textarea
             v-model="decisions.marketing_strategy"
             rows="3"
-            placeholder="写入 §6.2「营销策略」：传播、活动、投放、内容主线；尽量写清阶段重点而非口号（可选）"
+            placeholder="传播、活动、投放、内容主线；写清阶段重点而非口号（可选）"
           />
         </label>
         <label class="fld fld-block">
-          <span>总体策略（§6.2 · 路径）</span>
+          <span>总体策略</span>
           <textarea
             v-model="decisions.general_strategy"
             rows="3"
-            placeholder="写入 §6.2「总体策略」：增长 / 品类 / 经营总原则，与上文战场与非目标不矛盾（可选）"
+            placeholder="增长 / 品类 / 经营总原则；与上文战场与非目标不矛盾（可选）"
           />
         </label>
         <label class="fld fld-block">
-          <span>资源与预算备注（§6.2 · 路径）</span>
+          <span>资源与预算备注</span>
           <textarea
             v-model="decisions.resource_notes"
             rows="2"
-            placeholder="写入 §6.2「资源与预算备注」：人力、投放、产能约束，供模型写节奏与优先级（可选）"
+            placeholder="人力、投放、产能约束；便于成稿写节奏与优先级（可选）"
           />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>§7～§8 七、品牌四线 · 八、战术支柱</legend>
+        <legend>品牌四线与战术动作</legend>
         <p class="fieldset-hint">
-          底稿会把下列内容<strong>各写两遍</strong>：<strong>§7.1～§7.4</strong>（建设/打造/运营/体验四行）与 <strong>§8.1～§8.4</strong>（战术支柱）。价位阵地单选只进 <strong>§8.2</strong> 勾选区；<strong>§8.3 促销</strong>无单独表单项，由监测与模型写。第四章「品牌承诺与调性」仍由模型依据数据写，本页不单独列。
+          下列内容会在策略稿中用于<strong>品牌四线</strong>与<strong>战术支柱</strong>相关段落（系统会自动落到对应小节）。价位阵地为单选；促销与活动细节无单独表单项，由监测与模型归纳。品牌承诺与调性由模型依据数据撰写。
         </p>
         <label class="fld fld-block">
-          <span>产品（§7.1 品牌建设 · §8.1 产品策略）</span>
+          <span>产品</span>
           <textarea
             v-model="decisions.pillar_product"
             rows="2"
-            placeholder="同一文案进入 §7.1 与 §8.1：规格、配方/功能叙事、与 §2.1 可挂钩的产品动作（可选）"
+            placeholder="规格、配方或功能叙事、计划中的产品动作（可选）"
           />
         </label>
         <label class="fld fld-block">
-          <span>价位阵地（仅 §8.2 定价策略 · 单选）</span>
+          <span>价位阵地（单选）</span>
           <select v-model="decisions.positioning_choice" class="job-select full">
             <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
               {{ o.label }}
@@ -432,35 +430,35 @@ watch(
           </select>
         </label>
         <label class="fld fld-block">
-          <span>定价补充（§7.2 品牌打造 · §8.2 定价策略）</span>
+          <span>定价（补充说明）</span>
           <textarea
             v-model="decisions.pillar_price"
             rows="2"
-            placeholder="同一叙述进入 §7.2 与 §8.2「表单价格支柱」：在价位阵地之外的到手价呈现、跟价/避战原则、与大促关系等（可选）"
+            placeholder="在价位阵地之外：到手价呈现、跟价或避战原则、与大促关系等（可选）"
           />
         </label>
         <label class="fld fld-block">
-          <span>渠道与触点（§7.3 品牌运营 · §8.4 渠道与传播 · 渠道侧）</span>
+          <span>渠道与触点</span>
           <textarea
             v-model="decisions.pillar_channel"
             rows="2"
-            placeholder="同一叙述进入 §7.3 与 §8.4：货架、店铺类型、站内路径、触点优先级等（可选）"
+            placeholder="货架、店铺类型、站内路径、触点优先级等（可选）"
           />
         </label>
         <label class="fld fld-block">
-          <span>传播与内容（§7.4 品牌体验 · §8.4 渠道与传播 · 传播侧）</span>
+          <span>传播与内容</span>
           <textarea
             v-model="decisions.pillar_comm"
             rows="2"
-            placeholder="同一叙述进入 §7.4 与 §8.4：内容形态、达人/自播、搜索承接与话术方向等（可选）"
+            placeholder="内容形态、达人/自播、搜索承接与话术方向等（可选）"
           />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>§9 九、风险、假设与待验证（确认知晓）</legend>
+        <legend>数据与样本风险（确认知晓）</legend>
         <p class="fieldset-hint">
-          与成稿 <strong>§9</strong> 风险意识一致；勾选表示已了解数据局限（不影响生成，便于业务自检）。
+          勾选表示了解以下数据局限（不影响生成，仅供自检）。
         </p>
         <label class="chk">
           <input v-model="decisions.ack_risk_keywords" type="checkbox" />
@@ -477,16 +475,16 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>§10 十、下一步与节奏 · 业务备注</legend>
+        <legend>业务备注</legend>
         <p class="fieldset-hint">
-          写入成稿 <strong>§10</strong>「下一步与节奏」中的<strong>业务约束与备注</strong>段落；与 §0～§8 表单字段不同，此处自由叙述红线、禁忌与组织判断，模型会融入收尾清单。
+          法务红线、渠道约束、组织与预算等自由补充，会进入策略稿收尾部分；不替换正文结构，也不替代上方已填的决策字段。
         </p>
         <label class="fld fld-block">
-          <span>业务备注（§10 正文）</span>
+          <span>业务备注</span>
           <textarea
             v-model="businessNotes"
             rows="4"
-            placeholder="如：法务/合规表述边界、渠道限价、禁止对标表述、预算与人力硬约束；会进入 §10 而非替换 §2～§8 结构"
+            placeholder="如法务/合规表述边界、渠道限价、禁止对标表述、预算与人力硬约束等（可选）"
           />
         </label>
       </fieldset>
