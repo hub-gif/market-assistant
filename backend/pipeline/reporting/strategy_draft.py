@@ -413,24 +413,24 @@ def build_strategy_draft_markdown(
         [
             "## 三、为什么要买「这款产品」",
             "",
-            "### 3.1 品类与时机",
+            "### 3.1 为何要购买这一款（依据与理由）",
             "",
         ]
     )
     raw = brief.get("pc_search_raw") or {}
     if raw.get("result_count_consensus") is not None:
         lines.append(
-            f"- **平台申报检索规模**：{_num(raw.get('result_count_consensus'))}（站内匹配条数量级，非销售额）"
+            f"- **检索结果量级（需求侧参考，非销售额）**：{_num(raw.get('result_count_consensus'))}（站内匹配条数量级）"
             if for_llm_input
-            else f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}（非销售额）"
+            else f"- **检索结果量级（需求侧参考，非销售额）**：{_num(raw.get('result_count_consensus'))}（列表 resultCount）"
         )
     elif merged_n is not None:
-        lines.append(f"- **深入样本 SKU 数**：{_num(merged_n)}")
+        lines.append(f"- **深入样本 SKU 数（监测范围）**：{_num(merged_n)}")
     else:
         lines.append(
-            "- **品类与时机**：—"
+            "- **检索与样本尺度**：—"
             if for_llm_input
-            else "- **品类与时机**：*（成稿结合摘要与监测范围。）*"
+            else "- **检索与样本尺度**：*（成稿结合摘要与监测范围。）*"
         )
     lines.append("")
     if pst.get("n"):
@@ -438,22 +438,26 @@ def build_strategy_draft_markdown(
         src_disp = "本监测样本" if for_llm_input and src == "strategy_scope_matrix_group_skus" else src
         lines.extend(
             [
-                f"- **价格摘录（可支撑购买理由与锚点）**：来源 {src_disp}，n = {_num(pst.get('n'))}；"
+                f"- **价带摘录（支撑购买理由与价位锚点）**：来源 {src_disp}，n = {_num(pst.get('n'))}；"
                 f"区间 {_num(pst.get('min'))}～{_num(pst.get('max'))}；中位数 {_num(pst.get('median'))}。",
                 "",
             ]
         )
     else:
         if for_llm_input:
-            lines.append("- **价带摘录**：监测摘要中暂无统计表，可结合同任务报告补一句购买锚点。")
+            lines.append("- **价带摘录**：监测摘要中暂无统计表，可结合同任务报告补一句与购买理由相关的价位锚点。")
         else:
-            lines.append("*摘要中无价带统计，成稿可结合本批次价格数据在 §3.1 补一句锚点；**勿**重复 §2 已写的应对动作。*")
+            lines.append(
+                "*摘要中无价带统计，成稿可结合本批次价格数据在本节补一句价位锚点；**勿**重复 §2 已写的应对动作。*"
+            )
         lines.append("")
-    if not for_llm_input:
-        lines.append(
-            "*成稿在 §3.1 末尾用 1～2 句**承接** §2 优先痛点并写购买理由；**若**多细类并存，**分句**写清购买理由与主推；价带/规格类动作已在 §2 表内则此处**勿再展开一遍**。*"
-        )
-        lines.append("")
+    lines.append(
+        "- **购买理由**：用 1～2 句直接回答「为何要购买**这一款**」；上列为依据，须收束到可验证的产品点（规格/配料/口感/价位等，与输入可对读）。"
+        "**禁止**以「品类需求稳、概念认知成熟、适合××叙事切入」等**仅适用于整个品类**的宏观句收尾，而不落到本品或主推规格。"
+        if for_llm_input
+        else "- **购买理由**：*（成稿：承接上列依据，1～2 句写清为何要购买这一款；承接 §2 优先痛点；多细类则分句；**勿**只写品类风口而不落到本品；价带/规格动作已在 §2 表内则此处**勿再展开一遍**。）*"
+    )
+    lines.append("")
 
     lines.extend(
         [
