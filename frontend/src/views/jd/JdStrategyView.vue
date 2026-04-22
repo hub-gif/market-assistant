@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import {
@@ -8,20 +8,34 @@ import {
   useJobs,
   exportStrategyDocument,
 } from '../../composables/useJobs'
+import { generationInFlightKey, withGenerationInFlight } from '../../composables/useGenerationInFlight'
+import { loadStrategyDraftRecord } from '../../lib/strategyDraftStorage'
 
 const route = useRoute()
 const router = useRouter()
 const { jobs } = useJobs()
+
+const genInFlight = generationInFlightKey()
 
 const selectedId = ref('')
 const draftMd = ref('')
 const draftMeta = ref(null)
 const viewMode = ref('render')
 const exportErr = ref('')
-const exportBusy = ref(false)
-const marketingBusy = ref(false)
 const marketingErr = ref('')
 const marketingResult = ref(null)
+
+const exportBusy = computed(() => {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.some((k) => String(k).startsWith(`export-strategy:${id}:`))
+})
+
+const marketingBusy = computed(() => {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.includes(`marketing-detail-pack:${id}`)
+})
 
 function payloadForMarketing(lastRequest) {
   if (!lastRequest || typeof lastRequest !== 'object') {
@@ -39,8 +53,6 @@ function payloadForMarketing(lastRequest) {
   }
 }
 
-const STORAGE_KEY = (id) => `ma_strategy_draft_${id}`
-
 const successJobs = computed(() =>
   [...jobs.value].filter((j) => j.status === 'success').sort((a, b) => b.id - a.id),
 )
@@ -57,13 +69,12 @@ function loadDraft() {
     return
   }
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY(id))
-    if (!raw) {
+    const o = loadStrategyDraftRecord(id)
+    if (!o) {
       draftMd.value = ''
       draftMeta.value = null
       return
     }
-    const o = JSON.parse(raw)
     draftMd.value = o.markdown || ''
     draftMeta.value = {
       keyword: o.keyword || '',
@@ -102,47 +113,47 @@ async function generateMarketingDetailPack() {
   if (!draftMd.value || !selectedId.value) return
   marketingErr.value = ''
   marketingResult.value = null
-  marketingBusy.value = true
+  const id = selectedId.value
   const { business_notes, strategy_decisions } = payloadForMarketing(
     draftMeta.value?.last_request,
   )
   try {
-    const r = await api(`/api/jobs/${selectedId.value}/marketing-detail-pack/`, {
-      method: 'POST',
-      body: JSON.stringify({
-        strategy_markdown: draftMd.value,
-        business_notes,
-        strategy_decisions,
-      }),
-    })
-    const text = await r.text()
-    if (!r.ok) {
-      try {
-        const j = JSON.parse(text)
-        marketingErr.value = j.detail || text
-      } catch {
-        marketingErr.value = text || `HTTP ${r.status}`
+    await withGenerationInFlight(`marketing-detail-pack:${id}`, async () => {
+      const r = await api(`/api/jobs/${id}/marketing-detail-pack/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          strategy_markdown: draftMd.value,
+          business_notes,
+          strategy_decisions,
+        }),
+      })
+      const text = await r.text()
+      if (!r.ok) {
+        try {
+          const j = JSON.parse(text)
+          marketingErr.value = j.detail || text
+        } catch {
+          marketingErr.value = text || `HTTP ${r.status}`
+        }
+        return
       }
-      return
-    }
-    marketingResult.value = JSON.parse(text)
+      marketingResult.value = JSON.parse(text)
+    })
   } catch (e) {
     marketingErr.value = String(e)
-  } finally {
-    marketingBusy.value = false
   }
 }
 
 async function exportStrategyFmt(fmt) {
   if (!draftMd.value || !selectedId.value) return
   exportErr.value = ''
-  exportBusy.value = true
+  const id = selectedId.value
   try {
-    await exportStrategyDocument(selectedId.value, draftMd.value, fmt)
+    await withGenerationInFlight(`export-strategy:${id}:${fmt}`, async () => {
+      await exportStrategyDocument(id, draftMd.value, fmt)
+    })
   } catch (e) {
     exportErr.value = String(e)
-  } finally {
-    exportBusy.value = false
   }
 }
 
@@ -165,10 +176,26 @@ function syncSelectionFromRouteAndJobs() {
   }
 }
 
+function onStorageDraftSync(ev) {
+  const prefix = 'ma_strategy_draft_'
+  if (!ev.key || !ev.key.startsWith(prefix)) return
+  const jid = ev.key.slice(prefix.length)
+  if (jid === String(selectedId.value)) loadDraft()
+}
+
 onMounted(async () => {
   await loadList()
   syncSelectionFromRouteAndJobs()
   loadDraft()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', onStorageDraftSync)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('storage', onStorageDraftSync)
+  }
 })
 
 watch(
@@ -206,7 +233,7 @@ watch(successJobs, (list) => {
     <section class="ma-card">
       <h2>策略稿预览</h2>
       <p class="hint-top">
-        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本浏览器会话内）。可点击<strong>生成商详包</strong>：先抽核心信息卡，再派生标题与卖点等（两次大模型调用）。需要改决策请回到
+        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本机浏览器 <strong>localStorage</strong>，同域名下可跨标签查看）。生成/导出/商详包等耗时操作状态在全局任务锁中同步，跨标签页可看到进行中。需要改决策请回到
         <RouterLink to="/jd/strategy-build">策略生成</RouterLink>
         重新提交。分析数据见
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。

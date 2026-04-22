@@ -1,11 +1,16 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { refreshJobs, useJobs, api } from '../../composables/useJobs'
 import {
   generationInFlightKey,
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
+import {
+  loadStrategyMatrixScope,
+  saveStrategyDraftRecord,
+  saveStrategyMatrixScope,
+} from '../../lib/strategyDraftStorage'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,8 +120,6 @@ function buildPayload() {
   }
 }
 
-const STORAGE_KEY = (id) => `ma_strategy_draft_${id}`
-
 function formatJobOption(j) {
   const t = j.created_at
   const tail = t ? String(t).replace('T', ' ').slice(0, 16) : ''
@@ -151,7 +154,7 @@ async function loadMatrixGroupsForJob(id) {
     const data = JSON.parse(text)
     const mg = data.matrix_groups
     matrixGroups.value = Array.isArray(mg) ? mg : []
-    const saved = sessionStorage.getItem(`ma_strategy_scope_${id}`)
+    const saved = loadStrategyMatrixScope(id)
     if (saved && matrixGroups.value.some((g) => g.group === saved)) {
       strategyMatrixScope.value = saved
     }
@@ -184,15 +187,12 @@ async function generateAndGoPreview() {
         return
       }
       const j = JSON.parse(text)
-      sessionStorage.setItem(
-        STORAGE_KEY(id),
-        JSON.stringify({
-          markdown: j.markdown || '',
-          keyword: j.keyword || '',
-          generated_at: j.generated_at || '',
-          last_request: buildPayload(),
-        }),
-      )
+      saveStrategyDraftRecord(id, {
+        markdown: j.markdown || '',
+        keyword: j.keyword || '',
+        generated_at: j.generated_at || '',
+        last_request: buildPayload(),
+      })
       router.push({ path: '/jd/strategy-view', query: { job: id } })
     } catch (e) {
       err.value = String(e)
@@ -200,7 +200,31 @@ async function generateAndGoPreview() {
   })
 }
 
-onMounted(loadList)
+function onStorageScopeSync(ev) {
+  const prefix = 'ma_strategy_scope_'
+  if (!ev.key || !ev.key.startsWith(prefix)) return
+  const jid = ev.key.slice(prefix.length)
+  if (jid !== String(selectedId.value)) return
+  const v = loadStrategyMatrixScope(jid)
+  if (v && matrixGroups.value.some((g) => g.group === v)) {
+    strategyMatrixScope.value = v
+  } else if (!v) {
+    strategyMatrixScope.value = ''
+  }
+}
+
+onMounted(() => {
+  loadList()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', onStorageScopeSync)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('storage', onStorageScopeSync)
+  }
+})
 
 watch(selectedId, (id) => {
   loadMatrixGroupsForJob(id)
@@ -209,8 +233,7 @@ watch(selectedId, (id) => {
 watch(strategyMatrixScope, (v) => {
   const jid = selectedId.value
   if (!jid) return
-  if (v) sessionStorage.setItem(`ma_strategy_scope_${jid}`, v)
-  else sessionStorage.removeItem(`ma_strategy_scope_${jid}`)
+  saveStrategyMatrixScope(jid, v)
 })
 
 watch(
@@ -237,7 +260,7 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>（主推类目，与报告矩阵一致）。下方字段按策略文档常见顺序排列；成稿里的小节标题与编号由系统自动对应，无需在此对照章节号。有关痛点、购买理由、品牌承诺等段落由监测与模型撰写，本页主要收集<strong>业务决策与战术要点</strong>。生成结果见
+        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>（主推类目，与报告矩阵一致）。策略稿与矩阵选择保存在本机 <strong>localStorage</strong>，同域名下可跨标签查看；与其它页面的耗时任务通过全局任务锁同步。下方字段按策略文档常见顺序排列；成稿里的小节标题与编号由系统自动对应。有关痛点、购买理由、品牌承诺等由监测与模型撰写，本页主要收集<strong>业务决策与战术要点</strong>。生成结果见
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>。<strong>已填项</strong>进入底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
       </p>
 
