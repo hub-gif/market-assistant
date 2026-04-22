@@ -338,7 +338,11 @@ def build_strategy_draft_markdown(
 
     lines.extend(
         [
-            "### 1.3 本品聚焦（占位）",
+            (
+                "### 1.3 本品聚焦"
+                if for_llm_input
+                else "### 1.3 本品聚焦（占位）"
+            ),
             "",
             *(
                 []
@@ -455,7 +459,11 @@ def build_strategy_draft_markdown(
         [
             "## 四、为什么要选「这个品牌」",
             "",
-            "### 4.1 品牌承诺与调性（占位）",
+            (
+                "### 4.1 品牌承诺与调性"
+                if for_llm_input
+                else "### 4.1 品牌承诺与调性（占位）"
+            ),
             "",
             *(
                 []
@@ -465,7 +473,11 @@ def build_strategy_draft_markdown(
                     "",
                 ]
             ),
-            "- **一句话**：*（占位）*",
+            (
+                "- **一句话**：*（请写可落到商详/包装/客服等触点的承诺句）*"
+                if for_llm_input
+                else "- **一句话**：*（占位）*"
+            ),
             (
                 "- **调性**：透明、可验证、合规控糖叙事。"
                 if for_llm_input
@@ -570,7 +582,11 @@ def build_strategy_draft_markdown(
                 ]
             ),
             "",
-            "### 5.2 差异化方向（占位）",
+            (
+                "### 5.2 差异化方向"
+                if for_llm_input
+                else "### 5.2 差异化方向（占位）"
+            ),
             "",
             *(
                 []
@@ -582,7 +598,11 @@ def build_strategy_draft_markdown(
             ),
             "| 差异点 | 说明 | 风险 |",
             "|--------|------|------|",
-            "| | *待填* | |",
+            (
+                "| | | |"
+                if for_llm_input
+                else "| | *待填* | |"
+            ),
             "",
         ]
     )
