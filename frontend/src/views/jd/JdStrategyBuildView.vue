@@ -76,11 +76,12 @@ const positioningOptions = [
   { value: 'different', label: '另起带' },
 ]
 
+/** 对应后端 competitive_stance / 成稿 §5.3：与头部或主竞品「怎么打」，非价位阵地、亦非泛指的「进市场」。 */
 const stanceOptions = [
   { value: '', label: '暂不填写' },
-  { value: 'flank', label: '倾向侧翼切入' },
-  { value: 'head_on', label: '倾向正面替代' },
-  { value: 'both', label: '分层推进（侧翼 + 正面）' },
+  { value: 'flank', label: '侧翼切入（避开头部主战场）' },
+  { value: 'head_on', label: '正面替代（对标头部主战场）' },
+  { value: 'both', label: '分层推进（侧翼 + 正面并行）' },
   { value: 'undecided', label: '尚未拍板' },
 ]
 
@@ -235,13 +236,11 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，在下方选择<strong>策略类目</strong>（与竞品矩阵细类一致，对应成稿中的主推细类；选「全部分类」则与全关键词样本一致）。<strong>默认</strong>使用大模型在规则底稿与同任务监测摘要基础上润色成稿（需服务端已配置网关）。可勾选「本次仅生成规则稿」跳过智能润色。策略配置与「分析报告生成」的<strong>报告配置</strong>相互独立。收窄类目时，成稿会并入该细类在宿主报告<strong>第五～第八章</strong>的大模型归纳节选。提交后跳转
+        选择<strong>已成功</strong>任务，在下方选择<strong>策略类目</strong>
         <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>
-        。<strong>已填项</strong>写入底稿并由大模型落实；<strong>未填项</strong>可由大模型结合监测数据推断（仍受「禁止编造」约束）。
+        。<strong>已填项</strong>写入底稿并由大模型落实；<strong>未填项</strong>可由大模型结合监测数据推断。
       </p>
-      <p class="hint-top hint-flow">
-        <strong>与成稿目录对齐</strong>（对应下载策略稿 Markdown）：「策略范围与前提」→「摘要」→「一、顾客是谁」→「二、针对痛点要怎么做」（主要由数据与模型归纳）→「三、为什么要买这款产品」→「四、为什么要选这个品牌」（承诺与信任；底稿占位为主）→「五～七、竞品 / 阶段路径 / 品牌四线」→「八、战术支柱」（含<strong>价位阵地</strong>勾选与 4P）→「九、风险」→「十、下一步」→「业务约束与备注」→「附录」。第四章叙事本页不设表单项；<strong>贴顶/卡腰等价位取向</strong>归入第八章定价，见下方「战术支柱」分组。
-      </p>
+
 
       <div class="toolbar">
         <label class="chk-inline">
@@ -346,10 +345,12 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>五、与其它品牌有何不同 — 竞争倾向</legend>
-        <p class="fieldset-hint">对应成稿「<strong>五、与其它品牌有何不同 · 竞争应对</strong>」。</p>
+        <legend>五、与其它品牌有何不同 — 竞争应对取向</legend>
+        <p class="fieldset-hint">
+          对应成稿「<strong>§5.3 竞争应对</strong>」：选的是<strong>与头部或主竞品交锋时的主打法</strong>（侧翼 / 正面等）。与下方「价位阵地」（贴顶/卡腰/下探）回答的问题不同，也不是泛指的「是否进新市场」。
+        </p>
         <label class="fld fld-block">
-          <span>本品竞争倾向</span>
+          <span>面对竞品时的主打法</span>
           <select v-model="decisions.competitive_stance" class="job-select full">
             <option v-for="o in stanceOptions" :key="o.value || 'empty'" :value="o.value">
               {{ o.label }}
