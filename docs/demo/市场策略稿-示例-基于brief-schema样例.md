@@ -188,7 +188,7 @@
 ## 十、下一步与节奏
 
 1. 选定真实品牌与 SKU，替换本稿占位表述。  
-2. 用同一 `run_dir` 跑通简报 → 报告 → 策略稿，核对第九章节选与 `report_strategy_excerpt` 一致。  
+2. 用同一 `run_dir` 跑通简报 → 报告 → 策略稿，核对策略稿数字与 brief、矩阵细类节选一致（默认产线下 `report_strategy_excerpt` 多为空，见规划 `strategy-marketing-content-alignment.md` §2）。  
 3. 将对标表与价位带图固化进评审材料（内部）。
 
 ---

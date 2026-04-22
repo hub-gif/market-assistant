@@ -2,6 +2,8 @@
 
 > **生成方式**：本机 `pipeline.demos.dump_strategy_llm_input_md` 按与 `generate_strategy_draft_markdown_llm` 相同的 payload 组装逻辑导出。
 > **与线上一致性**：与真实接口相比，表单字段此处均为空默认；你只要把当时提交的 `strategy_decisions` / `business_notes` 代入即与线上等价。
+>
+> **口径（2026-04）**：默认产线已弃用报告内第九章大模型长文，新任务 `report_strategy_excerpt` 多为空。下文为某次历史导出的**全文留档**，元数据与内嵌 System 片段中若仍出现「第九章」主对齐表述，以 `strategy-marketing-content-alignment.md`、`策略生成-框架确定.md` 现行版为准。
 
 ## 快照元数据
 
@@ -10,7 +12,7 @@
 - **run_dir**：`D:\PythonProject\Low GI\market_assistant\data\JD\pipeline_runs\20260413_104252_低GI`
 - **矩阵分组**：0 → 「饼干」
 - **本任务可选细类（节选）**：['饼干', '西式糕点', '中式糕点', '面点', '干菜类', '米', '风味挂面', '其他杂粮', '冲饮谷物', '药食同源', '酸辣粉', '妈妈专区', '挂面', '混合麦片', '特色米粉/米线']
-- **第九章节选来源**：json_markdown，约 2930 字符
+- **report_strategy_excerpt（本快照）**：json_markdown，约 2930 字符（历史批次；非默认产线形态）
 - **细类报告节选来源**：competitor_analysis_md，约 2682 字符
 - **System 字符数**：6927
 - **User 消息字符数**：22226
