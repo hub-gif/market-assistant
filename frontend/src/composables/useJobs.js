@@ -1,44 +1,5 @@
-import { ref, watch } from 'vue'
-
-const jobs = ref([])
-
-/** 终态 */
-const TERMINAL_JOB_STATUSES = new Set(['success', 'failed', 'cancelled'])
-
-function isActiveJobStatus(status) {
-  return status === 'pending' || status === 'running'
-}
-
-/** 单一定时器轮询列表（避免 N 个任务 → N 路 GET /api/jobs/:id/） */
-let jobsListPollTimer = null
-
-function stopJobsListPoll() {
-  if (jobsListPollTimer != null) {
-    clearInterval(jobsListPollTimer)
-    jobsListPollTimer = null
-  }
-}
-
-async function fetchJobsListQuietly() {
-  try {
-    const r = await api('/api/jobs/')
-    if (r.ok) {
-      jobs.value = await r.json()
-    }
-  } catch {
-    /* 忽略网络错误，下一轮再试 */
-  }
-}
-
-function syncJobsListPoll() {
-  const hasActive = jobs.value.some((j) => isActiveJobStatus(j.status))
-  if (!hasActive) {
-    stopJobsListPoll()
-    return
-  }
-  if (jobsListPollTimer != null) return
-  jobsListPollTimer = setInterval(fetchJobsListQuietly, 3000)
-}
+import { storeToRefs } from 'pinia'
+import { useJobStore } from '../stores/jobs'
 
 export function api(path, opts = {}) {
   return fetch(path, {
@@ -48,9 +9,7 @@ export function api(path, opts = {}) {
 }
 
 export async function refreshJobs() {
-  const r = await api('/api/jobs/')
-  if (!r.ok) throw new Error(await r.text())
-  jobs.value = await r.json()
+  return useJobStore().refreshJobs()
 }
 
 export function jobCancelUrl(jobId) {
@@ -117,11 +76,14 @@ export async function exportReportDocument(jobId, fmt = 'docx') {
   URL.revokeObjectURL(u)
 }
 
-/** 策略稿正文（浏览器 sessionStorage）→ Word/PDF */
-export async function exportStrategyDocument(jobId, markdown, fmt = 'docx') {
+/**
+ * 策略稿或营销内容 Markdown → Word/PDF
+ * @param {'strategy' | 'marketing_detail'} [kind]
+ */
+export async function exportStrategyDocument(jobId, markdown, fmt = 'docx', kind = 'strategy') {
   const r = await api(`/api/jobs/${jobId}/export-document/`, {
     method: 'POST',
-    body: JSON.stringify({ kind: 'strategy', fmt, markdown }),
+    body: JSON.stringify({ kind, fmt, markdown }),
   })
   const ct = r.headers.get('Content-Type') || ''
   if (!r.ok) {
@@ -140,9 +102,12 @@ export async function exportStrategyDocument(jobId, markdown, fmt = 'docx') {
     throw new Error(msg)
   }
   const blob = await r.blob()
+  const fallback =
+    kind === 'marketing_detail'
+      ? `job_${jobId}_marketing_detail_pack.${fmt}`
+      : `job_${jobId}_strategy_draft.${fmt}`
   const filename =
-    filenameFromContentDisposition(r.headers.get('Content-Disposition')) ||
-    `job_${jobId}_strategy_draft.${fmt}`
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) || fallback
   const u = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = u
@@ -282,14 +247,6 @@ export async function downloadJobDatasetExport(jobId, kind, exportFmt) {
   URL.revokeObjectURL(u)
 }
 
-watch(
-  jobs,
-  () => {
-    syncJobsListPoll()
-  },
-  { deep: true },
-)
-
 export function jobConfigHint(j) {
   const parts = []
   if (j.page_start != null || j.page_to != null) {
@@ -311,6 +268,8 @@ export function jobConfigHint(j) {
 }
 
 export function useJobs() {
+  const store = useJobStore()
+  const { jobs } = storeToRefs(store)
   return {
     jobs,
     refreshJobs,

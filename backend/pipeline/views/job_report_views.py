@@ -28,6 +28,7 @@ from ..reporting.brief_strategy_scope import (
     list_matrix_groups_for_api,
     resolve_strategy_matrix_group_index,
 )
+from ..reporting.marketing_pack_persist import persist_marketing_detail_pack_v1
 from ..reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 from ..reporting.report_matrix_group_evidence import (
     load_report_matrix_group_evidence_markdown,
@@ -266,7 +267,7 @@ class JobStrategyDraftView(APIView):
 @method_decorator(csrf_exempt, name="dispatch")
 class JobMarketingDetailPackView(APIView):
     """
-    根据浏览器会话中的策略稿 Markdown，经「核心信息卡」再派生**商详包**（JSON）。
+    根据浏览器会话中的策略稿 Markdown，经「核心信息卡」再派生**营销内容**（多触点文案 JSON）。
     两步均走 ``call_llm``；事实约束见提示词。
     """
 
@@ -281,7 +282,7 @@ class JobMarketingDetailPackView(APIView):
             raise Http404()
         if job.status != JobStatus.SUCCESS or not (job.run_dir or "").strip():
             return Response(
-                {"detail": "仅可对已成功且含 run_dir 的任务生成商详包"},
+                {"detail": "仅可对已成功且含 run_dir 的任务生成营销内容"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         ser = MarketingDetailPackRequestSerializer(data=request.data or {})
@@ -314,6 +315,10 @@ class JobMarketingDetailPackView(APIView):
             "source": "llm_marketing_detail_pack_v1",
             **inner,
         }
+        try:
+            persist_marketing_detail_pack_v1(job.run_dir, body)
+        except OSError:
+            pass
         return Response(body)
 
 
@@ -323,7 +328,7 @@ class JobExportDocumentView(APIView):
     将 Markdown 导出为 Word（.docx）或简易 PDF。
     - GET：``kind=report``，读取 ``run_dir/competitor_analysis.md``；若文件缺失但已有合并表，
       则先按任务配置调用 ``regenerate_competitor_report`` 再导出（与「报告生成」规则版一致）。
-    - POST：``kind=strategy``，请求体 JSON 字段 ``markdown`` 为策略稿正文（与前端 sessionStorage 一致）。
+    - POST：``kind=strategy``，请求体 ``markdown`` 为策略稿正文；``kind=marketing_detail`` 为营销内容等派生稿（同一套转版逻辑，下载文件名不同）。
     PDF 依赖本机中文字体或环境变量 ``MA_PDF_FONT`` 指向 .ttf。
     """
 
@@ -408,9 +413,9 @@ class JobExportDocumentView(APIView):
         kind = (body.get("kind") or "strategy").strip().lower()
         fmt = (body.get("fmt") or "docx").strip().lower()
         md = (body.get("markdown") or "").strip()
-        if kind != "strategy":
+        if kind not in ("strategy", "marketing_detail"):
             return Response(
-                {"detail": "POST 仅支持 kind=strategy"},
+                {"detail": "POST 的 kind 须为 strategy 或 marketing_detail"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not md:
@@ -424,14 +429,18 @@ class JobExportDocumentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
+            if kind == "marketing_detail":
+                base = f"job_{pk}_marketing_detail_pack"
+            else:
+                base = f"job_{pk}_strategy_draft"
             if fmt == "docx":
                 data = markdown_to_docx_bytes(md)
                 ct = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                fn = f"job_{pk}_strategy_draft.docx"
+                fn = f"{base}.docx"
             else:
                 data = markdown_to_pdf_bytes(md)
                 ct = "application/pdf"
-                fn = f"job_{pk}_strategy_draft.pdf"
+                fn = f"{base}.pdf"
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         resp = HttpResponse(data, content_type=ct)

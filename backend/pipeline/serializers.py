@@ -476,7 +476,7 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
 
 
 class MarketingDetailPackRequestSerializer(serializers.Serializer):
-    """策略稿正文 → 核心信息卡 → 商详包（两步 LLM）。"""
+    """策略稿正文 → 核心信息卡 → 营销内容（多触点文案，两步 LLM）。"""
 
     strategy_markdown = serializers.CharField(
         required=True,
