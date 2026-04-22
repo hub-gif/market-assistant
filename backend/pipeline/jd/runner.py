@@ -14,6 +14,7 @@ from django.conf import settings
 
 from ..csv.schema import MERGED_FIELD_TO_CSV_HEADER
 from ..models import PipelineJob
+from ..serializers import REPORT_CONFIG_BOOL_KEYS
 
 
 def merge_llm_supplement_with_rules_report(llm_md: str, rules_md: str) -> str:
@@ -160,7 +161,10 @@ def use_chunked_group_summaries_llm(report_config: dict[str, Any] | None) -> boo
         "yes",
     ):
         return False
-    return bool(rc.get("llm_group_summaries_chunk_by_matrix", True))
+    ch = rc.get("llm_group_summaries_chunk_by_matrix")
+    if ch is None:
+        return True
+    return bool(ch)
 
 
 def get_default_report_config() -> dict[str, Any]:
@@ -184,6 +188,25 @@ def get_default_report_config() -> dict[str, Any]:
             for a, b, c, d in jcr.EXTERNAL_MARKET_TABLE_ROWS
         ],
     }
+
+
+def merge_report_config_with_defaults(
+    report_config: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """
+    合并 ``get_default_report_config``：任务里常见仅含部分键；JSON ``null`` 的布尔开关视为未设置，
+    否则 ``bool(None)`` 会把第五章矩阵/第六章促销等 LLM 归纳整段关掉。
+    """
+    eff_rc: dict[str, Any] = (
+        dict(report_config) if isinstance(report_config, dict) else {}
+    )
+    for _bk in REPORT_CONFIG_BOOL_KEYS:
+        if eff_rc.get(_bk) is None:
+            eff_rc.pop(_bk, None)
+    for _k, _v in get_default_report_config().items():
+        if _k not in eff_rc:
+            eff_rc[_k] = _v
+    return eff_rc
 
 
 def get_default_strategy_config() -> dict[str, Any]:
@@ -225,13 +248,7 @@ def write_competitor_analysis_for_run_dir(
         except json.JSONDecodeError:
             meta = None
 
-    eff_rc: dict[str, Any] = (
-        dict(report_config) if isinstance(report_config, dict) else {}
-    )
-    # 任务仅保存部分调参时，补齐默认项（含各 llm_* 开关）；显式写入的键不被覆盖
-    for _k, _v in get_default_report_config().items():
-        if _k not in eff_rc:
-            eff_rc[_k] = _v
+    eff_rc = merge_report_config_with_defaults(report_config)
     all_tx = _flat_comment_texts(comment_rows)
     suggest_path = run_dir / "keyword_suggest_llm.json"
     suggest_record: dict[str, Any] = {
@@ -823,6 +840,9 @@ def build_competitor_brief_for_job(
         except json.JSONDecodeError:
             pass
 
+    eff_final = merge_report_config_with_defaults(
+        eff if isinstance(eff, dict) else None
+    )
     return jcr.build_competitor_brief(
         run_dir=base,
         keyword=kw,
@@ -830,7 +850,7 @@ def build_competitor_brief_for_job(
         search_export_rows=search_export_rows,
         comment_rows=comment_rows,
         meta=meta,
-        report_config=eff,
+        report_config=eff_final,
     )
 
 

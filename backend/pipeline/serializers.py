@@ -37,25 +37,10 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
     }
 )
 
-
-def validate_report_config_body(value: dict) -> dict:
-    if not isinstance(value, dict):
-        raise serializers.ValidationError("须为 JSON 对象")
-    value = dict(value)
-    value.pop("llm_section_bridges", None)
-    # 已废弃字段：静默丢弃，兼容旧任务 JSON
-    value.pop("comment_focus_words", None)
-    value.pop("comment_scenario_groups", None)
-    value.pop("llm_scenario_group_summaries", None)
-    extra = set(value.keys()) - _REPORT_CONFIG_ALLOWED_KEYS
-    if extra:
-        raise serializers.ValidationError(
-            f"未知字段：{', '.join(sorted(extra))}"
-        )
-    if "llm_comment_sentiment" in value and value["llm_comment_sentiment"] is not None:
-        if not isinstance(value["llm_comment_sentiment"], bool):
-            raise serializers.ValidationError("llm_comment_sentiment 须为 true 或 false")
-    for k in (
+# 与 ``validate_report_config_body`` 中布尔校验一致；``null`` 视为未设置（须让默认 true/false 生效）
+REPORT_CONFIG_BOOL_KEYS = frozenset(
+    {
+        "llm_comment_sentiment",
         "llm_matrix_group_summaries",
         "llm_price_group_summaries",
         "llm_promo_group_summaries",
@@ -66,8 +51,29 @@ def validate_report_config_body(value: dict) -> dict:
         "chapter8_text_mining_probe_live_llm",
         "chapter8_text_mining_probe_llm_chunked",
         "chapter8_text_mining_probe_wordcloud",
-    ):
-        if k in value and value[k] is not None and not isinstance(value[k], bool):
+    }
+)
+
+
+def validate_report_config_body(value: dict) -> dict:
+    if not isinstance(value, dict):
+        raise serializers.ValidationError("须为 JSON 对象")
+    value = dict(value)
+    for _bk in REPORT_CONFIG_BOOL_KEYS:
+        if value.get(_bk) is None:
+            value.pop(_bk, None)
+    value.pop("llm_section_bridges", None)
+    # 已废弃字段：静默丢弃，兼容旧任务 JSON
+    value.pop("comment_focus_words", None)
+    value.pop("comment_scenario_groups", None)
+    value.pop("llm_scenario_group_summaries", None)
+    extra = set(value.keys()) - _REPORT_CONFIG_ALLOWED_KEYS
+    if extra:
+        raise serializers.ValidationError(
+            f"未知字段：{', '.join(sorted(extra))}"
+        )
+    for k in REPORT_CONFIG_BOOL_KEYS:
+        if k in value and not isinstance(value[k], bool):
             raise serializers.ValidationError(f"{k} 须为 true 或 false")
     for k in (
         "chapter8_probe_min_texts",
