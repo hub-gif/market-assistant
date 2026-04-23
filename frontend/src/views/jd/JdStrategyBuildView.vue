@@ -332,7 +332,7 @@ watch(
           <textarea
             v-model="decisions.stage_goal_type"
             rows="2"
-            placeholder="如：心智占位、转化与复购爬坡、份额防守等（可与内部规划文档中的阶段目标类型选项对齐）；不填则由系统在成稿中结合数据推断"
+            placeholder="如：让更多人愿意尝试购买、把销量和转化做起来、稳住老顾客和份额、先验证新品是否卖得动……按你公司本阶段真实目标写一句即可；不填则由系统在成稿中结合数据推断"
           />
         </label>
         <label class="fld fld-block">

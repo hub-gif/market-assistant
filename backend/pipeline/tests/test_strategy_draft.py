@@ -21,7 +21,7 @@ class StrategyDraftTests(SimpleTestCase):
             strategy_decisions_substantive({"product_role": "新品"})
         )
         self.assertTrue(
-            strategy_decisions_substantive({"stage_goal_type": "B 转化爬坡"})
+            strategy_decisions_substantive({"stage_goal_type": "本阶段做销量与转化"})
         )
 
     def test_for_llm_input_omits_dev_traces(self) -> None:
@@ -92,12 +92,12 @@ class StrategyDraftTests(SimpleTestCase):
             job_id=1,
             keyword="K",
             brief=brief,
-            strategy_decisions={"stage_goal_type": "A 心智占位"},
+            strategy_decisions={"stage_goal_type": "本阶段以拉新尝试为主"},
             generated_at_iso="2026-04-09T12:00:00",
             for_llm_input=True,
         )
-        self.assertIn("| **本阶段策略目标类型** | A 心智占位 |", md)
-        self.assertIn("**本阶段策略目标类型**：A 心智占位", md)
+        self.assertIn("| **本阶段策略目标类型** | 本阶段以拉新尝试为主 |", md)
+        self.assertIn("**本阶段策略目标类型**：本阶段以拉新尝试为主", md)
 
     def test_strategy_decisions_merge(self) -> None:
         brief = {"schema_version": 1, "keyword": "K", "batch_label": "b"}

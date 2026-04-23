@@ -240,7 +240,7 @@ def build_strategy_draft_markdown(
     )
     sgt = _esc(d.get("stage_goal_type") or "").strip()
     _goal_type_placeholder = (
-        "待确认：可填如心智占位、转化爬坡等业务阶段目标；与业务内部口径对齐"
+        "待确认：可填如拉新尝试、做销量与转化、守份额与复购、新品试水等业务阶段目标；与业务内部口径对齐"
         if for_llm_input
         else "成稿从业务侧阶段目标类型口径择一或组合，并与下列成功标准一致"
     )
@@ -362,7 +362,7 @@ def build_strategy_draft_markdown(
             _goal_bullet(
                 "本阶段策略目标类型",
                 str(d.get("stage_goal_type") or ""),
-                "与业务内部阶段目标口径对齐，或自填（如心智占位、转化爬坡）",
+                "与业务内部阶段目标口径对齐，或自填（如拉新尝试、做销量）",
             ),
             _goal_bullet(
                 "目标客群",
