@@ -238,11 +238,13 @@ def build_strategy_draft_markdown(
         if not for_llm_input
         else "*（待确认）*"
     )
-    _table_goal_type = (
-        "*（成稿从规划文档「目标类型选项」择一或组合，并与下列成功标准一致）*"
-        if not for_llm_input
-        else "*（待确认）*"
+    sgt = _esc(d.get("stage_goal_type") or "").strip()
+    _goal_type_placeholder = (
+        "待确认：可填如「A 心智占位 / B 转化爬坡 …」，见规划文档「目标类型选项」"
+        if for_llm_input
+        else "成稿从规划文档「目标类型选项」择一或组合，并与下列成功标准一致"
     )
+    _table_goal_type = _scope_cell(sgt, _goal_type_placeholder)
     _summary_user_side = (
         "- **用户侧**：*（一两句结论即可：讨论焦点与负向主题；**按细类分句**归纳，**勿**混成「全站用户」一句；**勿**展开与报告重复的细类统计、词频。）*"
         if not for_llm_input
@@ -357,6 +359,11 @@ def build_strategy_draft_markdown(
                 ]
             ),
             _goal_bullet("本品角色", str(d.get("product_role") or ""), "新品 / 追赶 / 防守 / 拓品类 …"),
+            _goal_bullet(
+                "本阶段策略目标类型",
+                str(d.get("stage_goal_type") or ""),
+                "见规划文档「目标类型选项」或自填（如心智占位、转化爬坡）",
+            ),
             _goal_bullet(
                 "目标客群",
                 str(d.get("audience_segment") or ""),

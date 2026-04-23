@@ -36,6 +36,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 def _strategy_decisions_empty() -> dict[str, Any]:
     return {
         "product_role": "",
+        "stage_goal_type": "",
         "time_horizon": "",
         "success_criteria": "",
         "non_goals": "",

@@ -15,6 +15,7 @@ from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window
 # 与策略生成表单 POST 字段一致：任一则视为业务已提供「实质决策」，否则由模型基于数据推断草案。
 _STRATEGY_DECISION_SUBSTANTIVE_KEYS: tuple[str, ...] = (
     "product_role",
+    "stage_goal_type",
     "battlefield_one_line",
     "audience_segment",
     "time_horizon",
@@ -142,7 +143,7 @@ STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**
 - 仍须遵守全局禁止编造：数字、品牌、店铺、用户原话、活动规则仅可来自输入依据；无依据处用假设语气。
 
 **决策边界（硬性）**：
-- **当 `strategy_decisions_substantive` 为 true 时**：业务已在 `strategy_decisions` 中填写的项（角色、时间、成功标准、战场一句话、定位勾选、竞争倾向、四柱、目标客群/对标/资源备注、**营销策略**与**总体策略**等）视为**已定决策**：成稿须**落实为具体执行句**，**不得**改写成相反结论或再要求用户「请选择」。
+- **当 `strategy_decisions_substantive` 为 true 时**：业务已在 `strategy_decisions` 中填写的项（角色、**本阶段策略目标类型**（`stage_goal_type`）、时间、成功标准、战场一句话、定位勾选、竞争倾向、四柱、目标客群/对标/资源备注、**营销策略**与**总体策略**等）视为**已定决策**：成稿须**落实为具体执行句**，**不得**改写成相反结论或再要求用户「请选择」。**若 `stage_goal_type` 非空**，「策略范围与前提」表中「本阶段策略目标类型」列须**直接采用该表述**（可略作语序润色），**不得**改判为另一类阶段目标。
 - **当 `strategy_decisions_substantive` 为 true** 而部分表单项仍为空或占位：结合监测摘要与节选**补全为可执行表述**，与数据方向一致。
 - **当 `strategy_decisions_substantive` 为 false 时**：适用上文「业务决策未填写时的成稿义务」，**禁止**以「请先填表」类表述搪塞全篇。
 - **成稿阶段避免**：反复「请业务决策」；不确定时在 §2.1 用「类目/细类」+「假设：」「待业务确认：」**写清**，**禁止**只写泛化一句。

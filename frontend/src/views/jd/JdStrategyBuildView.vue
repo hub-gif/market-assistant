@@ -49,6 +49,7 @@ const briefMatrixErr = ref('')
 
 const decisions = reactive({
   product_role: '',
+  stage_goal_type: '',
   time_horizon: '',
   success_criteria: '',
   non_goals: '',
@@ -96,6 +97,7 @@ function buildPayload() {
     generator,
     business_notes: businessNotes.value,
     product_role: decisions.product_role,
+    stage_goal_type: decisions.stage_goal_type,
     time_horizon: decisions.time_horizon,
     success_criteria: decisions.success_criteria,
     non_goals: decisions.non_goals,
@@ -315,7 +317,7 @@ watch(
       <fieldset class="fieldset">
         <legend>策略范围与前提</legend>
         <p class="fieldset-hint">
-          界定本次策略的任务边界与阶段目标。监测词、批次由任务自动带出；<strong>主推类目</strong>以顶部「矩阵细类」为准。角色、战场、客群会进入策略稿开篇，并与下一栏「主要对标」衔接。
+          界定本次策略的任务边界与阶段目标。监测词、批次由任务自动带出；<strong>主推类目</strong>以顶部「矩阵细类」为准。角色、<strong>本阶段策略目标类型</strong>、战场、客群会进入策略稿开篇；目标类型填好后大模型不得擅自改判。并与下一栏「主要对标」衔接。
         </p>
         <label class="fld">
           <span>本品角色（策略服务对象）</span>
@@ -323,6 +325,14 @@ watch(
             v-model="decisions.product_role"
             type="text"
             placeholder="如：追赶型 / 新品 / 防守 / 拓品类"
+          />
+        </label>
+        <label class="fld fld-block">
+          <span>本阶段策略目标类型</span>
+          <textarea
+            v-model="decisions.stage_goal_type"
+            rows="2"
+            placeholder="由业务选定，如：A 心智占位 / B 转化与复购爬坡 / C 份额防守……详见仓库 docs/planning/策略生成-框架确定.md；填后大模型须落实，不得擅自改判"
           />
         </label>
         <label class="fld fld-block">

@@ -141,6 +141,7 @@ class JobStrategyDraftView(APIView):
         notes = (vd.get("business_notes") or "").strip()
         strategy_decisions = {
             "product_role": vd.get("product_role") or "",
+            "stage_goal_type": vd.get("stage_goal_type") or "",
             "time_horizon": vd.get("time_horizon") or "",
             "success_criteria": vd.get("success_criteria") or "",
             "non_goals": vd.get("non_goals") or "",

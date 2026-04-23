@@ -410,6 +410,13 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
     product_role = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=500, trim_whitespace=False
     )
+    stage_goal_type = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=1000,
+        trim_whitespace=False,
+    )
     time_horizon = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=200, trim_whitespace=False
     )
