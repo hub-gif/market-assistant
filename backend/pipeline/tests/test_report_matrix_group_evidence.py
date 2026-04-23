@@ -1,11 +1,15 @@
 """从宿主报告 MD 按细类抽取大模型小节。"""
 from __future__ import annotations
 
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from django.test import SimpleTestCase
 
-from pipeline.llm.generate_sections import demote_sentiment_inner_h4_to_h5_for_matrix_group
 from pipeline.reporting.report_matrix_group_evidence import (
     extract_level4_sections_by_group_title,
+    extract_sentiment_83_level4_body,
+    load_report_matrix_group_evidence_markdown,
 )
 
 
@@ -39,23 +43,51 @@ B 段评论归纳。
             [],
         )
 
-    def test_extract_8_3_sentiment_when_inner_subsections_are_h5(self) -> None:
-        """8.3 在 #### 细类 下须用 ##### 子标题，否则抽取在首个 #### 子节处断开。"""
-        inner = demote_sentiment_inner_h4_to_h5_for_matrix_group(
-            "#### 正向体验主题\n\n正文A\n\n#### 负向评价主题归因\n\n正文B\n"
-        )
-        md = (
-            "### 8.3 评价正/负向主题\n\n"
-            "#### 饼干\n\n"
-            f"{inner}\n"
-        )
-        parts = extract_level4_sections_by_group_title(md, "饼干")
-        self.assertEqual(len(parts), 1)
-        self.assertIn("正文A", parts[0])
-        self.assertIn("正文B", parts[0])
+    def test_sentiment_83_nested_level4(self) -> None:
+        md = """## 八、消费者反馈
 
-    def test_demote_known_h4_titles_only(self) -> None:
-        raw = "#### 正向体验主题\nx\n#### 饼干\ny\n"
-        out = demote_sentiment_inner_h4_to_h5_for_matrix_group(raw)
-        self.assertIn("##### 正向体验主题", out)
-        self.assertIn("#### 饼干", out)
+### 8.3 评价正/负向主题（按细类 · 大模型）
+
+> 说明
+
+#### 饼干
+
+#### 正向体验主题
+酥脆好评。
+
+#### 负向评价主题归因
+略贵。
+
+#### 西式糕点
+
+#### 正向体验主题
+别的细类。
+
+## 九、策略
+"""
+        body = extract_sentiment_83_level4_body(md, "饼干")
+        self.assertIn("酥脆好评", body)
+        self.assertIn("正向体验主题", body)
+        self.assertIn("略贵", body)
+        self.assertNotIn("别的细类", body)
+
+    def test_load_includes_83_after_splice(self) -> None:
+        md = """#### 饼干
+矩阵段。
+
+### 8.3 评价正/负向主题（按细类 · 大模型）
+
+#### 饼干
+
+#### 正向体验主题
+情感段。
+
+## 九、策略
+"""
+        with TemporaryDirectory() as td:
+            p = Path(td) / "competitor_analysis.md"
+            p.write_text(md, encoding="utf-8")
+            out, src = load_report_matrix_group_evidence_markdown(td, "饼干")
+        self.assertEqual(src, "competitor_analysis_md")
+        self.assertIn("矩阵段", out)
+        self.assertIn("情感段", out)
