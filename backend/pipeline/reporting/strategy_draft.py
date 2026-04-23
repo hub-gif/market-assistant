@@ -227,7 +227,7 @@ def build_strategy_draft_markdown(
     scope_prelude = (
         [
             "*回答：**这份策略是针对什么、在什么边界里做的**——属「立项靶心」，不是执行摘要。表单已填则写成短句；未填保留占位，**勿**编造。*",
-            "*业务侧在动策略稿之前，应先对齐本节；可选目标类型见 `docs/planning/策略生成-框架确定.md`「启动前：须先明确的项」。*",
+            "*业务侧在动策略稿之前，应先对齐本节；阶段目标类型以业务内部规划口径为准（若有）。*",
             "",
         ]
         if not for_llm_input
@@ -240,9 +240,9 @@ def build_strategy_draft_markdown(
     )
     sgt = _esc(d.get("stage_goal_type") or "").strip()
     _goal_type_placeholder = (
-        "待确认：可填如「A 心智占位 / B 转化爬坡 …」，见规划文档「目标类型选项」"
+        "待确认：可填如心智占位、转化爬坡等业务阶段目标；与业务内部口径对齐"
         if for_llm_input
-        else "成稿从规划文档「目标类型选项」择一或组合，并与下列成功标准一致"
+        else "成稿从业务侧阶段目标类型口径择一或组合，并与下列成功标准一致"
     )
     _table_goal_type = _scope_cell(sgt, _goal_type_placeholder)
     _summary_user_side = (
@@ -362,7 +362,7 @@ def build_strategy_draft_markdown(
             _goal_bullet(
                 "本阶段策略目标类型",
                 str(d.get("stage_goal_type") or ""),
-                "见规划文档「目标类型选项」或自填（如心智占位、转化爬坡）",
+                "与业务内部阶段目标口径对齐，或自填（如心智占位、转化爬坡）",
             ),
             _goal_bullet(
                 "目标客群",
