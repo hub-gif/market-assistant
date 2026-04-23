@@ -45,6 +45,7 @@ from .generate_strategy import (
     STRATEGY_USER_PREFIX,
     generate_strategy_draft_markdown_llm,
     generate_strategy_opportunities_llm,
+    resolve_strategy_draft_llm_input_snapshot,
     strategy_decisions_substantive,
 )
 from .llm_client import call_llm as _call_llm
@@ -81,6 +82,7 @@ __all__ = [
     "generate_section_bridges_llm",
     "generate_strategy_draft_markdown_llm",
     "generate_strategy_opportunities_llm",
+    "resolve_strategy_draft_llm_input_snapshot",
     "split_competitor_report_for_bridges",
     "strategy_decisions_substantive",
 ]

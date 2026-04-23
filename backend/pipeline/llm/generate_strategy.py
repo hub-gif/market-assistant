@@ -200,6 +200,205 @@ STRATEGY_USER_PREFIX = (
 )
 
 
+def _build_strategy_draft_llm_payload_and_user(
+    *,
+    job_id: int,
+    keyword: str,
+    generated_at_iso: str,
+    strategy_decisions: dict[str, Any],
+    business_notes: str,
+    brief: dict[str, Any],
+    report_config: dict[str, Any] | None,
+    rules_md: str,
+    excerpt_raw: str,
+    group_evidence_raw: str,
+    compact_max: int,
+    excerpt_max: int,
+    rules_max: int | None,
+) -> tuple[dict[str, Any], str]:
+    compact = compact_brief_for_llm(brief, max_chars=compact_max)
+    if report_uses_chapter8_text_mining_probe(report_config):
+        compact = dict(compact)
+        _omit_ch8_probe_wordchart_fields(compact)
+    ex = (
+        _truncate_strategy_narrative(excerpt_raw, excerpt_max) if excerpt_raw else ""
+    )
+    ev_max = min(24_000, max(3_000, excerpt_max + excerpt_max // 2))
+    gm = (
+        _truncate_strategy_narrative(group_evidence_raw, ev_max)
+        if group_evidence_raw
+        else ""
+    )
+    if rules_max is None:
+        rd = rules_md
+    else:
+        rd = _truncate_rules_draft_md(rules_md, rules_max)
+    payload: dict[str, Any] = {
+        "job_id": job_id,
+        "keyword": keyword,
+        "generated_at_iso": generated_at_iso,
+        "strategy_decisions": strategy_decisions,
+        "strategy_decisions_substantive": strategy_decisions_substantive(
+            strategy_decisions
+        ),
+        "business_notes": business_notes,
+        "structured_brief": compact,
+        "rules_draft_markdown": rd,
+        "report_strategy_excerpt": ex,
+        "report_matrix_group_evidence_md": gm,
+        "chapter8_text_mining_probe": bool(
+            report_uses_chapter8_text_mining_probe(report_config)
+        ),
+    }
+    if report_uses_chapter8_text_mining_probe(report_config):
+        payload["structured_brief_omission_note"] = (
+            "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top、"
+            "``strategy_hints`` 等；报告已**不再**输出 ``comment_sentiment_lexicon``（星级子集预设口语短语）及同口径图。**不得**再以这类子串计数、短语条形图或预设场景占比作为论据。"
+            "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及 brief 已给字段一致；若 `report_strategy_excerpt` 非空则勿与其明显矛盾。**默认**节选为空，勿编造「报告策略长文已写明的」具体活动规则。"
+        )
+    raw = json.dumps(payload, ensure_ascii=False)
+    if len(raw) > 500_000:
+        payload["rules_draft_markdown"] = _truncate_rules_draft_md(rd, 200_000)
+        raw = json.dumps(payload, ensure_ascii=False)
+    return payload, STRATEGY_USER_PREFIX + raw
+
+
+def resolve_strategy_draft_llm_input_snapshot(
+    *,
+    job_id: int,
+    keyword: str,
+    brief: dict[str, Any],
+    business_notes: str,
+    generated_at_iso: str,
+    strategy_decisions: dict[str, Any],
+    report_strategy_excerpt: str | None = None,
+    report_matrix_group_evidence_md: str | None = None,
+    report_config: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], str, str]:
+    """
+    复现 ``generate_strategy_draft_markdown_llm`` 在**首档通过** ``_strategy_prompt_ok_for_call`` 时的
+    ``payload`` 与完整 ``user`` 字符串（不请求网关）。
+
+    返回 ``(payload, user, tier_note)``；若所有档位均未通过，与生产一致仍返回最后一档兜底组装的
+    ``(payload, user, tier_note)``（``tier_note`` 标明可能仍会由网关报错）。
+    """
+    rules_md = build_strategy_draft_markdown(
+        job_id=job_id,
+        keyword=keyword,
+        brief=brief,
+        business_notes=business_notes,
+        generated_at_iso=generated_at_iso,
+        strategy_decisions=strategy_decisions,
+        report_config=report_config,
+        for_llm_input=True,
+    )
+    excerpt_raw = (report_strategy_excerpt or "").strip()
+    group_evidence_raw = (report_matrix_group_evidence_md or "").strip()
+    sys_prompt = STRATEGY_SYSTEM
+    min_comp = _min_strategy_completion_tokens()
+    min_comp_relaxed = max(256, min_comp // 2)
+
+    for cap_brief, cap_excerpt, cap_rules in (
+        (80_000, 24_000, None),
+        (64_000, 20_000, None),
+        (48_000, 17_000, None),
+        (36_000, 14_000, None),
+        (28_000, 11_000, None),
+        (22_000, 9_000, None),
+        (18_000, 7_000, None),
+        (14_000, 5_000, None),
+        (12_000, 4_000, 220_000),
+        (10_000, 3_500, 180_000),
+        (10_000, 3_000, 150_000),
+        (9_000, 2_500, 120_000),
+        (8_000, 2_000, 100_000),
+        (8_000, 2_000, 70_000),
+    ):
+        payload, user = _build_strategy_draft_llm_payload_and_user(
+            job_id=job_id,
+            keyword=keyword,
+            generated_at_iso=generated_at_iso,
+            strategy_decisions=strategy_decisions,
+            business_notes=business_notes,
+            brief=brief,
+            report_config=report_config,
+            rules_md=rules_md,
+            excerpt_raw=excerpt_raw,
+            group_evidence_raw=group_evidence_raw,
+            compact_max=cap_brief,
+            excerpt_max=cap_excerpt,
+            rules_max=cap_rules,
+        )
+        if _strategy_prompt_ok_for_call(
+            sys_prompt, user, min_completion_tokens=min_comp
+        ):
+            rules_note = (
+                "未截断"
+                if cap_rules is None
+                else f"rules_draft_markdown 截断上限 {cap_rules} 字"
+            )
+            note = (
+                "首档（标准 completion 阈值）："
+                f"structured_brief max_chars={cap_brief}，"
+                f"report_strategy_excerpt / 节选侧 excerpt_max={cap_excerpt}，"
+                f"{rules_note}。"
+            )
+            return payload, user, note
+
+    for cap_brief, cap_excerpt, cap_rules in (
+        (10_000, 2_000, 55_000),
+        (8_000, 1_500, 45_000),
+        (7_000, 1_200, 35_000),
+    ):
+        payload, user = _build_strategy_draft_llm_payload_and_user(
+            job_id=job_id,
+            keyword=keyword,
+            generated_at_iso=generated_at_iso,
+            strategy_decisions=strategy_decisions,
+            business_notes=business_notes,
+            brief=brief,
+            report_config=report_config,
+            rules_md=rules_md,
+            excerpt_raw=excerpt_raw,
+            group_evidence_raw=group_evidence_raw,
+            compact_max=cap_brief,
+            excerpt_max=cap_excerpt,
+            rules_max=cap_rules,
+        )
+        if _strategy_prompt_ok_for_call(
+            sys_prompt, user, min_completion_tokens=min_comp_relaxed
+        ):
+            note = (
+                "首档（relaxed completion 阈值）："
+                f"structured_brief max_chars={cap_brief}，"
+                f"excerpt_max={cap_excerpt}，"
+                f"rules_draft 截断上限 {cap_rules}。"
+            )
+            return payload, user, note
+
+    payload, user = _build_strategy_draft_llm_payload_and_user(
+        job_id=job_id,
+        keyword=keyword,
+        generated_at_iso=generated_at_iso,
+        strategy_decisions=strategy_decisions,
+        business_notes=business_notes,
+        brief=brief,
+        report_config=report_config,
+        rules_md=rules_md,
+        excerpt_raw=excerpt_raw,
+        group_evidence_raw=group_evidence_raw,
+        compact_max=6_000,
+        excerpt_max=1_000,
+        rules_max=28_000,
+    )
+    note = (
+        "所有标准/relaxed 档位均未通过 ``_strategy_prompt_ok_for_call``，"
+        "与生产一致使用兜底档：structured_brief max_chars=6000，excerpt_max=1000，"
+        "rules_draft 截断上限 28000（网关仍可能报错）。"
+    )
+    return payload, user, note
+
+
 def generate_strategy_draft_markdown_llm(
     *,
     job_id: int,
@@ -218,119 +417,18 @@ def generate_strategy_draft_markdown_llm(
     ``report_matrix_group_evidence_md``：按所选矩阵细类从 ``competitor_analysis.md`` 抽取的第五～第八章大模型小节摘录（见
     ``reporting.report_matrix_group_evidence.load_report_matrix_group_evidence_markdown``）；用于与收窄后的 ``structured_brief`` 一并支撑策略叙事。
     """
-    rules_md = build_strategy_draft_markdown(
+    _payload, user, _tier = resolve_strategy_draft_llm_input_snapshot(
         job_id=job_id,
         keyword=keyword,
         brief=brief,
         business_notes=business_notes,
         generated_at_iso=generated_at_iso,
         strategy_decisions=strategy_decisions,
+        report_strategy_excerpt=report_strategy_excerpt,
+        report_matrix_group_evidence_md=report_matrix_group_evidence_md,
         report_config=report_config,
-        for_llm_input=True,
     )
-    excerpt_raw = (report_strategy_excerpt or "").strip()
-    group_evidence_raw = (report_matrix_group_evidence_md or "").strip()
-    sys_prompt = STRATEGY_SYSTEM
-    min_comp = _min_strategy_completion_tokens()
-    min_comp_relaxed = max(256, min_comp // 2)
-
-    def _payload_and_user(
-        *,
-        compact_max: int,
-        excerpt_max: int,
-        rules_max: int | None,
-    ) -> str:
-        compact = compact_brief_for_llm(brief, max_chars=compact_max)
-        if report_uses_chapter8_text_mining_probe(report_config):
-            compact = dict(compact)
-            _omit_ch8_probe_wordchart_fields(compact)
-        ex = (
-            _truncate_strategy_narrative(excerpt_raw, excerpt_max)
-            if excerpt_raw
-            else ""
-        )
-        ev_max = min(24_000, max(3_000, excerpt_max + excerpt_max // 2))
-        gm = (
-            _truncate_strategy_narrative(group_evidence_raw, ev_max)
-            if group_evidence_raw
-            else ""
-        )
-        if rules_max is None:
-            rd = rules_md
-        else:
-            rd = _truncate_rules_draft_md(rules_md, rules_max)
-        payload: dict[str, Any] = {
-            "job_id": job_id,
-            "keyword": keyword,
-            "generated_at_iso": generated_at_iso,
-            "strategy_decisions": strategy_decisions,
-            "strategy_decisions_substantive": strategy_decisions_substantive(
-                strategy_decisions
-            ),
-            "business_notes": business_notes,
-            "structured_brief": compact,
-            "rules_draft_markdown": rd,
-            "report_strategy_excerpt": ex,
-            "report_matrix_group_evidence_md": gm,
-            "chapter8_text_mining_probe": bool(
-                report_uses_chapter8_text_mining_probe(report_config)
-            ),
-        }
-        if report_uses_chapter8_text_mining_probe(report_config):
-            payload["structured_brief_omission_note"] = (
-                "已启用第八章文本挖掘（探针为主）：structured_brief 已省略「关注词/场景子串计数」、按细类 feedback 中的 focus_keyword_hits/scenarios_top、"
-                "``strategy_hints`` 等；报告已**不再**输出 ``comment_sentiment_lexicon``（星级子集预设口语短语）及同口径图。**不得**再以这类子串计数、短语条形图或预设场景占比作为论据。"
-                "用户与评论侧须依报告 §8 文本挖掘归纳及 `report_matrix_group_evidence_md`；**促销、满减、券价差**须与报告第六章、`price_promotion_signals` 及 brief 已给字段一致；若 `report_strategy_excerpt` 非空则勿与其明显矛盾。**默认**节选为空，勿编造「报告策略长文已写明的」具体活动规则。"
-            )
-        raw = json.dumps(payload, ensure_ascii=False)
-        if len(raw) > 500_000:
-            payload["rules_draft_markdown"] = _truncate_rules_draft_md(rd, 200_000)
-            raw = json.dumps(payload, ensure_ascii=False)
-        return STRATEGY_USER_PREFIX + raw
-
-    for cap_brief, cap_excerpt, cap_rules in (
-        (80_000, 24_000, None),
-        (64_000, 20_000, None),
-        (48_000, 17_000, None),
-        (36_000, 14_000, None),
-        (28_000, 11_000, None),
-        (22_000, 9_000, None),
-        (18_000, 7_000, None),
-        (14_000, 5_000, None),
-        (12_000, 4_000, 220_000),
-        (10_000, 3_500, 180_000),
-        (10_000, 3_000, 150_000),
-        (9_000, 2_500, 120_000),
-        (8_000, 2_000, 100_000),
-        (8_000, 2_000, 70_000),
-    ):
-        user = _payload_and_user(
-            compact_max=cap_brief,
-            excerpt_max=cap_excerpt,
-            rules_max=cap_rules,
-        )
-        if _strategy_prompt_ok_for_call(
-            sys_prompt, user, min_completion_tokens=min_comp
-        ):
-            return call_llm(sys_prompt, user)
-
-    for cap_brief, cap_excerpt, cap_rules in (
-        (10_000, 2_000, 55_000),
-        (8_000, 1_500, 45_000),
-        (7_000, 1_200, 35_000),
-    ):
-        user = _payload_and_user(
-            compact_max=cap_brief,
-            excerpt_max=cap_excerpt,
-            rules_max=cap_rules,
-        )
-        if _strategy_prompt_ok_for_call(
-            sys_prompt, user, min_completion_tokens=min_comp_relaxed
-        ):
-            return call_llm(sys_prompt, user)
-
-    user = _payload_and_user(compact_max=6_000, excerpt_max=1_000, rules_max=28_000)
-    return call_llm(sys_prompt, user)
+    return call_llm(STRATEGY_SYSTEM, user)
 
 
 STRATEGY_OPPORTUNITIES_SYSTEM = (
