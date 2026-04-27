@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from pipeline.llm.providers import (
+    CrawlerOpenAiCompatibleTextLlm,
+    OpenAiOfficialChatGptTextLlm,
+    get_text_llm,
+    reset_text_llm_client_for_tests,
+)
+
+
+def test_openai_official_complete_text_uses_post_and_returns_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_OFFICIAL_API_KEY", "sk-test")
+
+    def _fake_post(
+        url: str,
+        headers: dict,
+        json: dict,
+        timeout: object,
+    ) -> MagicMock:
+        assert "/chat/completions" in url
+        assert json["messages"][0]["role"] == "system"
+        r = MagicMock()
+        r.json.return_value = {"choices": [{"message": {"content": "ok_out"}}]}
+        r.raise_for_status = MagicMock()
+        return r
+
+    with patch(
+        "pipeline.llm.providers.adapters.openai_official_chatgpt.requests.post",
+        side_effect=_fake_post,
+    ):
+        llm = OpenAiOfficialChatGptTextLlm()
+        out = llm.complete_text("S", "U", temperature=0.1)
+    assert out == "ok_out"
+
+
+def test_factory_selects_openai_official_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    reset_text_llm_client_for_tests()
+    monkeypatch.setenv("MA_LLM_TEXT_PROVIDER", "chatgpt")
+    monkeypatch.setenv("OPENAI_OFFICIAL_API_KEY", "sk-x")
+    try:
+        c = get_text_llm()
+        assert isinstance(c, OpenAiOfficialChatGptTextLlm)
+    finally:
+        reset_text_llm_client_for_tests()
+        monkeypatch.delenv("MA_LLM_TEXT_PROVIDER", raising=False)
+        monkeypatch.delenv("OPENAI_OFFICIAL_API_KEY", raising=False)
+
+
+def test_factory_unknown_provider_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    reset_text_llm_client_for_tests()
+    monkeypatch.setenv("MA_LLM_TEXT_PROVIDER", "no_such_provider")
+    try:
+        with pytest.raises(ValueError, match="不支持的"):
+            get_text_llm()
+    finally:
+        reset_text_llm_client_for_tests()
+        monkeypatch.delenv("MA_LLM_TEXT_PROVIDER", raising=False)
+
+
+def test_default_provider_is_crawler_when_env_cleared(monkeypatch: pytest.MonkeyPatch) -> None:
+    """未设置 MA_LLM_TEXT_PROVIDER 时仍为爬虫副本网关；此处只断言类型，不调真实网络。"""
+    reset_text_llm_client_for_tests()
+    monkeypatch.delenv("MA_LLM_TEXT_PROVIDER", raising=False)
+    c = get_text_llm()
+    assert isinstance(c, CrawlerOpenAiCompatibleTextLlm)
+    reset_text_llm_client_for_tests()

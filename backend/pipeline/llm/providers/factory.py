@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import os
 
-from .crawler_openai_compatible import CrawlerOpenAiCompatibleTextLlm
+from .adapters.crawler_openai_compatible import CrawlerOpenAiCompatibleTextLlm
+from .adapters.openai_official_chatgpt import OpenAiOfficialChatGptTextLlm
 from .protocol import TextLlmClient
 
 # 模块级单例：避免重复构造；测试可用 `reset_text_llm_client_for_tests` 切换实现。
@@ -29,9 +30,14 @@ def _build_client(pid: str) -> TextLlmClient:
         "openai_compatible",
     ):
         return CrawlerOpenAiCompatibleTextLlm()
+    if pid in ("openai_official", "openai_chatgpt", "chatgpt"):
+        return OpenAiOfficialChatGptTextLlm()
+    known = (
+        "crawler_openai_compatible, crawler, default, openai_compatible, "
+        "openai_official, openai_chatgpt, chatgpt"
+    )
     raise ValueError(
-        f"不支持的 {_ENV_KEY}={pid!r}；"
-        f"当前仅实现 {_DEFAULT_ID}（经 AI_crawler 的 OpenAI 兼容 `chat/completions`）。"
+        f"不支持的 {_ENV_KEY}={pid!r}；已知取值：{known}。",
     )
 
 

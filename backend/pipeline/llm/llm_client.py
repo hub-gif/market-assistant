@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .providers.factory import get_text_llm
-from .providers.output_normalize import strip_outer_markdown_fence
+from .providers.shared.output_normalize import strip_outer_markdown_fence
 
 
 def call_llm(

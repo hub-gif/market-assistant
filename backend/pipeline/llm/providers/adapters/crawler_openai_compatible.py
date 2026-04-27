@@ -9,7 +9,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-from .token_heuristics import estimate_crawler_style_input_tokens
+from ..shared.token_heuristics import estimate_crawler_style_input_tokens
 
 
 def ensure_ai_crawler_path() -> None:

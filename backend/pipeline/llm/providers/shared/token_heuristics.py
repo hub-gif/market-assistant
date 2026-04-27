@@ -1,6 +1,6 @@
 """
 与 `crawler_copy/.../AI_crawler` 中 `_estimate_chat_input_tokens` 同口径的保守估算，
-供预检、策略档位与 OpenAI 兼容适配器共用（无 tiktoken 时避免 max_tokens 400）。
+供预检、策略档位与各适配器共用（无 tiktoken 时避免 max_tokens 400）。
 """
 from __future__ import annotations
 
