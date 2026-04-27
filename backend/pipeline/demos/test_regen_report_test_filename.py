@@ -10,7 +10,7 @@
 
 可选环境变量：``MA_TEST_RUN_DIR`` = 绝对路径，默认自动选 ``data/JD/pipeline_runs`` 下第一个含 ``keyword_pipeline_merged.csv`` 的目录。
 
-默认 ``report_config`` 为**快测**（只开 ``llm_matrix_group_summaries``，其余大模型段关；可按需改脚本）。
+默认 **全量** 报告（``report_config=None``，与线上一致合并默认开关）。快测（只开矩阵 LLM 等）设环境变量 ``MA_TEST_REPORT_FAST=1``。
 """
 from __future__ import annotations
 
@@ -67,17 +67,23 @@ def main() -> int:
     if not kw:
         print("无法从 run_meta 读取 keyword，请设置环境变量或检查 run_dir", file=sys.stderr)
         return 1
-    # 快测：只跑矩阵大模型段；全量可改为 None 走默认
-    report_config = {
-        "llm_comment_sentiment": False,
-        "llm_matrix_group_summaries": True,
-        "llm_comment_group_summaries": False,
-        "llm_price_group_summaries": False,
-        "llm_promo_group_summaries": False,
-        "llm_strategy_opportunities": False,
-        "chapter8_text_mining_probe": False,
-        "chapter8_text_mining_probe_live_llm": False,
-    }
+    if (os.environ.get("MA_TEST_REPORT_FAST") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        report_config = {
+            "llm_comment_sentiment": False,
+            "llm_matrix_group_summaries": True,
+            "llm_comment_group_summaries": False,
+            "llm_price_group_summaries": False,
+            "llm_promo_group_summaries": False,
+            "llm_strategy_opportunities": False,
+            "chapter8_text_mining_probe": False,
+            "chapter8_text_mining_probe_live_llm": False,
+        }
+    else:
+        report_config = None
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     main = run_dir / "competitor_analysis.md"
     pre_bak = run_dir / f"competitor_analysis__pre_test_{ts}.md"
@@ -87,7 +93,10 @@ def main() -> int:
         shutil.copy2(main, pre_bak)
     print("run_dir:", run_dir, file=sys.stderr)
     print("keyword:", kw, file=sys.stderr)
-    print("regenerating (may take a few minutes)...", file=sys.stderr)
+    print(
+        "regenerating (full config, may take long; set MA_TEST_REPORT_FAST=1 for quick) ...",
+        file=sys.stderr,
+    )
     regenerate_competitor_report(str(run_dir), kw, report_config=report_config)
     if not main.is_file():
         print("未生成 competitor_analysis.md", file=sys.stderr)
