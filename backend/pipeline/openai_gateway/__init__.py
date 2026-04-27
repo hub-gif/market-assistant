@@ -5,7 +5,7 @@ OpenAI 兼容网关（`chat/completions`）：纯文本、多模态配料、详�
 """
 from __future__ import annotations
 
-from .chat_content import normalize_message_content
+from .chat_content import normalize_message_content, strip_thinking_leaks_from_model_text
 from .credentials import (
     _resolve_credentials,
     resolve_credentials,
@@ -40,4 +40,5 @@ __all__ = [
     "resolve_text_model_name",
     "sanitize_vision_ingredients_output",
     "strip_outer_markdown_fence",
+    "strip_thinking_leaks_from_model_text",
 ]

@@ -26,6 +26,12 @@ def test_text_channel_uses_text_key_same_base(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_text_channel_uses_text_base_same_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    for _e in (
+        "OPENAI_TEXT_API_KEY",
+        "LLM_TEXT_API_KEY",
+        "LLM_API_KEY",
+    ):
+        monkeypatch.delenv(_e, raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-shared")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://a.com/v1")
     monkeypatch.setenv("OPENAI_TEXT_BASE_URL", "https://b.com/v1")
