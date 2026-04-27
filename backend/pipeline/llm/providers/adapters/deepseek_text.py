@@ -5,7 +5,10 @@ DeepSeek 官方 OpenAI 兼容 `chat/completions`（`https://api.deepseek.com`）
 
 启用：`MA_LLM_TEXT_PROVIDER=deepseek`（或 `deep_seek`）。
 
-环境变量：见 `.env.example`（`DEEPSEEK_API_KEY`、基址、模型、上下文字数预检 等）。
+**思考模式**（与官方「Thinking Mode」一致）：默认可通过 `DEEPSEEK_THINKING=0` 关闭。开启时在请求中携带
+`thinking.type=enabled` 与 `reasoning_effort`；不发送 `temperature`（官方在思考模式下忽略采样参数）。
+未指定 `DEEPSEEK_TEXT_MODEL` 时，开启思考默认用 `deepseek-v4-pro`，关闭时默认 `deepseek-chat`。
+详见 https://api-docs.deepseek.com/guides/thinking_mode
 """
 from __future__ import annotations
 
@@ -20,7 +23,8 @@ from pipeline.openai_gateway.estimate import (
 )
 
 _DEFAULT_BASE = "https://api.deepseek.com/v1"
-_DEFAULT_MODEL = "deepseek-chat"
+_DEFAULT_MODEL_NO_THINK = "deepseek-chat"
+_DEFAULT_MODEL_THINK = "deepseek-v4-pro"
 # 常见 64k 级；若用长上下文/官方调整上限可改 DEEPSEEK_CONTEXT_WINDOW
 _DEFAULT_CTX = 64_000
 
@@ -51,6 +55,28 @@ def _read_timeout() -> tuple[float, float]:
     return (conn, float(read))
 
 
+def _thinking_enabled() -> bool:
+    v = (os.environ.get("DEEPSEEK_THINKING") or "1").strip().lower()
+    if v in ("0", "false", "off", "no", "disabled"):
+        return False
+    return True
+
+
+def _reasoning_effort() -> str:
+    raw = (os.environ.get("DEEPSEEK_REASONING_EFFORT") or "high").strip().lower()
+    if raw in ("max", "high", "low", "medium", "xhigh"):
+        if raw in ("low", "medium"):
+            return "high"
+        if raw == "xhigh":
+            return "max"
+        return raw
+    return "high"
+
+
+def _default_model() -> str:
+    return _DEFAULT_MODEL_THINK if _thinking_enabled() else _DEFAULT_MODEL_NO_THINK
+
+
 def _resolve_deepseek_credentials() -> tuple[str, str, str]:
     key = (os.environ.get("DEEPSEEK_API_KEY") or "").strip()
     if not key:
@@ -59,9 +85,9 @@ def _resolve_deepseek_credentials() -> tuple[str, str, str]:
             "与配料/视觉所用 OPENAI_API_KEY 分开配置。"
         )
     base = (os.environ.get("DEEPSEEK_BASE_URL") or _DEFAULT_BASE).strip().rstrip("/")
-    model = (
-        (os.environ.get("DEEPSEEK_TEXT_MODEL") or os.environ.get("DEEPSEEK_MODEL") or _DEFAULT_MODEL)
-    ).strip()
+    model = (os.environ.get("DEEPSEEK_TEXT_MODEL") or os.environ.get("DEEPSEEK_MODEL") or "").strip()
+    if not model:
+        model = _default_model()
     return key, base, model
 
 
@@ -88,15 +114,21 @@ class DeepSeekTextLlm:
         temperature: float | None = None,
     ) -> str:
         api_key, base, model = _resolve_deepseek_credentials()
+        think = _thinking_enabled()
         body: dict[str, Any] = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": _default_temperature() if temperature is None else float(temperature),
             "max_tokens": _WANT_MAX,
         }
+        if think:
+            # 与 OpenAI 官方 Python SDK 合并 extra_body 后一致：思考模式不依赖 temperature
+            body["thinking"] = {"type": "enabled"}
+            body["reasoning_effort"] = _reasoning_effort()
+        else:
+            body["temperature"] = _default_temperature() if temperature is None else float(temperature)
         est = estimate_crawler_style_input_tokens(system_prompt, user_prompt)
         context_window = _context_window()
         if est >= context_window - _BUF - 256:
