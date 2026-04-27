@@ -21,7 +21,7 @@
 - 若 ``OUTPUT_SKU_AND_BODY_IMAGES_ONLY=False``：**原始接口 JSON** 单 SKU ``OUT``、批量 ``OUT_DIR`` / ``ware_{sku}.json``；解析扁平含全部 ``detail_*``；汇总表 ``OUT_PARSED_CSV``。
 
 **解析 API**：``flatten_ware_business`` / ``parse_ware_business_response_text`` / ``ware_parsed_row``，
-列 ``detail_body_ingredients`` 为配料表文本（由 ``#detail-main`` 长图经 ``AI_crawler`` 自后向前多模态识别）；列 ``detail_body_ingredients_source_url`` 为**实际用于识别**的那张长图 URL（命中即停）。未配置 API 或识别失败时配料列为原因说明、图源列为空。内部 ``meta["detail_body_image_urls"]`` 仍为全部长图 URL 串，仅供解析用。
+列 ``detail_body_ingredients`` 为配料表文本（由 ``#detail-main`` 长图经 ``pipeline.openai_gateway`` 自后向前多模态识别）；列 ``detail_body_ingredients_source_url`` 为**实际用于识别**的那张长图 URL（命中即停）。未配置 API 或识别失败时配料列为原因说明、图源列为空。内部 ``meta["detail_body_image_urls"]`` 仍为全部长图 URL 串，仅供解析用。
 
 Cookie：``../common/jd_cookie.txt``（或配置项 ``COOKIE_FILE`` / ``COOKIE_OVERRIDE``），经 ``add_cookies`` 注入。
 
@@ -51,6 +51,10 @@ from playwright.sync_api import sync_playwright
 _JD_PC_SEARCH = Path(__file__).resolve().parents[1]
 if str(_JD_PC_SEARCH) not in sys.path:
     sys.path.insert(0, str(_JD_PC_SEARCH))
+# ``import pipeline.openai_gateway`` 需将 backend 根目录加入 path（Django 启动时已有）
+_backend_root = Path(__file__).resolve().parents[3]
+if str(_backend_root) not in sys.path:
+    sys.path.insert(0, str(_backend_root))
 from _low_gi_root import low_gi_project_root  # noqa: E402
 
 _PROJECT_ROOT = low_gi_project_root()
@@ -92,7 +96,7 @@ LOG_API_M_JD_TRACE = False
 # COLLECT_DETAIL_MAIN_IMAGE_URLS：True 时在点击商品详情 tab 并等待后，从 #detail-main 抽取图文 URL（style 中 background-image、img src、zbViewWeChatMiniImages），
 # 补全为 https 后写入 meta（见 DETAIL_BODY_IMAGE_URL_SEPARATOR）；再经多模态写入列 detail_body_ingredients（配料文本）与 detail_body_ingredients_source_url（命中图源）
 COLLECT_DETAIL_MAIN_IMAGE_URLS = True
-# EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES：True 时 detail_body_ingredients 为配料表文本、detail_body_ingredients_source_url 为命中图源；False 时配料列恒为空、图源列恒为空。需 .env 中 OPENAI_* / LLM_*（见上级目录 AI_crawler.py）
+# EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES：True 时 detail_body_ingredients 为配料表文本、detail_body_ingredients_source_url 为命中图源；False 时配料列恒为空、图源列恒为空。需 .env 中 OPENAI_* / LLM_*（见 pipeline.openai_gateway）
 EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES = True
 # DETAIL_BODY_IMAGE_URL_SEPARATOR：写入 CSV/JSON 单单元格时的分隔符
 DETAIL_BODY_IMAGE_URL_SEPARATOR = "; "
@@ -348,9 +352,9 @@ def main() -> None:
     vision_ok = False
     if EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES:
         try:
-            import AI_crawler as vision_mod  # noqa: WPS433
+            import pipeline.openai_gateway as vision_mod  # noqa: WPS433
 
-            vision_mod._resolve_credentials(None, None, None)
+            vision_mod.resolve_credentials(None, None, None)
             vision_ok = True
         except Exception as e:
             print(

@@ -318,9 +318,9 @@ def main(keyword: str | None = None) -> Path:
     _ingredient_vision_ok = False
     if EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES:
         try:
-            import AI_crawler as _ac_mod  # noqa: WPS433
+            import pipeline.openai_gateway as _ac_mod  # noqa: WPS433
 
-            _ac_mod._resolve_credentials(None, None, None)
+            _ac_mod.resolve_credentials(None, None, None)
             _ingredient_vision_ok = True
         except Exception as e:
             print(

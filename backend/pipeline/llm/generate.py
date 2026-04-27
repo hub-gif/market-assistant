@@ -1,6 +1,6 @@
 """
-竞品报告 / 策略稿的**大模型生成**：通过 ``crawler_copy/jd_pc_search/AI_crawler`` 的
-``chat_completion_text`` 调用，与配料识别共用网关与密钥。
+竞品报告 / 策略稿的**大模型生成**：经 ``pipeline.llm`` → ``openai_gateway.chat_completion_text``（OpenAI 兼容），
+与配料多模态识别共用 `OPENAI_*` / `LLM_*` 环境配置。
 
 实现已拆分为子模块（``llm_client``、``generate_*``），本模块保留对外符号以兼容
 ``from pipeline.llm.generate import …`` 与测试中的 patch 路径。

@@ -11,8 +11,10 @@ from typing import Any
 
 import requests
 
-from ..shared.openai_message_content import normalize_message_content
-from ..shared.token_heuristics import estimate_crawler_style_input_tokens
+from pipeline.openai_gateway.chat_content import normalize_message_content
+from pipeline.openai_gateway.estimate import (
+    estimate_chat_input_tokens as estimate_crawler_style_input_tokens,
+)
 
 _DEFAULT_BASE = "https://api.openai.com/v1"
 _DEFAULT_MODEL = "gpt-4o-mini"

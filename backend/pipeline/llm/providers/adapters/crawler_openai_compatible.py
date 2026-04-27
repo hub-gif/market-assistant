@@ -1,24 +1,13 @@
 """
-经 `crawler_copy/jd_pc_search/AI_crawler.chat_completion_text` 访问 OpenAI 兼容网关（与配料识别等共用凭据与配置）。
+经 ``pipeline.openai_gateway.text_chat.chat_completion_text`` 访问 OpenAI 兼容网关（与配料识别等共用环境变量，不再 import 爬虫目录）。
 """
 from __future__ import annotations
 
 import os
-import sys
-from pathlib import Path
 
-from django.conf import settings
+from pipeline.openai_gateway import chat_completion_text
 
 from ..shared.token_heuristics import estimate_crawler_style_input_tokens
-
-
-def ensure_ai_crawler_path() -> None:
-    root = Path(settings.CRAWLER_JD_ROOT).resolve()
-    if not root.is_dir():
-        raise FileNotFoundError(f"爬虫副本目录不存在: {root}")
-    rs = str(root)
-    if rs not in sys.path:
-        sys.path.insert(0, rs)
 
 
 def _llm_context_window_size_from_env() -> int:
@@ -35,8 +24,7 @@ def _llm_context_window_size_from_env() -> int:
 
 class CrawlerOpenAiCompatibleTextLlm:
     """
-    文本任务默认后端：复用 `AI_crawler` 的 `chat_completion_text` 与上下文预检逻辑。
-    更换为其它云厂商时，应新增独立适配器并在 `factory` 中注册，而非修改本类。
+    文本任务默认后端：与历史 ``AI_crawler.chat_completion_text`` 行为一致，实现位于 ``pipeline.openai_gateway``。
     """
 
     def complete_text(
@@ -46,16 +34,13 @@ class CrawlerOpenAiCompatibleTextLlm:
         *,
         temperature: float | None = None,
     ) -> str:
-        ensure_ai_crawler_path()
-        import AI_crawler as ac  # noqa: WPS433
-
         kwargs: dict[str, object] = {
             "system_prompt": system_prompt,
             "user_prompt": user_prompt,
         }
         if temperature is not None:
             kwargs["temperature"] = float(temperature)
-        return ac.chat_completion_text(**kwargs)
+        return chat_completion_text(**kwargs)
 
     def estimate_input_tokens(self, system_prompt: str, user_prompt: str) -> int:
         return estimate_crawler_style_input_tokens(system_prompt, user_prompt)
