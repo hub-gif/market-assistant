@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 
 from .adapters.crawler_openai_compatible import CrawlerOpenAiCompatibleTextLlm
+from .adapters.deepseek_text import DeepSeekTextLlm
 from .adapters.kimi_moonshot_text import KimiMoonshotTextLlm
 from .adapters.openai_official_chatgpt import OpenAiOfficialChatGptTextLlm
 from .protocol import TextLlmClient
@@ -35,10 +36,12 @@ def _build_client(pid: str) -> TextLlmClient:
         return OpenAiOfficialChatGptTextLlm()
     if pid in ("kimi", "moonshot", "kimi_moonshot", "moonshot_kimi"):
         return KimiMoonshotTextLlm()
+    if pid in ("deepseek", "deep_seek"):
+        return DeepSeekTextLlm()
     known = (
         "crawler_openai_compatible, crawler, default, openai_compatible, "
         "openai_official, openai_chatgpt, chatgpt, "
-        "kimi, moonshot, kimi_moonshot"
+        "kimi, moonshot, kimi_moonshot, deepseek, deep_seek"
     )
     raise ValueError(
         f"不支持的 {_ENV_KEY}={pid!r}；已知取值：{known}。",

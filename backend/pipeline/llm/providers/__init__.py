@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .adapters import (
     CrawlerOpenAiCompatibleTextLlm,
+    DeepSeekTextLlm,
     KimiMoonshotTextLlm,
     OpenAiOfficialChatGptTextLlm,
 )
@@ -12,6 +13,7 @@ from .protocol import TextLlmClient
 
 __all__ = [
     "CrawlerOpenAiCompatibleTextLlm",
+    "DeepSeekTextLlm",
     "KimiMoonshotTextLlm",
     "OpenAiOfficialChatGptTextLlm",
     "TextLlmClient",

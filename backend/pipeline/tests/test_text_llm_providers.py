@@ -6,6 +6,7 @@ import pytest
 
 from pipeline.llm.providers import (
     CrawlerOpenAiCompatibleTextLlm,
+    DeepSeekTextLlm,
     KimiMoonshotTextLlm,
     OpenAiOfficialChatGptTextLlm,
     get_text_llm,
@@ -62,6 +63,46 @@ def test_kimi_complete_text_uses_post_and_returns_content(monkeypatch: pytest.Mo
         llm = KimiMoonshotTextLlm()
         out = llm.complete_text("S", "U", temperature=0.1)
     assert out == "kimi_out"
+
+
+def test_deepseek_complete_text_uses_post_and_returns_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-ds-test")
+
+    def _fake_post(
+        url: str,
+        headers: dict,
+        json: dict,
+        timeout: object,
+    ) -> MagicMock:
+        assert "deepseek" in url
+        assert "/chat/completions" in url
+        assert json["messages"][0]["role"] == "system"
+        assert headers.get("Authorization", "").startswith("Bearer sk-ds-")
+        r = MagicMock()
+        r.json.return_value = {"choices": [{"message": {"content": "ds_out"}}]}
+        r.raise_for_status = MagicMock()
+        return r
+
+    with patch(
+        "pipeline.llm.providers.adapters.deepseek_text.requests.post",
+        side_effect=_fake_post,
+    ):
+        llm = DeepSeekTextLlm()
+        out = llm.complete_text("S", "U", temperature=0.1)
+    assert out == "ds_out"
+
+
+def test_factory_selects_deepseek_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    reset_text_llm_client_for_tests()
+    monkeypatch.setenv("MA_LLM_TEXT_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-x")
+    try:
+        c = get_text_llm()
+        assert isinstance(c, DeepSeekTextLlm)
+    finally:
+        reset_text_llm_client_for_tests()
+        monkeypatch.delenv("MA_LLM_TEXT_PROVIDER", raising=False)
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
 
 
 def test_factory_selects_kimi_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
