@@ -29,7 +29,7 @@
 | 仓库根 `.env` | 运行时配置（勿提交 Git）；从 `.env.example` 复制 |
 | `.env.example` | 模板，可随仓库分发 |
 
-Django（`backend/config/settings.py`）与 `backend/crawler_copy/jd_pc_search/AI_crawler.py` 均从**仓库根**的 `.env` 加载。
+Django（`backend/config/settings.py`）与 `python -m pipeline.openai_gateway`（在 `backend` 下执行、用于配料多模态试跑）均从**仓库根**的 `.env` 加载。
 
 **首次编辑建议：**
 

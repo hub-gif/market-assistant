@@ -1,8 +1,7 @@
 """
 OpenAI 兼容网关（`chat/completions`）：纯文本、多模态配料、详情长图逆序等。
 
-与 ``crawler_copy/.../AI_crawler`` 解耦，逻辑唯一来源在 ``pipeline.openai_gateway``。
-脚本 ``AI_crawler.py`` 仅作加载 .env 与命令行试跑、并向后兼容重导出名。
+逻辑唯一在 ``pipeline.openai_gateway``；单图试跑在 ``python -m pipeline.openai_gateway``（见 ``__main__.py``），不再使用爬虫目录下的已删除脚本名。
 """
 from __future__ import annotations
 
