@@ -1,5 +1,7 @@
 """
-OpenAI 兼容 `chat/completions` 纯文本（system + user），与多模态配料识别共用 `OPENAI_*` / `LLM_*` 环境配置。
+OpenAI 兼容 `chat/completions` 纯文本（system + user）。
+
+凭据与基址可经 ``OPENAI_TEXT_API_KEY`` / ``OPENAI_TEXT_BASE_URL`` 与多模/配料的 ``OPENAI_API_KEY`` / ``OPENAI_BASE_URL`` **分开**（可只覆写其中一项，另一项回退到 ``OPENAI_*``）。详见 ``credentials.resolve_text_channel_credentials``。
 """
 from __future__ import annotations
 
@@ -9,7 +11,7 @@ from typing import Any
 import requests
 
 from .chat_content import normalize_message_content
-from .credentials import _resolve_credentials, resolve_text_model_name
+from .credentials import resolve_text_channel_credentials, resolve_text_model_name
 from .estimate import estimate_chat_input_tokens
 from .timeouts import chat_completion_read_timeout as _chat_completion_timeout
 
@@ -41,7 +43,7 @@ def chat_completion_text(
 ) -> str:
     if timeout is None:
         timeout = _chat_completion_timeout()
-    k, b, _ = _resolve_credentials(api_key, base_url, None)
+    k, b = resolve_text_channel_credentials(api_key, base_url)
     m = resolve_text_model_name(model)
     body: dict[str, Any] = {
         "model": m,

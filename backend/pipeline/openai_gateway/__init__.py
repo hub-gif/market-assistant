@@ -9,6 +9,7 @@ from .chat_content import normalize_message_content
 from .credentials import (
     _resolve_credentials,
     resolve_credentials,
+    resolve_text_channel_credentials,
     resolve_text_model_name,
 )
 from .ingredients_op import (
@@ -35,6 +36,7 @@ __all__ = [
     "normalize_message_content",
     "parse_joined_image_urls",
     "resolve_credentials",
+    "resolve_text_channel_credentials",
     "resolve_text_model_name",
     "sanitize_vision_ingredients_output",
     "strip_outer_markdown_fence",

@@ -38,6 +38,37 @@ def _resolve_credentials(
     return key, base, m
 
 
+def resolve_text_channel_credentials(
+    api_key: str | None = None,
+    base_url: str | None = None,
+) -> tuple[str, str]:
+    """
+    仅用于 ``text_chat.chat_completion_text`` 的 Key 与基址。
+
+    可与商详多模/配料的 ``OPENAI_API_KEY``、``OPENAI_BASE_URL`` **分开**（例如同网关两枚 Key、或同 Key 不同路径），
+    任一侧未设 ``OPENAI_TEXT_*`` 时回退到 ``OPENAI_*`` / ``LLM_*``。
+
+    别名：``LLM_TEXT_API_KEY``、``LLM_TEXT_BASE_URL``（与 ``OPENAI_TEXT_MODEL`` 等命名一致）。
+    """
+    key = (api_key or "").strip() or (
+        (os.environ.get("OPENAI_TEXT_API_KEY") or os.environ.get("LLM_TEXT_API_KEY") or "").strip()
+    )
+    if not key:
+        key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "").strip()
+    base = (base_url or "").strip().rstrip("/")
+    if not base:
+        base = (os.environ.get("OPENAI_TEXT_BASE_URL") or os.environ.get("LLM_TEXT_BASE_URL") or "").strip().rstrip(
+            "/"
+        )
+    if not base:
+        base = (os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL") or "").strip().rstrip("/")
+    if not key:
+        raise ValueError("纯文本需设置 OPENAI_TEXT_API_KEY 或 OPENAI_API_KEY（或 LLM_* 别名）")
+    if not base:
+        raise ValueError("纯文本需设置 OPENAI_TEXT_BASE_URL 或 OPENAI_BASE_URL（或 LLM_* 别名）")
+    return key, base
+
+
 def resolve_text_model_name(model: str | None = None) -> str:
     m = (model or "").strip()
     if m:
