@@ -6,6 +6,7 @@ import pytest
 
 from pipeline.llm.providers import (
     CrawlerOpenAiCompatibleTextLlm,
+    KimiMoonshotTextLlm,
     OpenAiOfficialChatGptTextLlm,
     get_text_llm,
     reset_text_llm_client_for_tests,
@@ -35,6 +36,45 @@ def test_openai_official_complete_text_uses_post_and_returns_content(monkeypatch
         llm = OpenAiOfficialChatGptTextLlm()
         out = llm.complete_text("S", "U", temperature=0.1)
     assert out == "ok_out"
+
+
+def test_kimi_complete_text_uses_post_and_returns_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("KIMI_API_KEY", "sk-kimi-test")
+
+    def _fake_post(
+        url: str,
+        headers: dict,
+        json: dict,
+        timeout: object,
+    ) -> MagicMock:
+        assert "moonshot" in url or "chat/completions" in url
+        assert json["messages"][0]["role"] == "system"
+        assert headers.get("Authorization", "").startswith("Bearer sk-kimi-")
+        r = MagicMock()
+        r.json.return_value = {"choices": [{"message": {"content": "kimi_out"}}]}
+        r.raise_for_status = MagicMock()
+        return r
+
+    with patch(
+        "pipeline.llm.providers.adapters.kimi_moonshot_text.requests.post",
+        side_effect=_fake_post,
+    ):
+        llm = KimiMoonshotTextLlm()
+        out = llm.complete_text("S", "U", temperature=0.1)
+    assert out == "kimi_out"
+
+
+def test_factory_selects_kimi_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    reset_text_llm_client_for_tests()
+    monkeypatch.setenv("MA_LLM_TEXT_PROVIDER", "kimi")
+    monkeypatch.setenv("KIMI_API_KEY", "sk-x")
+    try:
+        c = get_text_llm()
+        assert isinstance(c, KimiMoonshotTextLlm)
+    finally:
+        reset_text_llm_client_for_tests()
+        monkeypatch.delenv("MA_LLM_TEXT_PROVIDER", raising=False)
+        monkeypatch.delenv("KIMI_API_KEY", raising=False)
 
 
 def test_factory_selects_openai_official_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:

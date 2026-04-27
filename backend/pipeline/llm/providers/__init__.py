@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from .adapters import CrawlerOpenAiCompatibleTextLlm, OpenAiOfficialChatGptTextLlm
+from .adapters import (
+    CrawlerOpenAiCompatibleTextLlm,
+    KimiMoonshotTextLlm,
+    OpenAiOfficialChatGptTextLlm,
+)
 from .factory import get_text_llm, reset_text_llm_client_for_tests
 from .protocol import TextLlmClient
 
 __all__ = [
     "CrawlerOpenAiCompatibleTextLlm",
+    "KimiMoonshotTextLlm",
     "OpenAiOfficialChatGptTextLlm",
     "TextLlmClient",
     "get_text_llm",
