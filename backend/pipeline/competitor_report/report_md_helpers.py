@@ -1,4 +1,7 @@
-"""报告 Markdown 片段：Mermaid、场景摘要、规则策略提示、插图路径与解读段落。"""
+"""报告 Markdown 片段：规则策略提示、插图路径、矩阵图文件名等。
+
+含若干**已废弃口径**的 Mermaid/场景摘要辅助函数（关注词子串、预设场景标签），当前主报告链路**不再调用**，保留仅为历史图表命名一致或后续清理。
+"""
 from __future__ import annotations
 
 import re
@@ -54,12 +57,9 @@ def _strategy_hints(
     *,
     cr1: float | None,
     pst: dict[str, Any],
-    hits: Counter[str],
     n_comments: int,
-    scen_counts: Counter[str],
-    scen_n_texts: int,
 ) -> list[str]:
-    """基于规则的「提示性」结论，均标注待验证。"""
+    """基于规则的「提示性」结论，均标注待验证（不含预设关注词/场景子串统计）。"""
     hints: list[str] = []
     if cr1 is not None and cr1 >= 0.45:
         hints.append(
@@ -75,23 +75,10 @@ def _strategy_hints(
             hints.append(
                 "价格离散度较高，同时存在偏低价与偏高价陈列，可分别对标「性价比带」与「品质/功能带」竞品（**终端到手价受促销影响，非成本结构**）。"
             )
-    if hits:
-        top = hits.most_common(3)
-        top_s = "、".join(w for w, _ in top)
-        hints.append(
-            f"评价文本中「{top_s}」等主题出现较多，可作为消费者沟通与产品卖点的假设输入（**非严格主题模型，建议人工抽样复核**）。"
-        )
     if n_comments < 5:
         hints.append(
             "有效评价样本偏少，消费者洞察部分仅作方向参考，正式结论建议加大 SKU 数或评论分页。"
         )
-    if scen_n_texts >= 5 and scen_counts:
-        top_lbl, top_n = scen_counts.most_common(1)[0]
-        share = top_n / scen_n_texts
-        if share >= 0.25:
-            hints.append(
-                f"用途/场景中「{top_lbl}」在约 {100 * share:.0f}% 的有效评价自述中出现，可作为沟通场景与卖点的优先假设（**词组规则，建议抽样核对原句**）。"
-            )
     if not hints:
         hints.append(
             "当前样本下自动规则未触发强信号；请结合业务目标人工解读对比矩阵与原始 CSV。"

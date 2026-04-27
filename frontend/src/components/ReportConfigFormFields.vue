@@ -7,18 +7,9 @@ defineEmits(['add-market', 'remove-market'])
 
 <template>
   <div>
-    <div class="rc-section">
-      <h4 class="rc-subtitle">1. 第八章评论分析</h4>
-      <p class="rc-help">
-        报告<strong>不再</strong>使用「预设关注词 / 预设场景词组」子串统计。请在报告配置（高级 JSON 或接口）中维护
-        <code>chapter8_text_mining_probe</code>
-        等开关，以生成开放词表、词频与共现等文本挖掘内容。可选
-        <code>llm_comment_sentiment</code>：按矩阵细类分别调用模型，在报告<strong>8.3</strong>生成「正/负向主题」归纳，与探针及「细类评论要点归纳」并列、互不替代。
-      </p>
-    </div>
 
     <div class="rc-section">
-      <h4 class="rc-subtitle">2. 外部市场信息（可选）</h4>
+      <h4 class="rc-subtitle">1. 外部市场信息（可选）</h4>
       <p class="rc-help">若手边有第三方市场规模、增速等摘录，可填在表里，报告会多一节说明；不需要可整表留空。</p>
       <div class="rc-market-wrap">
         <table class="rc-market">

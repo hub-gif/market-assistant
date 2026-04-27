@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 
@@ -136,6 +136,13 @@ import {
   generationInFlightKey,
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
+import {
+  analysisBriefCacheKey,
+  analysisReportCacheKey,
+  persistAnalysisBrief,
+  persistAnalysisReportMd,
+} from '../../lib/analysisViewStorage'
+import { useJobStore } from '../../stores/jobs'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
@@ -148,21 +155,30 @@ const briefErr = ref('')
 const briefCopyOk = ref(false)
 const packErr = ref('')
 const exportDocErr = ref('')
-/** 正在导出的格式：docx | pdf | null */
-const exportDocFmt = ref(null)
+
+const genInFlight = generationInFlightKey()
+const K_PREVIEW = 'preview-report:'
+const K_BRIEF = 'competitor-brief:'
+const K_PACK = 'brief-pack:'
+const K_EXPORT = 'export-report:'
+
+function isExporting(fmt) {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.includes(`${K_EXPORT}${id}:${fmt}`)
+}
 
 async function exportReportFmt(fmt) {
   const id = selectedId.value
   if (!id) return
   exportDocErr.value = ''
-  exportDocFmt.value = fmt
-  try {
-    await exportReportDocument(id, fmt)
-  } catch (e) {
-    exportDocErr.value = String(e?.message || e)
-  } finally {
-    exportDocFmt.value = null
-  }
+  await withGenerationInFlight(`${K_EXPORT}${id}:${fmt}`, async () => {
+    try {
+      await exportReportDocument(id, fmt)
+    } catch (e) {
+      exportDocErr.value = String(e?.message || e)
+    }
+  })
 }
 
 /** 将 Markdown 中的 report_assets 相对路径转为可访问的 API URL（在线预览插图） */
@@ -178,10 +194,6 @@ const reportMdForPreview = computed(() =>
   reportMdWithAssetUrls(reportMd.value, selectedId.value),
 )
 
-const genInFlight = generationInFlightKey()
-const K_PREVIEW = 'preview-report:'
-const K_BRIEF = 'competitor-brief:'
-const K_PACK = 'brief-pack:'
 function genKeyMatches(prefix) {
   const id = selectedId.value
   if (!id) return false
@@ -194,9 +206,15 @@ const viewInFlightOtherJobId = computed(() => {
   const sid = selectedId.value
   if (!sid) return null
   for (const k of genInFlight.value) {
-    const i = k.lastIndexOf(':')
-    if (i < 0) continue
-    const jid = k.slice(i + 1)
+    let jid = null
+    if (k.startsWith(K_PREVIEW)) jid = k.slice(K_PREVIEW.length)
+    else if (k.startsWith(K_BRIEF)) jid = k.slice(K_BRIEF.length)
+    else if (k.startsWith(K_PACK)) jid = k.slice(K_PACK.length)
+    else if (k.startsWith(K_EXPORT)) {
+      const rest = k.slice(K_EXPORT.length)
+      const m = /^(\d+):/.exec(rest)
+      if (m) jid = m[1]
+    }
     if (jid && jid !== sid) return jid
   }
   return null
@@ -238,7 +256,9 @@ async function loadReport() {
         }
         return
       }
-      reportMd.value = await r.text()
+      const text = await r.text()
+      reportMd.value = text
+      persistAnalysisReportMd(id, text)
     } catch (e) {
       err.value = String(e)
     }
@@ -268,6 +288,7 @@ async function loadCompetitorBrief() {
       const j = JSON.parse(text)
       briefData.value = j
       briefJson.value = JSON.stringify(j, null, 2)
+      persistAnalysisBrief(id, j)
     } catch (e) {
       briefErr.value = String(e)
     }
@@ -314,7 +335,31 @@ async function downloadBriefPack() {
   })
 }
 
-onMounted(loadList)
+function onAnalysisViewStorage(ev) {
+  if (!ev.key || ev.storageArea !== localStorage) return
+  const sid = selectedId.value
+  if (!sid) return
+  if (ev.key === analysisReportCacheKey(sid) && ev.newValue != null) {
+    reportMd.value = ev.newValue
+  }
+  if (ev.key === analysisBriefCacheKey(sid) && ev.newValue) {
+    try {
+      const j = JSON.parse(ev.newValue)
+      briefData.value = j
+      briefJson.value = JSON.stringify(j, null, 2)
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+onMounted(() => {
+  loadList()
+  window.addEventListener('storage', onAnalysisViewStorage)
+})
+onUnmounted(() => {
+  window.removeEventListener('storage', onAnalysisViewStorage)
+})
 
 watch(selectedId, async () => {
   briefJson.value = ''
@@ -327,8 +372,7 @@ watch(selectedId, async () => {
     const r = await api(`/api/jobs/${id}/`)
     if (r.ok) {
       const j = await r.json()
-      const idx = jobs.value.findIndex((x) => x.id === j.id)
-      if (idx >= 0) jobs.value[idx] = j
+      useJobStore().mergeJob(j)
     }
   } catch {
     /* ignore */
@@ -381,18 +425,18 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-secondary"
-          :disabled="!selectedId || exportDocFmt || loading"
+          :disabled="!selectedId || isExporting('docx') || isExporting('pdf') || loading"
           @click="exportReportFmt('docx')"
         >
-          {{ exportDocFmt === 'docx' ? '导出中…' : '导出 Word' }}
+          {{ isExporting('docx') ? '导出中…' : '导出 Word' }}
         </button>
         <button
           type="button"
           class="ma-btn ma-btn-secondary"
-          :disabled="!selectedId || exportDocFmt || loading"
+          :disabled="!selectedId || isExporting('docx') || isExporting('pdf') || loading"
           @click="exportReportFmt('pdf')"
         >
-          {{ exportDocFmt === 'pdf' ? '导出中…' : '导出 PDF' }}
+          {{ isExporting('pdf') ? '导出中…' : '导出 PDF' }}
         </button>
         <button
           type="button"

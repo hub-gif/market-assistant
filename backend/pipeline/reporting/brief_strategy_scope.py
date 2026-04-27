@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any
 
 from pipeline.competitor_report.csv_io import _collect_prices
+from pipeline.competitor_report.price_promo import _analyze_price_promotions
 from pipeline.competitor_report.price_stats import _price_stats_extended
 
 
@@ -224,12 +225,11 @@ def filter_brief_for_strategy_matrix_group(
 
     if fb_one:
         f0 = fb_one[0]
-        b["comment_focus_keywords"] = list(f0.get("focus_keyword_hits") or [])
-        scenarios_top = f0.get("scenarios_top") or []
-        b["usage_scenarios"] = list(scenarios_top)
         denom = int(f0.get("effective_comment_text_units") or 0)
         if denom <= 0:
             denom = int(f0.get("comment_rows") or 0)
+        b["comment_focus_keywords"] = []
+        b["usage_scenarios"] = []
         b["usage_scenarios_denominator"] = denom
     else:
         b["comment_focus_keywords"] = []
@@ -285,7 +285,7 @@ def filter_brief_for_strategy_matrix_group(
     else:
         b["notes"] = [extra]
 
-    b["price_promotion_signals"] = []
+    b["price_promotion_signals"] = _analyze_price_promotions(rows_for_price)
     b["strategy_hints"] = []
 
     b["list_visibility_proxy"] = {

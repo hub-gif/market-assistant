@@ -9,6 +9,10 @@ import {
   exportStrategyDocument,
 } from '../../composables/useJobs'
 import { generationInFlightKey, withGenerationInFlight } from '../../composables/useGenerationInFlight'
+import {
+  loadMarketingDetailPackRecord,
+  saveMarketingDetailPackRecord,
+} from '../../lib/marketingDetailPackStorage'
 import { loadStrategyDraftRecord } from '../../lib/strategyDraftStorage'
 import { marketingPackResultToMarkdown } from '../../lib/marketingPackMarkdown'
 
@@ -26,6 +30,8 @@ const exportErr = ref('')
 const marketingErr = ref('')
 const marketingExportErr = ref('')
 const marketingResult = ref(null)
+/** 底部「预览」区：策略稿 vs 营销 Markdown（与导出同源） */
+const previewDoc = ref('strategy')
 
 const exportBusy = computed(() => {
   const id = selectedId.value
@@ -113,6 +119,15 @@ const marketingPackTouchBlock = computed(() =>
   ]),
 )
 
+const marketingMd = computed(() => {
+  if (!marketingResult.value) return ''
+  try {
+    return marketingPackResultToMarkdown(marketingResult.value) || ''
+  } catch {
+    return ''
+  }
+})
+
 function loadDraft() {
   const id = selectedId.value
   if (!id) {
@@ -137,6 +152,16 @@ function loadDraft() {
     draftMd.value = ''
     draftMeta.value = null
   }
+}
+
+function loadMarketingPack() {
+  const id = selectedId.value
+  if (!id) {
+    marketingResult.value = null
+    return
+  }
+  const rec = loadMarketingDetailPackRecord(id)
+  marketingResult.value = rec && typeof rec === 'object' ? rec : null
 }
 
 async function loadList() {
@@ -224,7 +249,14 @@ async function generateMarketingDetailPack() {
         }
         return
       }
-      marketingResult.value = JSON.parse(text)
+      const body = JSON.parse(text)
+      marketingResult.value = body
+      try {
+        saveMarketingDetailPackRecord(id, body)
+      } catch {
+        /* 忽略存储失败 */
+      }
+      previewDoc.value = 'marketing'
     })
   } catch (e) {
     marketingErr.value = String(e)
@@ -270,18 +302,28 @@ function onStorageDraftSync(ev) {
   if (jid === String(selectedId.value)) loadDraft()
 }
 
+function onStorageMarketingSync(ev) {
+  const prefix = 'ma_marketing_detail_pack_'
+  if (!ev.key || !ev.key.startsWith(prefix)) return
+  const jid = ev.key.slice(prefix.length)
+  if (jid === String(selectedId.value)) loadMarketingPack()
+}
+
 onMounted(async () => {
   await loadList()
   syncSelectionFromRouteAndJobs()
   loadDraft()
+  loadMarketingPack()
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', onStorageDraftSync)
+    window.addEventListener('storage', onStorageMarketingSync)
   }
 })
 
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('storage', onStorageDraftSync)
+    window.removeEventListener('storage', onStorageMarketingSync)
   }
 })
 
@@ -293,14 +335,16 @@ watch(
     if (s !== selectedId.value) {
       selectedId.value = s
       loadDraft()
+      loadMarketingPack()
     }
   },
 )
 
 watch(selectedId, (id) => {
-  marketingResult.value = null
   marketingExportErr.value = ''
+  previewDoc.value = 'strategy'
   loadDraft()
+  loadMarketingPack()
   const want = id ? String(id) : ''
   if (String(route.query.job || '') !== want) {
     router.replace({ path: '/jd/strategy-view', query: want ? { job: want } : {} })
@@ -313,6 +357,7 @@ watch(successJobs, (list) => {
   if (list.length) {
     selectedId.value = String(list[0].id)
     loadDraft()
+    loadMarketingPack()
   }
 })
 </script>
@@ -322,7 +367,7 @@ watch(successJobs, (list) => {
     <section class="ma-card">
       <h2>策略稿预览</h2>
       <p class="hint-top">
-        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本机浏览器 <strong>localStorage</strong>，同域名下可跨标签查看）。生成/导出/营销内容等耗时操作状态在全局任务锁中同步，跨标签页可看到进行中。需要改决策请回到
+        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本机浏览器 <strong>localStorage</strong>，同域名下可跨标签查看）。需要改决策请回到
         <RouterLink to="/jd/strategy-build">策略生成</RouterLink>
         重新提交。分析数据见
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
@@ -385,10 +430,7 @@ watch(successJobs, (list) => {
         <p class="ma-muted marketing-pack-meta">
           {{ marketingResult.generated_at }} · {{ marketingResult.source }}
         </p>
-        <p class="ma-muted marketing-pack-disk">
-          服务端会将本包写入任务目录
-          <code>marketing/marketing_detail_pack_v1.json</code>（与批次一并归档；目录不可写时仅内存结果）。
-        </p>
+
         <div class="toolbar marketing-pack-actions">
           <button
             type="button"
@@ -441,9 +483,25 @@ watch(successJobs, (list) => {
       </p>
     </section>
 
-    <section v-if="draftMd" class="ma-card preview-card">
+    <section v-if="draftMd || marketingMd" class="ma-card preview-card">
       <div class="preview-head">
         <h2>预览</h2>
+        <div v-if="marketingMd" class="tabs doc-tabs">
+          <button
+            type="button"
+            :class="{ on: previewDoc === 'strategy' }"
+            @click="previewDoc = 'strategy'"
+          >
+            策略稿
+          </button>
+          <button
+            type="button"
+            :class="{ on: previewDoc === 'marketing' }"
+            @click="previewDoc = 'marketing'"
+          >
+            营销内容
+          </button>
+        </div>
         <div class="tabs">
           <button type="button" :class="{ on: viewMode === 'render' }" @click="viewMode = 'render'">
             渲染
@@ -453,10 +511,21 @@ watch(successJobs, (list) => {
           </button>
         </div>
       </div>
-      <div v-if="viewMode === 'render'" class="md-box">
-        <MarkdownPreview :source="draftMd" />
-      </div>
-      <pre v-else class="raw-md">{{ draftMd }}</pre>
+      <template v-if="previewDoc === 'strategy' && draftMd">
+        <div v-if="viewMode === 'render'" class="md-box">
+          <MarkdownPreview :source="draftMd" />
+        </div>
+        <pre v-else class="raw-md">{{ draftMd }}</pre>
+      </template>
+      <template v-else-if="previewDoc === 'marketing' && marketingMd">
+        <div v-if="viewMode === 'render'" class="md-box">
+          <MarkdownPreview :source="marketingMd" />
+        </div>
+        <pre v-else class="raw-md">{{ marketingMd }}</pre>
+      </template>
+      <p v-else class="ma-muted preview-fallback">
+        暂无当前页面对应的文稿（请先生成策略稿或营销内容）。
+      </p>
     </section>
   </div>
 </template>
@@ -534,6 +603,13 @@ watch(successJobs, (list) => {
 }
 .preview-head h2 {
   margin: 0;
+}
+.doc-tabs {
+  margin-right: auto;
+}
+.preview-fallback {
+  margin: 0;
+  font-size: 0.9rem;
 }
 .tabs {
   display: flex;

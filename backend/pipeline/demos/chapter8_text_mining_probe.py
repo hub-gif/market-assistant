@@ -17,6 +17,8 @@
 
 输出：默认写入 ``<run_dir>/chapter8_text_mining_probe.md``。
 
+环境变量 ``MA_PROBE_LLM_DIAG=1``：向 stderr 打印每个 LLM 分块的 JSON 大小与耗时（定位「哪一类超时」）。
+
 嵌入竞品报告：流水线默认开启（``get_default_report_config`` 中 ``chapter8_text_mining_probe``: true）；若任务显式关闭则为 false。开启时会生成本稿并调用 ``markdown_embed_body_for_competitor_report`` 写入 ``competitor_analysis.md`` 的 **第八章第二节（评论文本补充分析）**，替代原「关注词 + 场景」条图及对应两段大模型；**不再**嵌入原「评价正负面粗判」预设口语短语扇形图/条形图及同口径大模型块。
 """
 from __future__ import annotations
@@ -434,14 +436,29 @@ def _merge_snippets_from_comment_groups(
             row["sample_text_snippets"] = [str(x)[:220] for x in sn[:8]]
 
 
+def _probe_llm_diag_enabled() -> bool:
+    return os.environ.get("MA_PROBE_LLM_DIAG", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
 def _run_probe_text_mining_llm(
     payload: dict[str, Any],
     *,
     chunked: bool,
 ) -> str:
-    """补充分析专用：``PROBE_TEXT_MINING_SYSTEM`` + 结构化 JSON；可选按细类拆分调用。"""
+    """补充分析专用：``PROBE_TEXT_MINING_SYSTEM`` + 结构化 JSON；可选按细类拆分调用。
+
+    - **分块模式**：每个 ``probe_status == ok`` 的细类**单独**请求；某一类失败时**保留**已成功类的正文，该类下追加失败说明（不再整段被外层 ``except`` 吃掉）。
+    - 设置环境变量 ``MA_PROBE_LLM_DIAG=1`` 时向 **stderr** 打印每类 JSON 字符数与耗时，便于定位超时发生在哪一类。
+    """
     if not payload.get("groups"):
         return "> **补充分析 LLM 解读**：无分组数据，跳过。"
+    import time as _time
+
+    diag = _probe_llm_diag_enabled()
     try:
         if not chunked:
             p = _truncate_probe_payload(payload)
@@ -451,10 +468,35 @@ def _run_probe_text_mining_llm(
                     raw[:82_000]
                     + "\n\n…（JSON 过长已截断，仅依据可见字段撰写。）\n"
                 )
-            return _call_llm(
-                PROBE_TEXT_MINING_SYSTEM,
-                PROBE_TEXT_MINING_USER_PREFIX + raw,
-            ).strip()
+            if diag:
+                print(
+                    f"[probe-llm] mode=single json_chars={len(raw)}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            t0 = _time.perf_counter()
+            try:
+                out = _call_llm(
+                    PROBE_TEXT_MINING_SYSTEM,
+                    PROBE_TEXT_MINING_USER_PREFIX + raw,
+                ).strip()
+            except Exception as e:
+                if diag:
+                    print(
+                        f"[probe-llm] mode=single FAIL after "
+                        f"{_time.perf_counter() - t0:.1f}s: {e}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                return f"> **补充分析 LLM 解读**调用失败：{e}"
+            if diag:
+                print(
+                    f"[probe-llm] mode=single OK "
+                    f"{_time.perf_counter() - t0:.1f}s out_chars={len(out)}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            return out
         kw = str(payload.get("keyword") or "")
         note = str(payload.get("probe_note") or "")
         parts: list[str] = []
@@ -477,12 +519,38 @@ def _run_probe_text_mining_llm(
             raw = json.dumps(mini, ensure_ascii=False)
             if len(raw) > 48_000:
                 raw = raw[:44_000] + "\n…\n"
-            parts.append(
-                _call_llm(
+            if diag:
+                print(
+                    f"[probe-llm] mode=chunked group={gname!r} json_chars={len(raw)}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            t0 = _time.perf_counter()
+            try:
+                chunk_out = _call_llm(
                     PROBE_TEXT_MINING_SYSTEM,
                     PROBE_TEXT_MINING_USER_PREFIX + raw,
                 ).strip()
-            )
+                parts.append(chunk_out)
+                if diag:
+                    print(
+                        f"[probe-llm] group={gname!r} OK "
+                        f"{_time.perf_counter() - t0:.1f}s out_chars={len(chunk_out)}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+            except Exception as e:
+                if diag:
+                    print(
+                        f"[probe-llm] group={gname!r} FAIL "
+                        f"{_time.perf_counter() - t0:.1f}s: {e}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                parts.append(
+                    f"#### {gname}\n\n"
+                    f"> **本细类补充分析 LLM 调用失败**：{e}"
+                )
         return "\n\n---\n\n".join(parts)
     except Exception as e:
         return f"> **补充分析 LLM 解读**调用失败：{e}"

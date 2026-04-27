@@ -34,28 +34,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 
 def _strategy_decisions_empty() -> dict[str, Any]:
-    return {
-        "product_role": "",
-        "stage_goal_type": "",
-        "time_horizon": "",
-        "success_criteria": "",
-        "non_goals": "",
-        "battlefield_one_line": "",
-        "positioning_choice": "",
-        "competitive_stance": "",
-        "pillar_product": "",
-        "pillar_price": "",
-        "pillar_channel": "",
-        "pillar_comm": "",
-        "audience_segment": "",
-        "competitor_reference": "",
-        "resource_notes": "",
-        "marketing_strategy": "",
-        "general_strategy": "",
-        "ack_risk_keywords": False,
-        "ack_risk_price": False,
-        "ack_risk_concentration": False,
-    }
+    from pipeline.strategy_decision_keys import empty_strategy_decisions
+
+    return empty_strategy_decisions()
 
 
 def _merge_decisions(base: dict[str, Any], overlay: dict[str, Any] | None) -> dict[str, Any]:

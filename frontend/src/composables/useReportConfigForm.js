@@ -1,45 +1,47 @@
 import { ref } from 'vue'
 
-/** 触发词分隔：逗号、顿号、中文逗号、换行 */
-const TRIGGER_SPLIT = /[,，、\n\r]+/u
-
-function splitTriggers(text) {
-  if (!text || typeof text !== 'string') return []
-  return text
-    .split(TRIGGER_SPLIT)
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
 /**
- * 表单未展示的大模型/细类归纳等布尔项：从任务读入后在「保存」时原样写回，避免误清空。
+ * 表单未单独展示的布尔项：从任务读入后在「保存」时原样写回，避免误清空。
  * （与 backend ``validate_report_config_body`` 允许的键一致。）
  */
 const REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS = [
   'llm_comment_sentiment',
   'llm_matrix_group_summaries',
   'llm_price_group_summaries',
+  'llm_promo_group_summaries',
+  'llm_strategy_opportunities',
   'llm_comment_group_summaries',
-  'llm_scenario_group_summaries',
+  'llm_group_summaries_chunk_by_matrix',
+  'chapter8_text_mining_probe',
+  'chapter8_text_mining_probe_live_llm',
+  'chapter8_text_mining_probe_llm_chunked',
+  'chapter8_text_mining_probe_wordcloud',
+]
+
+const REPORT_CONFIG_PASSTHROUGH_INT_KEYS = [
+  'chapter8_probe_min_texts',
+  'chapter8_probe_lda_topics',
+  'chapter8_probe_top_k_words',
+  'chapter8_probe_cooc_vocab',
+  'chapter8_probe_cooc_pairs',
+  'chapter8_probe_wordcloud_max',
 ]
 
 /**
  * 报告调参表单（与后端 report_config 字段对应），面向非技术用户。
  */
 export function useReportConfigForm() {
-  const focusWordRows = ref([{ text: '' }])
-  const scenarioGroups = ref([{ label: '', triggersText: '' }])
   const marketRows = ref([
     { indicator: '', value_and_scope: '', source: '', year: '' },
   ])
-  /** 表单未编辑的布尔项，从任务配置读入后随保存写回 */
+  /** 表单未编辑的项，从任务配置读入后随保存写回 */
   const passthroughBools = ref({})
+  const passthroughInts = ref({})
 
   function resetToEmpty() {
-    focusWordRows.value = [{ text: '' }]
-    scenarioGroups.value = [{ label: '', triggersText: '' }]
     marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
     passthroughBools.value = {}
+    passthroughInts.value = {}
   }
 
   /**
@@ -49,40 +51,6 @@ export function useReportConfigForm() {
     if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
       resetToEmpty()
       return
-    }
-
-    const w = cfg.comment_focus_words
-    if (Array.isArray(w) && w.length) {
-      focusWordRows.value = w
-        .map((x) => ({ text: String(x ?? '').trim() }))
-        .filter((r) => r.text)
-      if (!focusWordRows.value.length) focusWordRows.value = [{ text: '' }]
-    } else {
-      focusWordRows.value = [{ text: '' }]
-    }
-
-    const sg = cfg.comment_scenario_groups
-    if (Array.isArray(sg) && sg.length) {
-      scenarioGroups.value = sg.map((item) => {
-        let label = ''
-        let triggers = []
-        if (Array.isArray(item) && item.length >= 2) {
-          label = String(item[0] ?? '').trim()
-          const tr = item[1]
-          triggers = Array.isArray(tr) ? tr.map((t) => String(t ?? '').trim()).filter(Boolean) : []
-        } else if (item && typeof item === 'object' && !Array.isArray(item)) {
-          label = String(item.label ?? '').trim()
-          const tr = item.triggers
-          triggers = Array.isArray(tr) ? tr.map((t) => String(t ?? '').trim()).filter(Boolean) : []
-        }
-        return {
-          label,
-          triggersText: triggers.join('、'),
-        }
-      })
-      if (!scenarioGroups.value.length) scenarioGroups.value = [{ label: '', triggersText: '' }]
-    } else {
-      scenarioGroups.value = [{ label: '', triggersText: '' }]
     }
 
     const er = cfg.external_market_table_rows
@@ -110,32 +78,25 @@ export function useReportConfigForm() {
       marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
     }
 
-    const pass = {}
+    const passB = {}
     for (const k of REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS) {
-      if (Object.prototype.hasOwnProperty.call(cfg, k)) pass[k] = Boolean(cfg[k])
+      if (Object.prototype.hasOwnProperty.call(cfg, k)) passB[k] = Boolean(cfg[k])
     }
-    passthroughBools.value = pass
+    passthroughBools.value = passB
+
+    const passI = {}
+    for (const k of REPORT_CONFIG_PASSTHROUGH_INT_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(cfg, k)) {
+        const v = cfg[k]
+        if (typeof v === 'number' && Number.isFinite(v)) passI[k] = Math.trunc(v)
+      }
+    }
+    passthroughInts.value = passI
   }
 
   /** @returns {Record<string, unknown>} 可 PATCH 到后端的 report_config；全空则为 {} */
   function buildPayload() {
     const out = {}
-
-    const words = focusWordRows.value.map((r) => (r.text || '').trim()).filter(Boolean)
-    if (words.length) out.comment_focus_words = words
-
-    const groups = scenarioGroups.value
-      .map((g) => ({
-        label: (g.label || '').trim(),
-        triggers: splitTriggers(g.triggersText || ''),
-      }))
-      .filter((g) => g.label && g.triggers.length)
-    if (groups.length) {
-      out.comment_scenario_groups = groups.map((g) => ({
-        label: g.label,
-        triggers: g.triggers,
-      }))
-    }
 
     const rows = marketRows.value
       .map((r) => ({
@@ -155,26 +116,8 @@ export function useReportConfigForm() {
     }
 
     Object.assign(out, passthroughBools.value)
+    Object.assign(out, passthroughInts.value)
     return out
-  }
-
-  function addFocusRow() {
-    focusWordRows.value.push({ text: '' })
-  }
-  function removeFocusRow(i) {
-    if (focusWordRows.value.length > 1) focusWordRows.value.splice(i, 1)
-    else focusWordRows.value[0].text = ''
-  }
-
-  function addScenarioRow() {
-    scenarioGroups.value.push({ label: '', triggersText: '' })
-  }
-  function removeScenarioRow(i) {
-    if (scenarioGroups.value.length > 1) scenarioGroups.value.splice(i, 1)
-    else {
-      scenarioGroups.value[0].label = ''
-      scenarioGroups.value[0].triggersText = ''
-    }
   }
 
   function addMarketRow() {
@@ -197,17 +140,12 @@ export function useReportConfigForm() {
   }
 
   return {
-    focusWordRows,
-    scenarioGroups,
     marketRows,
     passthroughBools,
+    passthroughInts,
     resetToEmpty,
     applyFromApiConfig,
     buildPayload,
-    addFocusRow,
-    removeFocusRow,
-    addScenarioRow,
-    removeScenarioRow,
     addMarketRow,
     removeMarketRow,
   }

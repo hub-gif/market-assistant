@@ -1,4 +1,4 @@
-"""评价关键词命中、星级与口语词表、情感 lexicon、大模型情感 payload。"""
+"""评价文本单元迭代、星级解析、大模型情感载荷（语义池）；保留旧版 lexicon 辅助函数供测试，不再进入报告主链路。"""
 from __future__ import annotations
 
 import hashlib
@@ -405,30 +405,34 @@ def build_comment_sentiment_llm_payload(
     shuffle_seed: str = "",
 ) -> dict[str, Any]:
     """
-    供大模型做正/负向语义归纳：附规则统计、按**评分优先或关键词**归类后的抽样，以及 **sample_reviews_semantic_pool**
-    （全量去重后的评价句确定性洗牌抽样，供模型结合语境自行判断褒贬）。
+    供大模型做正/负向**语义**归纳：**仅**提供去重后的 ``sample_reviews_semantic_pool``（洗牌抽样原文），
+    以及可选 ``star_rating_distribution``（有有效评分列时 1～2 / 3 / 4～5 星条数，**非**预设子串词表）。
 
-    ``sentiment_bucket_method``：有有效评分列时为 ``score_then_lexeme``，否则为 ``keyword_substring_heuristic``；
-    ``comment_sentiment_lexicon`` 与各象限计数一致（竞品报告与 brief **已不再**发布同口径图）；正文归纳仍以整句语义为准。
+    已移除：``comment_sentiment_lexicon``、预设口语短语命中、按关键词/词表机械分桶的样本列表（与报告已废弃口径一致）。
+    参数 ``max_samples_*`` 保留签名以兼容旧调用方，**不再使用**。
     """
+    _ = (max_samples_positive, max_samples_negative, max_samples_mixed)
     use_score_column = bool(
         scores is not None
         and len(scores) == len(texts)
         and any(s is not None for s in scores)
     )
-    pos_only_texts: list[str] = []
-    neg_only_texts: list[str] = []
-    mixed_texts: list[str] = []
     use_attr = (
         attributed_texts is not None
         and len(attributed_texts) == len(texts)
     )
     all_unique_disp: list[str] = []
     seen_unique: set[str] = set()
+    text_unit_count = 0
+    star_dist: dict[str, int] | None = None
+    if use_score_column:
+        star_dist = {"score_1_2": 0, "score_3": 0, "score_4_5": 0, "no_score": 0}
+
     for i, t in enumerate(texts):
         s = (t or "").strip()
         if not s:
             continue
+        text_unit_count += 1
         disp = (
             (attributed_texts[i] or s).strip()
             if use_attr
@@ -437,14 +441,16 @@ def build_comment_sentiment_llm_payload(
         if disp and disp not in seen_unique:
             seen_unique.add(disp)
             all_unique_disp.append(disp)
-        sc = scores[i] if use_score_column and scores is not None else None
-        quad = _sentiment_quadrant_for_row(s, sc, use_score_column=use_score_column)
-        if quad == "mixed":
-            mixed_texts.append(disp)
-        elif quad == "pos_only":
-            pos_only_texts.append(disp)
-        elif quad == "neg_only":
-            neg_only_texts.append(disp)
+        if star_dist is not None and scores is not None:
+            sc = scores[i] if i < len(scores) else None
+            if sc is None:
+                star_dist["no_score"] += 1
+            elif sc <= 2:
+                star_dist["score_1_2"] += 1
+            elif sc == 3:
+                star_dist["score_3"] += 1
+            else:
+                star_dist["score_4_5"] += 1
 
     def _semantic_pool(seq: list[str], cap: int) -> list[str]:
         """去重列表的洗牌子样本；shuffle_seed 非空时按种子固定顺序以便同任务可复现。"""
@@ -467,39 +473,18 @@ def build_comment_sentiment_llm_payload(
 
     semantic_pool = _semantic_pool(all_unique_disp, semantic_pool_max)
 
-    def _sample(seq: list[str], cap: int) -> list[str]:
-        out: list[str] = []
-        seen: set[str] = set()
-        for raw in seq:
-            if raw in seen:
-                continue
-            seen.add(raw)
-            if len(raw) > max_chars_per_review:
-                out.append(raw[:max_chars_per_review] + "…")
-            else:
-                out.append(raw)
-            if len(out) >= cap:
-                break
-        return out
-
-    lex = _comment_sentiment_lexicon(texts, scores)
-    pos_h = lex.get("positive_tone_lexeme_hits") or []
-    neg_h = lex.get("negative_tone_lexeme_hits") or []
-    pos_h_top = [x for x in pos_h[:12] if isinstance(x, dict)]
-    neg_h_top = [x for x in neg_h[:12] if isinstance(x, dict)]
-    bucket_method = (
-        "score_then_lexeme" if use_score_column else "keyword_substring_heuristic"
-    )
-    return {
-        "comment_sentiment_lexicon": lex,
-        "positive_lexeme_hits_top": pos_h_top,
-        "negative_lexeme_hits_top": neg_h_top,
-        "sentiment_bucket_method": bucket_method,
+    out: dict[str, Any] = {
+        "text_unit_count": text_unit_count,
+        "unique_attributed_snippets_count": len(all_unique_disp),
         "sample_reviews_semantic_pool": semantic_pool,
-        "sample_reviews_positive_biased": _sample(pos_only_texts, max_samples_positive),
-        "sample_reviews_negative_biased": _sample(neg_only_texts, max_samples_negative),
-        "sample_reviews_mixed_tone": _sample(mixed_texts, max_samples_mixed),
+        "semantic_pool_note": (
+            "为去重后的评价原文抽样（可含细类/SKU/店铺前缀）。请据**整句语义**归纳正向体验与负向抱怨；"
+            "勿引用已废弃的预设子串词表、勿把星级分布等同于具体抱怨主题。"
+        ),
     }
+    if star_dist is not None:
+        out["star_rating_distribution"] = star_dist
+    return out
 
 
 __all__ = [

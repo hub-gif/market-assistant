@@ -15,12 +15,34 @@ def _strip_inline_md(s: str) -> str:
     return s
 
 
+_RE_TASK_CHECKED = re.compile(r"^\[x\]\s*", re.IGNORECASE)
+_RE_TASK_UNCHECKED = re.compile(r"^\[ \]\s*")
+# GFM 表头分隔行：每格为 :--- / ---: / :---: / ---------- 等（至少 3 个连字符）
+_TABLE_SEP_CELL = re.compile(r"^:?-{3,}:?$")
+
+
+def _strip_gfm_task_list_prefix(text: str) -> str:
+    """去掉 ``- [x]`` / ``- [ ]`` 中的任务标记，导出时用普通项目符号，观感接近 MD 预览圆点。"""
+    t = text.strip()
+    m = _RE_TASK_CHECKED.match(t)
+    if m:
+        return t[m.end() :].strip()
+    m = _RE_TASK_UNCHECKED.match(t)
+    if m:
+        return t[m.end() :].strip()
+    return text
+
+
 def _is_table_sep(line: str) -> bool:
-    t = line.strip()
-    if not t.startswith("|"):
+    """GFM 表头与表体之间的分隔行（含任意长度连字符，如 ``|----------|``）。"""
+    row_line = line.strip()
+    if not row_line.startswith("|"):
         return False
-    inner = t.strip("|").replace(" ", "")
-    return bool(inner) and all(p in ("", "---", ":---", "---:", ":---:") for p in t.split("|"))
+    cells = [c.strip() for c in row_line.strip("|").split("|")]
+    sep_cells = [c for c in cells if c]
+    if len(sep_cells) < 2:
+        return False
+    return all(_TABLE_SEP_CELL.match(c) is not None for c in sep_cells)
 
 
 _RE_HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
@@ -30,6 +52,38 @@ _RE_BLOCKQUOTE = re.compile(r"^\s*>\s?(.*)$")
 _RE_HR = re.compile(r"^\s*(?:[-*_]\s*){3,}\s*$")
 
 _img_line = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+
+
+def _join_md_soft_break_lines(lines: list[str]) -> str:
+    """把编辑器/模型折行产生的多行合并为一段（等价于 CommonMark 软换行 → 空格）。"""
+    parts = [ln.strip() for ln in lines if ln and ln.strip()]
+    if not parts:
+        return ""
+    return " ".join(parts)
+
+
+def _is_plain_markdown_line(s: str) -> bool:
+    """是否可作为「正文折行」参与合并的一行（非标题/列表/表格等）。"""
+    t = s.strip()
+    if not t:
+        return False
+    if t.startswith("```"):
+        return False
+    if _RE_HR.match(s):
+        return False
+    if _match_heading(s) is not None:
+        return False
+    if _img_line.match(t):
+        return False
+    if t.startswith("|"):
+        return False
+    if _RE_UL.match(s):
+        return False
+    if _RE_OL.match(s):
+        return False
+    if _RE_BLOCKQUOTE.match(s):
+        return False
+    return True
 
 
 def _match_heading(line: str) -> tuple[int, str] | None:
@@ -57,7 +111,7 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         pass
 
     def _add_list_bullet(text: str) -> None:
-        t = _strip_inline_md(text)
+        t = _strip_gfm_task_list_prefix(_strip_inline_md(text))
         try:
             doc.add_paragraph(t, style="List Bullet")
         except KeyError:
@@ -73,9 +127,24 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
     lines = (md or "").replace("\r\n", "\n").split("\n")
     i = 0
     in_fence = False
+    plain_buf: list[str] = []
+
+    def flush_plain() -> None:
+        if not plain_buf:
+            return
+        merged = _join_md_soft_break_lines(plain_buf)
+        plain_buf.clear()
+        if not merged:
+            return
+        p = doc.add_paragraph()
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+        p.add_run(_strip_inline_md(merged))
+
     while i < len(lines):
         raw = lines[i]
         if raw.strip().startswith("```"):
+            if not in_fence:
+                flush_plain()
             in_fence = not in_fence
             i += 1
             continue
@@ -90,23 +159,27 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
 
         line = raw.rstrip()
         if not line.strip():
+            flush_plain()
             doc.add_paragraph("")
             i += 1
             continue
 
         if _RE_HR.match(line):
+            flush_plain()
             doc.add_paragraph("")
             i += 1
             continue
 
         hm = _match_heading(line)
         if hm is not None:
+            flush_plain()
             doc.add_heading(hm[1], level=hm[0])
             i += 1
             continue
 
         mimg = _img_line.match(line.strip())
         if mimg and asset_root is not None:
+            flush_plain()
             rel = mimg.group(2).strip()
             if not (rel.startswith("http://") or rel.startswith("https://")):
                 img_path = (asset_root / rel).resolve()
@@ -121,6 +194,7 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             continue
 
         if line.strip().startswith("|"):
+            flush_plain()
             rows: list[list[str]] = []
             while i < len(lines) and lines[i].strip().startswith("|"):
                 row_line = lines[i].strip()
@@ -142,18 +216,21 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
 
         mu = _RE_UL.match(line)
         if mu:
+            flush_plain()
             _add_list_bullet(mu.group(1))
             i += 1
             continue
 
         mo = _RE_OL.match(line)
         if mo:
+            flush_plain()
             _add_list_number(mo.group(2))
             i += 1
             continue
 
         mq = _RE_BLOCKQUOTE.match(line)
         if mq:
+            flush_plain()
             inner = mq.group(1).strip()
             if inner:
                 p = doc.add_paragraph()
@@ -162,12 +239,18 @@ def markdown_to_docx_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             i += 1
             continue
 
+        if _is_plain_markdown_line(line):
+            plain_buf.append(line)
+            i += 1
+            continue
+
+        flush_plain()
         p = doc.add_paragraph()
         p.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-        text = _strip_inline_md(line)
-        p.add_run(text)
+        p.add_run(_strip_inline_md(line))
         i += 1
 
+    flush_plain()
     bio = BytesIO()
     doc.save(bio)
     return bio.getvalue()
@@ -262,19 +345,22 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         fontName=font_name,
         fontSize=10,
         leading=14,
+        spaceAfter=3,
     )
     h1s = ParagraphStyle(
         name="H1CJK",
         parent=body,
         fontSize=16,
         leading=20,
-        spaceAfter=8,
+        spaceBefore=0,
+        spaceAfter=10,
     )
     h2s = ParagraphStyle(
         name="H2CJK",
         parent=body,
         fontSize=13,
         leading=17,
+        spaceBefore=14,
         spaceAfter=6,
     )
     h3s = ParagraphStyle(
@@ -282,6 +368,7 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         parent=body,
         fontSize=12,
         leading=16,
+        spaceBefore=10,
         spaceAfter=5,
     )
     h4s = ParagraphStyle(
@@ -289,6 +376,7 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         parent=body,
         fontSize=11,
         leading=15,
+        spaceBefore=8,
         spaceAfter=4,
     )
     h56s = ParagraphStyle(
@@ -296,6 +384,7 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         parent=body,
         fontSize=10.5,
         leading=14,
+        spaceBefore=6,
         spaceAfter=3,
     )
     quote_style = ParagraphStyle(
@@ -305,25 +394,50 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
         fontSize=9.5,
         textColor=colors.HexColor("#444444"),
     )
+    # 项目符号用 Helvetica 绘制：正文 CJK 字体常缺 U+2022「•」，会落成方框（似 ☐）
     bullet_body = ParagraphStyle(
         name="BulletBodyCJK",
         parent=body,
-        leftIndent=18,
-        bulletIndent=8,
+        leftIndent=22,
+        bulletIndent=10,
         firstLineIndent=0,
+        bulletFontName="Helvetica",
+        bulletFontSize=10,
+        wordWrap="CJK",
+    )
+    ol_body = ParagraphStyle(
+        name="OlBodyCJK",
+        parent=body,
+        leftIndent=18,
+        firstLineIndent=0,
+        wordWrap="CJK",
     )
 
     story: list[Any] = []
     lines = (md or "").replace("\r\n", "\n").split("\n")
     i = 0
     in_fence = False
+    plain_buf: list[str] = []
 
     def _para_cell(s: str, style: Any) -> Paragraph:
         return Paragraph(xml_escape(_strip_inline_md(s)), style)
 
+    def flush_plain_pdf() -> None:
+        if not plain_buf:
+            return
+        merged = _join_md_soft_break_lines(plain_buf)
+        plain_buf.clear()
+        if not merged:
+            return
+        story.append(
+            Paragraph(xml_escape(_strip_inline_md(merged)), body)
+        )
+
     while i < len(lines):
         raw = lines[i]
         if raw.strip().startswith("```"):
+            if not in_fence:
+                flush_plain_pdf()
             in_fence = not in_fence
             i += 1
             continue
@@ -334,17 +448,20 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             i += 1
             continue
         if not s.strip():
+            flush_plain_pdf()
             story.append(Spacer(1, 0.15 * cm))
             i += 1
             continue
 
         if _RE_HR.match(s):
+            flush_plain_pdf()
             story.append(Spacer(1, 0.2 * cm))
             i += 1
             continue
 
         hm = _match_heading(s)
         if hm is not None:
+            flush_plain_pdf()
             level, title = hm
             title_esc = xml_escape(title)
             if level == 0:
@@ -362,6 +479,7 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
 
         mimg = _img_line.match(s.strip())
         if mimg and asset_root is not None:
+            flush_plain_pdf()
             rel = mimg.group(2).strip()
             if not (rel.startswith("http://") or rel.startswith("https://")):
                 img_path = (asset_root / rel).resolve()
@@ -381,6 +499,7 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             continue
 
         if s.strip().startswith("|"):
+            flush_plain_pdf()
             rows: list[list[str]] = []
             while i < len(lines) and lines[i].strip().startswith("|"):
                 row_line = lines[i].strip()
@@ -393,47 +512,51 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             if rows:
                 max_cols = max(len(r) for r in rows)
                 pad_rows = [r + [""] * (max_cols - len(r)) for r in rows]
-                usable_w = 13 * cm
-                col_w = usable_w / float(max_cols)
-                data: list[list[Any]] = []
-                for row in pad_rows:
-                    data.append(
-                        [_para_cell(c, body) for c in row]
+                usable_w = 17 * cm
+                if max_cols == 2:
+                    col_widths = [4.2 * cm, usable_w - 4.2 * cm]
+                else:
+                    col_widths = [usable_w / float(max_cols)] * max_cols
+                data = [[_para_cell(c, body) for c in row] for row in pad_rows]
+                t = Table(data, colWidths=col_widths, repeatRows=1)
+                tbl_cmds: list[tuple[Any, ...]] = [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#c8c8c8")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+                if pad_rows:
+                    tbl_cmds.append(
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#ececec"))
                     )
-                t = Table(data, colWidths=[col_w] * max_cols)
-                t.setStyle(
-                    TableStyle(
-                        [
-                            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ]
-                    )
-                )
+                t.setStyle(TableStyle(tbl_cmds))
                 story.append(t)
-                story.append(Spacer(1, 0.15 * cm))
+                story.append(Spacer(1, 0.2 * cm))
             continue
 
         mu = _RE_UL.match(s)
         if mu:
-            txt = xml_escape(_strip_inline_md(mu.group(1)))
-            story.append(Paragraph(f"• {txt}", bullet_body))
+            flush_plain_pdf()
+            inner = _strip_gfm_task_list_prefix(_strip_inline_md(mu.group(1)))
+            txt = xml_escape(inner)
+            story.append(Paragraph(txt, bullet_body, bulletText="\u2022"))
             i += 1
             continue
 
         mo = _RE_OL.match(s)
         if mo:
+            flush_plain_pdf()
             n, rest = mo.group(1), mo.group(2)
             txt = xml_escape(_strip_inline_md(rest))
-            story.append(Paragraph(f"{n}. {txt}", bullet_body))
+            story.append(Paragraph(f"{n}. {txt}", ol_body))
             i += 1
             continue
 
         mq = _RE_BLOCKQUOTE.match(s)
         if mq:
+            flush_plain_pdf()
             inner = mq.group(1).strip()
             if inner:
                 story.append(
@@ -442,10 +565,16 @@ def markdown_to_pdf_bytes(md: str, *, asset_root: Path | None = None) -> bytes:
             i += 1
             continue
 
-        plain = _strip_inline_md(s)
-        story.append(Paragraph(xml_escape(plain), body))
+        if _is_plain_markdown_line(s):
+            plain_buf.append(s)
+            i += 1
+            continue
+
+        flush_plain_pdf()
+        story.append(Paragraph(xml_escape(_strip_inline_md(s)), body))
         i += 1
 
+    flush_plain_pdf()
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,

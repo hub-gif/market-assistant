@@ -49,7 +49,8 @@ class BuildCompetitorBriefTests(SimpleTestCase):
             semantic_pool_max=10,
         )
         self.assertIn("sample_reviews_semantic_pool", pl)
-        self.assertEqual(pl.get("sentiment_bucket_method"), "keyword_substring_heuristic")
+        self.assertNotIn("comment_sentiment_lexicon", pl)
+        self.assertNotIn("negative_lexeme_hits_top", pl)
         self.assertGreaterEqual(len(pl["sample_reviews_semantic_pool"]), 1)
 
     def test_comment_sentiment_score_then_lexeme(self) -> None:
@@ -61,7 +62,11 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertEqual(lex.get("negative_only"), 1)
         self.assertEqual(lex.get("neutral_or_empty"), 1)
         pl = build_comment_sentiment_llm_payload(texts, scores=scores)
-        self.assertEqual(pl.get("sentiment_bucket_method"), "score_then_lexeme")
+        dist = pl.get("star_rating_distribution") or {}
+        self.assertEqual(dist.get("score_1_2"), 1)
+        self.assertEqual(dist.get("score_3"), 1)
+        self.assertEqual(dist.get("score_4_5"), 1)
+        self.assertNotIn("comment_sentiment_lexicon", pl)
 
     def test_comment_sentiment_all_scores_missing_falls_back_keyword(self) -> None:
         texts = ["好吃推荐", "差评"]
@@ -69,7 +74,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         lex = _comment_sentiment_lexicon(texts, scores)
         self.assertEqual(lex.get("method"), "keyword_lexicon")
 
-    def test_custom_focus_words_in_report_config(self) -> None:
+    def test_brief_omits_preset_comment_focus_keywords(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             (run_dir / "pc_search_raw").mkdir(parents=True)
@@ -88,8 +93,7 @@ class BuildCompetitorBriefTests(SimpleTestCase):
                 report_config={"comment_focus_words": ["自定义词阿尔法"]},
             )
 
-        words = {x["word"] for x in out["comment_focus_keywords"]}
-        self.assertIn("自定义词阿尔法", words)
+        self.assertEqual(out["comment_focus_keywords"], [])
 
     def test_matrix_groups_require_detail_category_path(self) -> None:
         sku_h = "SKU(skuId)"
@@ -144,43 +148,6 @@ class BuildCompetitorBriefTests(SimpleTestCase):
         self.assertIn("品名：", lines[0])
         self.assertIn("店铺：", lines[0])
         self.assertIn("整体口感还差点意思", lines[0])
-
-    def test_scenario_groups_llm_payload_matches_chapter8_sec2_right_rail_counts(
-        self,
-    ) -> None:
-        sku_h = "SKU(skuId)"
-        merged = [
-            {
-                sku_h: "111",
-                "detail_category_path": "食品饮料 > 休闲食品 > 饼干 > 粗粮饼干",
-                "标题(wareName)": "A饼",
-                "detail_shop_name": "店甲",
-            },
-        ]
-        scen = (("早餐/代餐", ("早餐",)),)
-        fb = jcr._consumer_feedback_by_matrix_group(
-            merged_rows=merged,
-            comment_rows=[
-                {"sku": "111", "tagCommentContent": "早上当早餐吃还不错"},
-            ],
-            sku_header=sku_h,
-        )
-        pl = jcr.build_scenario_groups_llm_payload(
-            feedback_groups=fb,
-            scenario_groups=scen,
-            merged_rows=merged,
-            sku_header=sku_h,
-            title_h="标题(wareName)",
-        )
-        self.assertIn("groups", pl)
-        self.assertIn("scenario_lexicon", pl)
-        g0 = pl["groups"][0]
-        self.assertEqual(g0["group"], "饼干")
-        self.assertEqual(g0["effective_text_count"], 1)
-        self.assertEqual(g0["scenario_distribution"][0]["mention_rows"], 1)
-        self.assertEqual(
-            g0["scenario_distribution"][0]["scenario"], "早餐/代餐"
-        )
 
     def test_cn_volume_int_parses_total_sales_trailer(self) -> None:
         self.assertEqual(

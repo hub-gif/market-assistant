@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api, refreshJobs, useJobs, jobConfigHint, jobCancelUrl } from '../../composables/useJobs'
+import { useJobStore } from '../../stores/jobs'
 
 const { jobs } = useJobs()
 const loadError = ref('')
@@ -48,8 +49,7 @@ async function requestCancel(jobId) {
       return
     }
     const updated = JSON.parse(text)
-    const idx = jobs.value.findIndex((x) => x.id === updated.id)
-    if (idx >= 0) jobs.value[idx] = updated
+    useJobStore().mergeJob(updated)
     await refreshJobs()
   } catch (e) {
     cancelErr.value = String(e)

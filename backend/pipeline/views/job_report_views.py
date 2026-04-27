@@ -35,6 +35,7 @@ from ..reporting.report_matrix_group_evidence import (
 )
 from ..reporting.report_strategy_excerpt import load_report_strategy_excerpt
 from ..reporting.strategy_draft import build_strategy_draft_markdown
+from ..strategy_decision_keys import build_strategy_decisions_dict
 from ..serializers import (
     MarketingDetailPackRequestSerializer,
     PipelineJobSerializer,
@@ -139,28 +140,7 @@ class JobStrategyDraftView(APIView):
         ser.is_valid(raise_exception=True)
         vd = ser.validated_data
         notes = (vd.get("business_notes") or "").strip()
-        strategy_decisions = {
-            "product_role": vd.get("product_role") or "",
-            "stage_goal_type": vd.get("stage_goal_type") or "",
-            "time_horizon": vd.get("time_horizon") or "",
-            "success_criteria": vd.get("success_criteria") or "",
-            "non_goals": vd.get("non_goals") or "",
-            "battlefield_one_line": vd.get("battlefield_one_line") or "",
-            "positioning_choice": vd.get("positioning_choice") or "",
-            "competitive_stance": vd.get("competitive_stance") or "",
-            "pillar_product": vd.get("pillar_product") or "",
-            "pillar_price": vd.get("pillar_price") or "",
-            "pillar_channel": vd.get("pillar_channel") or "",
-            "pillar_comm": vd.get("pillar_comm") or "",
-            "audience_segment": vd.get("audience_segment") or "",
-            "competitor_reference": vd.get("competitor_reference") or "",
-            "resource_notes": vd.get("resource_notes") or "",
-            "marketing_strategy": vd.get("marketing_strategy") or "",
-            "general_strategy": vd.get("general_strategy") or "",
-            "ack_risk_keywords": bool(vd.get("ack_risk_keywords")),
-            "ack_risk_price": bool(vd.get("ack_risk_price")),
-            "ack_risk_concentration": bool(vd.get("ack_risk_concentration")),
-        }
+        strategy_decisions = build_strategy_decisions_dict(vd)
         try:
             brief = build_competitor_brief_for_job(
                 job.run_dir,

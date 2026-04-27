@@ -62,10 +62,8 @@
     "n": 117,
     "median": 16.9
   },
-  "comment_focus_keywords": [{ "word": "口感", "count": 48 }],
-  "usage_scenarios": [
-    { "scenario": "控糖/血糖相关", "count": 12, "share_of_text_units": 0.15 }
-  ],
+  "comment_focus_keywords": [],
+  "usage_scenarios": [],
   "strategy_hints": ["样本内…（待验证）"],
   "matrix_by_group": [
     {
@@ -91,19 +89,14 @@
   "consumer_feedback_by_matrix_group": [
     {
       "group": "饼干",
+      "matrix_group_index": 0,
+      "chart_slug": "i00_饼干",
       "comment_rows": 40,
-      "focus_keyword_hits": [{ "word": "口感", "count": 10 }],
-      "scenarios_top": [
-        {
-          "scenario": "早餐/代餐",
-          "count": 5,
-          "share_of_text_units": 0.2
-        }
-      ]
+      "effective_comment_text_units": 38
     }
   ],
   "notes": [
-    "与在线分析报告各章计数规则一致；主题词与场景为预设词表，非 NLP 主题模型。",
+    "与在线分析报告各章计数规则一致；评论侧主题以第八章文本挖掘（若启用）及语义归纳为准，不再以预设子串词表为主指标。",
     "价格来自展示字段抽取，含促销与规格差异。"
   ]
 }

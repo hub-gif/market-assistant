@@ -137,25 +137,7 @@ def markdown_summary_from_brief(brief: dict[str, Any]) -> str:
                 )
         lines.append("")
 
-    ckw = brief.get("comment_focus_keywords") or []
-    if ckw:
-        lines.extend(["## 评价关注词（Top）", ""])
-        for item in ckw[:10]:
-            if isinstance(item, dict):
-                lines.append(
-                    f"- **{item.get('word') or '—'}**：{_num(item.get('count'))} 次"
-                )
-        lines.append("")
-
-    usc = brief.get("usage_scenarios") or []
-    if usc:
-        lines.extend(["## 用途/场景（预设词组，Top）", ""])
-        for item in usc[:8]:
-            if isinstance(item, dict):
-                lines.append(
-                    f"- **{item.get('scenario') or '—'}**：{_num(item.get('count'))} 条（约 {_pct(item.get('share_of_text_units'))} 文本单元）"
-                )
-        lines.append("")
+    # 已废弃：comment_focus_keywords / usage_scenarios 子串词表统计不再写入 brief，要点摘录亦不再展示。
 
     hints = brief.get("strategy_hints") or []
     if hints:

@@ -8,6 +8,7 @@ import {
 import { RouterLink } from 'vue-router'
 import ReportConfigFormFields from '../../components/ReportConfigFormFields.vue'
 import { refreshJobs, useJobs, api, reportConfigDefaultsUrl } from '../../composables/useJobs'
+import { useJobStore } from '../../stores/jobs'
 import { useReportConfigForm } from '../../composables/useReportConfigForm'
 
 const { jobs } = useJobs()
@@ -32,19 +33,8 @@ const regenBusyOtherTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value !== selectedId.value,
 )
 
-const {
-  focusWordRows,
-  scenarioGroups,
-  marketRows,
-  applyFromApiConfig,
-  buildPayload,
-  addFocusRow,
-  removeFocusRow,
-  addScenarioRow,
-  removeScenarioRow,
-  addMarketRow,
-  removeMarketRow,
-} = useReportConfigForm()
+const { marketRows, applyFromApiConfig, buildPayload, addMarketRow, removeMarketRow } =
+  useReportConfigForm()
 
 const reportConfigErr = ref('')
 const reportConfigSaveLoading = ref(false)
@@ -113,8 +103,7 @@ async function saveReportConfigToJob() {
       return
     }
     const updated = JSON.parse(text)
-    const idx = jobs.value.findIndex((x) => x.id === updated.id)
-    if (idx >= 0) jobs.value[idx] = updated
+    useJobStore().mergeJob(updated)
     syncReportConfigFromJob(updated)
   } catch (e) {
     reportConfigErr.value = String(e)
@@ -182,8 +171,7 @@ async function regenerateReport() {
         return
       }
       const updated = JSON.parse(text)
-      const idx = jobs.value.findIndex((x) => x.id === updated.id)
-      if (idx >= 0) jobs.value[idx] = updated
+      useJobStore().mergeJob(updated)
     })
   } catch (e) {
     regenErr.value = String(e)
@@ -200,8 +188,7 @@ watch(selectedId, async () => {
     const r = await api(`/api/jobs/${id}/`)
     if (r.ok) {
       const j = await r.json()
-      const idx = jobs.value.findIndex((x) => x.id === j.id)
-      if (idx >= 0) jobs.value[idx] = j
+      useJobStore().mergeJob(j)
       syncReportConfigFromJob(j)
     }
   } catch {
@@ -272,11 +259,7 @@ watch(
       </p>
 
       <div v-if="selectedId" class="report-config-block">
-        <h3 class="report-config-title">报告里的评价统计怎么算</h3>
-        <p class="hint-top report-config-hint">
-          关注词、场景词组、外部市场表等<strong>可以不改</strong>：留空并保存即沿用内置规则。大模型相关布尔项（如
-          <code>llm_comment_sentiment</code>）不再单独占勾选框：若任务里已有，会在保存时保留；要改请展开「高级 JSON」。
-        </p>
+        <h3 class="report-config-title">报告配置</h3>
         <div class="report-config-actions">
           <button
             type="button"
@@ -297,13 +280,7 @@ watch(
         </div>
 
         <ReportConfigFormFields
-          :focus-word-rows="focusWordRows"
-          :scenario-groups="scenarioGroups"
           :market-rows="marketRows"
-          @add-focus="addFocusRow"
-          @remove-focus="removeFocusRow"
-          @add-scenario="addScenarioRow"
-          @remove-scenario="removeScenarioRow"
           @add-market="addMarketRow"
           @remove-market="removeMarketRow"
         />

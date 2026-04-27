@@ -451,6 +451,9 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
     pillar_comm = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
     )
+    tactic_promotion = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
+    )
     audience_segment = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=500, trim_whitespace=False
     )

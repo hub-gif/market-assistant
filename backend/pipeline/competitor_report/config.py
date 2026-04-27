@@ -1,60 +1,9 @@
-"""``report_config`` JSON → 关注词、场景组、外部市场表行。"""
+"""``report_config`` JSON → 外部市场表行（不再解析预设关注词/场景词组）。"""
 from __future__ import annotations
 
 from typing import Any
 
-from .constants import (
-    COMMENT_FOCUS_WORDS,
-    COMMENT_SCENARIO_GROUPS,
-    EXTERNAL_MARKET_TABLE_ROWS,
-)
-
-
-def _normalize_focus_words(raw: Any) -> tuple[str, ...]:
-    if not isinstance(raw, list) or not raw:
-        return COMMENT_FOCUS_WORDS
-    out: list[str] = []
-    for x in raw[:120]:
-        s = str(x).strip()
-        if len(s) > 48:
-            s = s[:48]
-        if s:
-            out.append(s)
-    return tuple(out) if out else COMMENT_FOCUS_WORDS
-
-
-def _normalize_scenario_groups(
-    raw: Any,
-) -> tuple[tuple[str, tuple[str, ...]], ...]:
-    if not isinstance(raw, list) or not raw:
-        return COMMENT_SCENARIO_GROUPS
-    parsed: list[tuple[str, tuple[str, ...]]] = []
-    for item in raw[:40]:
-        label = ""
-        triggers: list[str] = []
-        if isinstance(item, dict):
-            label = str(item.get("label") or "").strip()[:80]
-            tr = item.get("triggers")
-            if isinstance(tr, list):
-                for t in tr[:48]:
-                    s = str(t).strip()
-                    if len(s) > 48:
-                        s = s[:48]
-                    if s:
-                        triggers.append(s)
-        elif isinstance(item, (list, tuple)) and len(item) >= 2:
-            label = str(item[0]).strip()[:80]
-            tr = item[1]
-            if isinstance(tr, (list, tuple)):
-                for t in tr[:48]:
-                    s = str(t).strip()
-                    if len(s) > 48:
-                        s = s[:48]
-                    if s:
-                        triggers.append(s)
-        if label and triggers:
-            parsed.append((label, tuple(triggers)))
-    return tuple(parsed) if parsed else COMMENT_SCENARIO_GROUPS
+from .constants import EXTERNAL_MARKET_TABLE_ROWS
 
 
 def _normalize_external_market_rows(
@@ -85,16 +34,11 @@ def _normalize_external_market_rows(
 
 def resolve_report_tuning(
     report_config: dict[str, Any] | None,
-) -> tuple[
-    tuple[str, ...],
-    tuple[tuple[str, tuple[str, ...]], ...],
-    tuple[tuple[str, str, str, str], ...],
-]:
+) -> tuple[tuple[tuple[str, str, str, str], ...]]:
+    """仅解析第三方市场摘录表；预设关注词/场景词组已废弃，不再参与报告或 brief。"""
     if not report_config:
-        return COMMENT_FOCUS_WORDS, COMMENT_SCENARIO_GROUPS, EXTERNAL_MARKET_TABLE_ROWS
+        return (EXTERNAL_MARKET_TABLE_ROWS,)
     return (
-        _normalize_focus_words(report_config.get("comment_focus_words")),
-        _normalize_scenario_groups(report_config.get("comment_scenario_groups")),
         _normalize_external_market_rows(
             report_config.get("external_market_table_rows")
         ),
@@ -104,6 +48,4 @@ def resolve_report_tuning(
 __all__ = [
     "resolve_report_tuning",
     "_normalize_external_market_rows",
-    "_normalize_focus_words",
-    "_normalize_scenario_groups",
 ]

@@ -268,8 +268,7 @@ def generate_report_charts(
 ) -> list[str]:
     """生成扇形/条形 PNG。返回已写入的文件名列表（不含路径）。
 
-    若 ``report_config["chapter8_text_mining_probe"]`` 为真，**不**生成 ``chart_focus_and_scenarios_bar__*.png``
-   （与竞品报告 §8.2 文本挖掘探针互斥，避免无效产出）。
+    **不**生成 ``chart_focus_and_scenarios_bar__*.png``（预设关注词/场景子串统计已废弃）。
     """
     _setup_matplotlib_cjk()
     import matplotlib.pyplot as plt
@@ -556,10 +555,7 @@ def generate_report_charts(
             core = "group"
         return f"i{index:02d}_{core}"
 
-    _skip_focus_scenario_combo = bool(
-        isinstance(report_config, dict)
-        and report_config.get("chapter8_text_mining_probe")
-    )
+    _skip_focus_scenario_combo = True
     if _skip_focus_scenario_combo:
         for fp in out_dir.glob("chart_focus_and_scenarios_bar__*.png"):
             try:

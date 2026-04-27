@@ -36,13 +36,15 @@ class BriefStrategyScopeTests(SimpleTestCase):
                             "brand": "B",
                             "shop": "S2",
                             "category": "休闲食品 > 饼干 > 粗粮饼干",
-                            "list_price_show": "20",
+                            "标价": "100",
+                            "券后到手价": "80",
                         },
                         {
                             "brand": "B",
                             "shop": "S2",
                             "category": "休闲食品 > 饼干 > 苏打饼干",
-                            "list_price_show": "22",
+                            "标价": "50",
+                            "券后到手价": "50",
                         },
                     ],
                 },
@@ -52,27 +54,11 @@ class BriefStrategyScopeTests(SimpleTestCase):
                     "group": "饮料",
                     "comment_rows": 5,
                     "effective_comment_text_units": 5,
-                    "focus_keyword_hits": [{"word": "甜", "count": 2}],
-                    "scenarios_top": [
-                        {
-                            "scenario": "解渴",
-                            "count": 2,
-                            "share_of_text_units": 0.4,
-                        }
-                    ],
                 },
                 {
                     "group": "饼干",
                     "comment_rows": 8,
                     "effective_comment_text_units": 8,
-                    "focus_keyword_hits": [{"word": "脆", "count": 3}],
-                    "scenarios_top": [
-                        {
-                            "scenario": "早餐",
-                            "count": 4,
-                            "share_of_text_units": 0.5,
-                        }
-                    ],
                 },
             ],
             "usage_scenarios_by_matrix_group": [
@@ -120,7 +106,17 @@ class BriefStrategyScopeTests(SimpleTestCase):
         self.assertEqual(out["matrix_by_group"][0]["group"], "饼干")
         self.assertEqual(len(out["matrix_by_group"][0]["skus"]), 2)
         self.assertEqual(len(out["consumer_feedback_by_matrix_group"]), 1)
-        self.assertEqual(out["comment_focus_keywords"][0]["word"], "脆")
+        self.assertEqual(out["comment_focus_keywords"], [])
         self.assertEqual(out["price_stats_source"], "strategy_scope_matrix_group_skus")
         self.assertIn("strategy_scope_applied", out)
         self.assertEqual(out["strategy_scope_applied"]["group"], "饼干")
+
+    def test_filter_recomputes_price_promotion_signals(self) -> None:
+        b = self._sample_brief()
+        out = filter_brief_for_strategy_matrix_group(b, matrix_group_index=1)
+        pps = out.get("price_promotion_signals")
+        self.assertIsInstance(pps, dict)
+        assert isinstance(pps, dict)
+        self.assertEqual(pps.get("row_count"), 2)
+        self.assertEqual(pps.get("rows_with_both_list_and_coupon"), 2)
+        self.assertEqual(pps.get("rows_coupon_below_list_price"), 1)

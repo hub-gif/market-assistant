@@ -1,5 +1,5 @@
 """
-市场策略 Markdown 草稿：**规则骨架**（占位 + 少量数据摘录），供业务与大模型成稿对齐。
+市场策略 Markdown 草稿：**规则骨架**（占位 + 必要表单项；不铺陈与报告同构的统计摘录），供业务与大模型成稿对齐。
 
 - 决策在「策略生成」表单完成；未填项由大模型结合摘要与报告节选补全。
 - 骨架刻意短、可执行；避免与成稿重复的「假设 / 待验证」套话。
@@ -9,27 +9,9 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from .brief_concentration import (
-    concentration_first_share,
-    concentration_top_three_share,
-)
-
-
 def _esc(s: Any) -> str:
     t = "" if s is None else str(s).strip()
     return t.replace("\r\n", "\n").replace("\r", "\n")
-
-
-def _pct(x: Any) -> str:
-    if x is None:
-        return "—"
-    try:
-        v = float(x)
-        if math.isnan(v) or math.isinf(v):
-            return "—"
-        return f"{100 * v:.1f}%"
-    except (TypeError, ValueError):
-        return "—"
 
 
 def _num(x: Any) -> str:
@@ -48,67 +30,6 @@ def _num(x: Any) -> str:
     return str(x)
 
 
-def _cr_narrative(
-    label: str,
-    cr1: Any,
-    cr3: Any,
-    top: Any,
-    *,
-    first_share_wording: tuple[str, str] | None = None,
-) -> str | None:
-    """从集中度生成一句策略向描述，无数据则返回 None（正文避免英文缩写）。
-
-    ``first_share_wording`` 为 ``(第一大句前缀, 前三大句前缀)`` 时覆盖默认措辞（用于矩阵收窄口径，
-    避免误写「列表行」）。
-    """
-    try:
-        c1 = float(cr1) if cr1 is not None else None
-    except (TypeError, ValueError):
-        c1 = None
-    if c1 is None and not (top or "").strip():
-        return None
-    top_s = _esc(top) or "—"
-    if first_share_wording is not None:
-        w1, w3 = first_share_wording
-    elif "店铺" in label:
-        w1, w3 = "第一大店铺约占列表行的", "前三大店铺合计约占"
-    elif "品牌" in label:
-        w1, w3 = "第一大品牌约占", "前三大品牌合计约占"
-    else:
-        w1, w3 = "第一大主体约占", "前三大合计约占"
-    if c1 is not None:
-        if c1 >= 0.4:
-            tone = "偏高，头部资源集中"
-        elif c1 >= 0.25:
-            tone = "中等，存在可争夺空间"
-        else:
-            tone = "相对分散，差异化切入点可能更多"
-        return (
-            f"- **{label}**：{w1} **{_pct(cr1)}**，{w3} **{_pct(cr3)}**；"
-            f"当前头部为「{top_s}」。*粗判：{tone}。*"
-        )
-    return f"- **{label}**：头部为「{top_s}」（缺少占比时可结合列表与商详数据补全）。"
-
-
-def _shop_unique_sku_basis_lines(shops: dict[str, Any]) -> list[str]:
-    """
-    ``shops_from_list.unique_sku_basis`` 与竞品报告/摘要一致：按去重 SKU 的店铺集中度对照口径。
-    """
-    usb = shops.get("unique_sku_basis") if isinstance(shops, dict) else None
-    if not isinstance(usb, dict) or not usb.get("n_unique_skus"):
-        return []
-    u1 = concentration_first_share(usb)
-    u3 = concentration_top_three_share(usb)
-    utop = _esc(usb.get("top_label") or "")
-    if u1 is None or not utop:
-        return []
-    return [
-        f"- **列表侧店铺（按去重 SKU）**：共 **{_num(usb.get('n_unique_skus'))}** 个去重 SKU；"
-        f"第一大店铺「{utop}」约占 **{_pct(u1)}**；前三合计 **{_pct(u3)}**。"
-        "*（与上行「按列表行」可能因同一 SKU 多行曝光而差异；非销量/市占。）*"
-    ]
-
-
 def _goal_bullet(label: str, user_val: str, placeholder: str) -> str:
     v = _esc(user_val).strip()
     if v:
@@ -121,13 +42,117 @@ def _pillar_cell(user_val: str) -> str:
     return v if v else "*待填*"
 
 
-def _pos_mark(choice: str, key: str) -> str:
-    return "[x]" if choice == key else "[ ]"
+def _price_position_llm_hint(pos: str) -> str:
+    """给 LLM 的 §8.2 提示：单行取向，避免成稿复刻四选项勾选表单。"""
+    k = (pos or "").strip()
+    if k == "top":
+        core = "当前表单取向为贴顶：锚定中高位或头部价位带。"
+    elif k == "mid":
+        core = "当前表单取向为卡腰：围绕监测价带中位数一带。"
+    elif k == "entry":
+        core = "当前表单取向为下探：贴近监测价带区间下限。"
+    elif k == "different":
+        core = "当前表单取向为另起带：以规格、组合或服务形成差异化价位。"
+    else:
+        core = "表单未勾选价位取向；请结合 `structured_brief` 价带与业务判断补全。"
+    return (
+        f"- {core} 成稿 §8.2 仅用**连贯叙述句**展开定价逻辑；**禁止**四选项勾选清单、"
+        "并排「贴顶/卡腰/下探/另起带」问卷式排版、「（表单勾选）」及类似内部提示语。"
+    )
 
 
-def _risk_line(checked: bool, text: str) -> str:
-    mark = "[x]" if checked else "[ ]"
-    return f"- {mark} {text}"
+def _price_position_display_line(pos: str) -> str:
+    """下载稿 §8.2：单行交待表单价位取向，不铺陈四勾选清单。"""
+    k = (pos or "").strip()
+    if k == "top":
+        core = "**贴顶**（锚定中高位或头部价位带）"
+    elif k == "mid":
+        core = "**卡腰**（围绕监测价带中位数一带）"
+    elif k == "entry":
+        core = "**下探**（贴近监测价带区间下限）"
+    elif k == "different":
+        core = "**另起带**（规格/组合或服务差异化价位）"
+    else:
+        core = "（表单未勾选；请结合价带与业务判断）"
+    return (
+        f"- **价位取向（表单）**：{core}。"
+        " 成稿 §8.2 用连贯叙述展开即可，不必复刻四选项勾选排版。"
+    )
+
+
+def _nine_ten_markdown_blocks(
+    *,
+    rk: bool,
+    rp: bool,
+    rc: bool,
+    for_llm_input: bool,
+) -> list[str]:
+    """§九、§十：叙述式分条，避免勾选问卷体不利阅读。"""
+    items: list[tuple[str, str, bool]] = [
+        (
+            "评论与归纳口径",
+            "评论侧归纳是否存在以偏概全，宜结合原评论抽样核实。",
+            rk,
+        ),
+        (
+            "价格带与清洗规则",
+            "价格带是否包含大促或异常挂价，宜核对数据清洗规则。",
+            rp,
+        ),
+        (
+            "列表曝光与深入样本",
+            "列表侧集中度与深入样本中的品牌结构是否不一致，宜说明渠道或口径差异。",
+            rc,
+        ),
+    ]
+    out: list[str] = [
+        "## 九、风险、假设与待验证",
+        "",
+    ]
+    if for_llm_input:
+        out.append(
+            "*§9 须用**短段落或分条叙述**写风险、假设与验证或应对；**禁止** `[ ]`/`[x]` 勾选、问卷式排版，"
+            "或仅堆疑问句而无动作。*"
+        )
+        out.append("")
+    else:
+        out.append(
+            "*成稿：每条风险带**应对动作或验证计划**；下列为业务表单关注点。*"
+        )
+        out.append("")
+    for title, body, checked in items:
+        tag = (
+            " *（业务已在表单中勾选「已知晓」，成稿须优先写清验证或应对。）*"
+            if checked
+            else ""
+        )
+        out.append(f"- **{title}**：{body}{tag}")
+    out.append("")
+    if not for_llm_input:
+        out.extend(["*业务备注见下节。*", ""])
+    out.extend(
+        [
+            "## 十、下一步与节奏",
+            "",
+        ]
+    )
+    if for_llm_input:
+        out.append(
+            "*§10 须列**可执行动作**（可补负责人/时间），与 §2.1 / §六 优先级一致；**禁止** `[ ]` 待办勾选格式。*"
+        )
+        out.append("")
+    else:
+        out.append("*成稿：可执行任务清单；可补负责人与时间。*")
+        out.append("")
+    out.extend(
+        [
+            "- 锁定主推款与对标，并完成法务与合规核对。",
+            "- 统一对外数据口径与话术。",
+            "- 下轮监测更新后迭代策略。",
+            "",
+        ]
+    )
+    return out
 
 
 def filter_strategy_hints_for_ch8_probe(hints: Any) -> list[str]:
@@ -156,8 +181,8 @@ def report_uses_chapter8_text_mining_probe(report_config: dict[str, Any] | None)
     """
     与任务 ``report_config`` 中 ``chapter8_text_mining_probe`` 一致；未显式设置时默认 ``True``
     （与 ``jd.runner.get_default_report_config`` 一致）。
-    用于 §1.2 文案分支及对 ``strategy_hints`` 的过滤：开启探针时与子串命中枚举相关的自动线索会被压掉；
-    关闭时 §1.2 仍说明「简报不附带预设关注词/场景子串统计」，评论侧以报告第八章探针（若启用）与原文为准。
+    用于 §1.2 短指引分支及对 ``strategy_hints`` 的过滤：开启探针时与子串命中枚举相关的自动线索会被压掉；
+    关闭时 §1.2 仍提示「简报不附带预设关注词/场景子串统计枚举」。
     """
     if not isinstance(report_config, dict):
         return True
@@ -246,12 +271,12 @@ def build_strategy_draft_markdown(
     )
     _table_goal_type = _scope_cell(sgt, _goal_type_placeholder)
     _summary_user_side = (
-        "- **用户侧**：*（一两句结论即可：讨论焦点与负向主题；**按细类分句**归纳，**勿**混成「全站用户」一句；**勿**展开与报告重复的细类统计、词频。）*"
+        "- **用户侧**：*（结论句：讨论焦点与负向主题；按细类分句；勿复述报告统计摘录。）*"
         if not for_llm_input
         else "- **用户侧**：—"
     )
     _summary_stage = (
-        "- **阶段重点**：*（须含 1～2 条**可执行动作**，回扣 §2 优先痛点；**尽量点明适用类目/主推线**；勿仅写「加强运营」。）*"
+        "- **阶段重点**：*（1～2 条可执行动作，点明类目/主推线。）*"
         if not for_llm_input
         else "- **阶段重点**：—"
     )
@@ -308,7 +333,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*成稿须与 §2 一致：写清「谁在什么任务下检索、决策」及**主攻类目/细类**（与 §2.1 类目列可对上），为后文「针对痛点怎么做」埋伏笔。*",
+                    "*成稿写清谁在何任务下检索与决策、主攻类目/细类。*",
                     "",
                 ]
             ),
@@ -317,30 +342,19 @@ def build_strategy_draft_markdown(
         ]
     )
     if use_ch8_probe:
-        if not for_llm_input:
-            lines.extend(
-                [
-                    "*当前任务以**第八章评论侧文本挖掘**为主呈现时，此处**不**逐条罗列关注词子串命中次数。*",
-                    "",
-                    "- **饼干 / 糕点 / 面点等**：*（骨架占位；成稿**分细类**各一句归纳用户关心点，**勿**合并成模糊「全池」一句；**勿**复述 §8 词频与条数。）*",
-                    "",
-                ]
-            )
+        _sec12 = (
+            "*评论侧以报告**第八章文本挖掘**为准；成稿在此按**细类各一两句**写讨论焦点，勿铺陈词频次数、共现、类目条数表等与报告重复的摘录。*"
+            if for_llm_input
+            else "*评论侧见报告第八章文本挖掘；成稿按细类各一两句，勿铺陈词频、共现、类目条数表等摘录。*"
+        )
     else:
-        if not for_llm_input:
-            lines.append(
-                "*简报中**不再**附带预设关注词/场景子串统计；评论侧请依据同任务《竞品分析报告》**第八章第二节**（文本挖掘探针，若已启用）及抽样原文撰写本节。*"
-            )
-            lines.append("")
-
-    mix = brief.get("category_mix_top") or []
-    if mix:
-        lines.append("### 类目结构（摘录）")
-        lines.append("")
-        for item in mix[:6]:
-            if isinstance(item, dict):
-                lines.append(f"- {_esc(item.get('label'))}：{_num(item.get('count'))}")
-        lines.append("")
+        _sec12 = (
+            "*简报不附带预设关注词/场景子串统计枚举；评论侧见报告第八章及原文抽样；成稿按细类各一两句，勿铺陈统计摘录。*"
+            if for_llm_input
+            else "*简报中**不再**附带预设关注词/场景子串统计；评论侧见报告第八章；成稿按细类各一两句，勿铺陈与报告重复的统计摘录。*"
+        )
+    lines.append(_sec12)
+    lines.append("")
 
     lines.extend(
         [
@@ -386,11 +400,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*本节**仅**用下表写清**针对痛点要怎么做**（**类目** + 痛点简述 + 动作 + 落地 + 验证）。**不再**单设「痛点表 / 价值对表 / 负向归因」子节，避免与 §三、§八重复。*",
-                    "",
-                    "*「用户痛点（简述）」须与 `structured_brief` / 策略线索 / 报告节选**可核对**；**禁止**编造「用户反馈『……』」式引语，除非原句已出现在上述输入中。*",
-                    "",
-                    "*「类目/细类」列：写明本行决策**适用于哪一类**（如饼干/面包/全检索池）；多细类须**分行**，**禁止**用一句「全站」覆盖彼此冲突的策略；类目未定可写「待业务定类」并附分类假设。*",
+                    "*本节仅 §2.1 一表；痛点与 brief/报告可核对；多类目分行；勿编造用户引语。*",
                     "",
                 ]
             ),
@@ -428,47 +438,40 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
-    raw = brief.get("pc_search_raw") or {}
-    if raw.get("result_count_consensus") is not None:
-        lines.append(
-            f"- **检索结果量级（需求侧参考，非销售额）**：{_num(raw.get('result_count_consensus'))}（站内匹配条数量级）"
-            if for_llm_input
-            else f"- **检索结果量级（需求侧参考，非销售额）**：{_num(raw.get('result_count_consensus'))}（列表 resultCount）"
-        )
-    elif merged_n is not None:
-        lines.append(f"- **深入样本 SKU 数（监测范围）**：{_num(merged_n)}")
+    if for_llm_input:
+        # 检索量级、价带统计已在 structured_brief/报告；勿写入 rules，避免模型复述进策略正文。
+        lines.append("")
     else:
-        lines.append(
-            "- **检索与样本尺度**：—"
-            if for_llm_input
-            else "- **检索与样本尺度**：*（成稿结合摘要与监测范围。）*"
-        )
-    lines.append("")
-    if pst.get("n"):
-        src = _esc(brief.get("price_stats_source")) or "—"
-        src_disp = "本监测样本" if for_llm_input and src == "strategy_scope_matrix_group_skus" else src
-        lines.extend(
-            [
-                f"- **价带摘录（支撑购买理由与价位锚点）**：来源 {src_disp}，n = {_num(pst.get('n'))}；"
-                f"区间 {_num(pst.get('min'))}～{_num(pst.get('max'))}；中位数 {_num(pst.get('median'))}。",
-                "",
-            ]
-        )
-    else:
-        if for_llm_input:
-            lines.append("- **价带摘录**：监测摘要中暂无统计表，可结合同任务报告补一句与购买理由相关的价位锚点。")
+        raw = brief.get("pc_search_raw") or {}
+        if raw.get("result_count_consensus") is not None:
+            rc = _num(raw.get("result_count_consensus"))
+            lines.append(
+                f"- **站内检索匹配条数量级**：{rc}（列表 resultCount，非销售额口径）。"
+            )
+        elif merged_n is not None:
+            lines.append(f"- **深入监测样本 SKU 数**：{_num(merged_n)}。")
+        else:
+            lines.append("- **检索与样本尺度**：*（成稿结合摘要与监测范围。）*")
+        lines.append("")
+        if pst.get("n"):
+            src = _esc(brief.get("price_stats_source")) or "—"
+            src_disp = src
+            lines.extend(
+                [
+                    f"- **本批样本价带**：来源 {src_disp}，n = {_num(pst.get('n'))}；"
+                    f"区间 {_num(pst.get('min'))}～{_num(pst.get('max'))}；中位数 {_num(pst.get('median'))}。",
+                    "",
+                ]
+            )
         else:
             lines.append(
                 "*摘要中无价带统计，成稿可结合本批次价格数据在本节补一句价位锚点；**勿**重复 §2 已写的应对动作。*"
             )
+            lines.append("")
+        lines.append(
+            "- **购买理由**：*（成稿：**购买者视角**——买家为何选这一款；承接上列依据与 §2 优先痛点；多细类则分句；**勿**只写品类风口或运营叙事；价带/规格动作已在 §2 表内则此处**勿再展开一遍**。）*"
+        )
         lines.append("")
-    lines.append(
-        "- **购买理由（须站在购买者一侧写）**：用 1～2 句写清**买家为何愿意下单这一款**——解决什么顾虑、在货架上凭什么选它（获得感、可感知利益、价位是否值得等）；上列检索/价带仅作背景，勿喧宾夺主。"
-        "可用「用户/消费者」作主语，**禁止**用纯运营口吻（如「适合××叙事切入」「策略上占位」）代替购买动机；**禁止**以品类宏观句收尾而不落到本品可验证点。"
-        if for_llm_input
-        else "- **购买理由**：*（成稿：**购买者视角**——买家为何选这一款；承接上列依据与 §2 优先痛点；多细类则分句；**勿**只写品类风口或运营叙事；价带/规格动作已在 §2 表内则此处**勿再展开一遍**。）*"
-    )
-    lines.append("")
 
     lines.extend(
         [
@@ -484,7 +487,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*成稿：承诺与调性须能落到**触点**（商详/包装/客服首句等）上的**具体句子**；**若**多类目话术不同，按 §2.1 类目**分句**，勿仅形容词。*",
+                    "*承诺与调性落到触点；多类目按 §2.1 分句。价位见 §8.2。*",
                     "",
                 ]
             ),
@@ -510,104 +513,42 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*本节写**用户为何信任、为何愿意选这个品牌**（承诺、证据、合规边界）；**价位阵地**（表单勾选的四类取向）见 **§8.2 定价策略**，勿混写。*",
+                    "*信任与证据；与 §8.2 价位叙述分开写。*",
                     "",
                 ]
             ),
         ]
     )
 
-    conc = brief.get("concentration") or {}
-    shops = conc.get("shops_from_list") or {}
-    dbrand = conc.get("detail_brand_among_merged") or {}
-    scope_ap = brief.get("strategy_scope_applied")
-    scoped_matrix = isinstance(scope_ap, dict) and bool(scope_ap.get("group"))
-    gname_scoped = _esc(scope_ap.get("group")) if scoped_matrix else ""
     lines.extend(
         [
             "## 五、与其它品牌有何不同",
             "",
-            "### 5.1 对比对象（摘录）",
-            "",
-        ]
-    )
-    if scoped_matrix:
-        lines.append(
-            "*本任务已按矩阵细类收窄：**下列店铺/品牌占比均按该分组内「深入合并 SKU」条数统计**，"
-            "与全关键词 **PC 搜索列表行** 集中度**不是同一口径**；亦非销量或市占。*"
-            if not for_llm_input
-            else "*集中度：按所选矩阵分组内合并 SKU 条数；非全站列表行。*"
-        )
-        lines.append("")
-    shop_label = (
-        f"店铺分布（「{gname_scoped}」内样本 SKU）"
-        if scoped_matrix
-        else "列表侧店铺集中度"
-    )
-    brand_label = (
-        f"品牌分布（「{gname_scoped}」内样本 SKU）"
-        if scoped_matrix
-        else "深入样本内品牌集中度"
-    )
-    scoped_wording: tuple[str, str] | None = (
-        ("第一大店铺约占该分组样本 SKU 的", "前三大店铺合计约占")
-        if scoped_matrix
-        else None
-    )
-    scoped_brand_wording: tuple[str, str] | None = (
-        ("第一大品牌约占该分组样本 SKU 的", "前三大品牌合计约占")
-        if scoped_matrix
-        else None
-    )
-    n_shop = _cr_narrative(
-        shop_label,
-        concentration_first_share(shops),
-        concentration_top_three_share(shops),
-        shops.get("top_label"),
-        first_share_wording=scoped_wording,
-    )
-    n_brand = _cr_narrative(
-        brand_label,
-        concentration_first_share(dbrand),
-        concentration_top_three_share(dbrand),
-        dbrand.get("top_label"),
-        first_share_wording=scoped_brand_wording,
-    )
-    if n_shop:
-        lines.append(n_shop)
-    for uline in _shop_unique_sku_basis_lines(shops):
-        lines.append(uline)
-    if n_brand:
-        lines.append(n_brand)
-    if not n_shop and not n_brand:
-        lines.append(
-            "- **竞争结构**：监测摘要未含集中度摘录。"
-            if for_llm_input
-            else "*本摘要未含集中度指标，请结合本批次竞争结构数据补全。*"
-        )
-    lines.extend(
-        [
+            (
+                "*竞争格局与店铺/品牌集中度见同任务《竞品分析报告》；规则骨架**不**铺陈摘录，成稿**勿**复述「对比对象（摘录）」「店铺分布」「品牌分布」等与报告同构的长段。*"
+                if for_llm_input
+                else "*竞争格局与集中度见报告；成稿写清与谁对比、差异化与应对，**勿**在此铺陈店铺/品牌占比摘录。*"
+            ),
             "",
             *(
                 []
                 if for_llm_input
                 else [
-                    "",
                     "- **环境自测**：头部强势时是侧翼还是正面替代？格局分散时是否用细分场景切入？",
+                    "",
                 ]
             ),
-            "",
             (
-                "### 5.2 差异化方向"
+                "### 5.1 差异化方向"
                 if for_llm_input
-                else "### 5.2 差异化方向（占位）"
+                else "### 5.1 差异化方向（占位）"
             ),
             "",
             *(
                 []
                 if for_llm_input
                 else [
-                    "*成稿：相对竞品**多做什么/少做什么**，写**可执行的一步**；**若**差异因细类而异，**分类目**写（非空泛「更好」）。*",
+                    "*差异化写清相对竞品多做什么/少做什么；细类不同则分写。*",
                     "",
                 ]
             ),
@@ -621,12 +562,10 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
-    lines.append("### 5.3 竞争应对")
+    lines.append("### 5.2 竞争应对")
     lines.append("")
     if not for_llm_input:
-        lines.append(
-            "*成稿：在表单倾向基础上，写清**跟价/不跟价时具体话术或机制**（一句即可）。*"
-        )
+        lines.append("*竞争应对：跟价/不跟价时的话术或机制（可简短）。*")
         lines.append("")
     stance = _esc(d.get("competitive_stance") or "").strip()
     stance_line = {
@@ -663,7 +602,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*成稿：路径须与 **§2.1 针对痛点要怎么做** 可对齐；营销/总体策略为**动词句**，回扣痛点；**多类目并行**时**分线**写目标或写清主线/副线。*",
+                    "*路径与 §2.1 对齐；动词句为主。*",
                     "",
                 ]
             ),
@@ -690,6 +629,7 @@ def build_strategy_draft_markdown(
     pr = str(d.get("pillar_price") or "")
     pch = str(d.get("pillar_channel") or "")
     pcm = str(d.get("pillar_comm") or "")
+    tp = str(d.get("tactic_promotion") or "")
     lines.extend(
         [
             "## 七、品牌四线：建设 · 打造 · 运营 · 体验",
@@ -698,8 +638,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*（与表单「4P 策略支柱」对应：产品 / 定价 / 渠道 / 传播。）*",
-                    "*成稿：**每条线**至少一句——服务哪类痛点、本阶段**具体做哪一步**；**尽量**与 §2.1「类目/细类」可对上，多类目则**分句**（勿四条同一泛化句）。*",
+                    "*四线对应产品/定价/渠道/传播；每条至少一句落地动作。*",
                     "",
                 ]
             ),
@@ -725,16 +664,12 @@ def build_strategy_draft_markdown(
     if use_ch8_probe and not for_llm_input:
         pst_sig = brief.get("price_promotion_signals") or {}
         has_promo = isinstance(pst_sig, dict) and bool(pst_sig)
-        promo_hint = "*促销与活动线索：须与摘要 `price_promotion_signals` 及第六章/第九章已有归纳一致；无则勿编造具体满减门槛。*"
-        lines.extend(
-            [
-                "",
-                promo_hint
-                if has_promo
-                else "*促销与价差：若摘要或价格信号有归纳则承接；无则勿编造。*",
-                "",
-            ]
+        promo_one = (
+            "*促销线索须与摘要中的价格/活动信号一致；无则勿编造门槛。*"
+            if has_promo
+            else "*价差与活动：有则承接摘要；无则勿编造。*"
         )
+        lines.extend(["", promo_one, ""])
 
     lines.extend(
         [
@@ -744,7 +679,7 @@ def build_strategy_draft_markdown(
                 []
                 if for_llm_input
                 else [
-                    "*成稿：四支柱分别回扣 **痛点→动作→落地**（可与 §2.1 呼应，避免纯重复）；**若**产品/定价/促销因类目策略不同，**分细类**写子条，勿一条盖全站。*",
+                    "*四支柱回扣痛点→动作→落地；类目不同则分细类。*",
                     "",
                 ]
             ),
@@ -754,26 +689,37 @@ def build_strategy_draft_markdown(
             "",
             "### 8.2 定价策略",
             "",
-            "**价位阵地取向（表单勾选；与监测价带可对读）**",
-            "",
-            f"- {_pos_mark(pos, 'top')} **贴顶**：中高位或头部价位带。",
-            f"- {_pos_mark(pos, 'mid')} **卡腰**：围绕中位数一带。",
-            f"- {_pos_mark(pos, 'entry')} **下探**：贴近区间下限。",
-            f"- {_pos_mark(pos, 'different')} **另起带**：规格/组合/服务差异化。",
-            "",
-            f"- *（表单价格支柱：{_pillar_cell(pr)}）*",
-            "",
+        ]
+    )
+    if for_llm_input:
+        lines.append(_price_position_llm_hint(pos))
+        lines.extend(["", f"- *（表单价格支柱：{_pillar_cell(pr)}）*", ""])
+    else:
+        lines.extend(
+            [
+                _price_position_display_line(pos),
+                "",
+                f"- *（表单价格支柱：{_pillar_cell(pr)}）*",
+                "",
+            ]
+        )
+    lines.extend(
+        [
             "### 8.3 促销与活动策略",
             "",
             *(
-                []
+                [
+                    "*成稿须写**本品**拟采用的满减/满折或到手价规则（决策句），监测至多一句带过；勿把摘要里的行数占比当正文。*",
+                    "",
+                ]
                 if for_llm_input
                 else [
-                    "*须写促销**原则**（券/到手价/跟价节奏）；**满减、满折、跨店**等：能引用的写清来源；监测未捕获具体门槛时写「待与运营/后台对齐」，**勿**整节留空，**勿**编造门槛数字。*",
-                    "*与 `price_promotion_signals`、报告第六章一致；勿虚构活动。*",
+                    "*写清本阶段促销**决策**（拟满减/折扣档、跟价原则）；勿写成报告统计段落。*",
                     "",
                 ]
             ),
+            f"- *（表单促销策略：{_pillar_cell(tp)}）*",
+            "",
             "### 8.4 渠道与传播",
             "",
             f"- *（渠道/传播：{_pillar_cell(pch)} / {_pillar_cell(pcm)}）*",
@@ -784,41 +730,7 @@ def build_strategy_draft_markdown(
     rk = bool(d.get("ack_risk_keywords"))
     rp = bool(d.get("ack_risk_price"))
     rc = bool(d.get("ack_risk_concentration"))
-    rk_kw = "评论侧归纳是否以偏概全？（需原评论抽样）"
-    lines.extend(
-        [
-            "## 九、风险、假设与待验证",
-            "",
-            _risk_line(rk, rk_kw),
-            _risk_line(rp, "价格带是否含大促/异常挂价？（需核对清洗规则）"),
-            _risk_line(rc, "列表集中度与深入样本品牌是否不一致？（需解释渠道差异）"),
-            "",
-            *(
-                []
-                if for_llm_input
-                else [
-                    "*成稿：每条风险尽量带**应对动作或验证计划**（抽样、核对规则），勿只列标题。*",
-                    "",
-                    "*业务备注见下节。*",
-                    "",
-                ]
-            ),
-            "## 十、下一步与节奏",
-            "",
-            *(
-                []
-                if for_llm_input
-                else [
-                    "*成稿：下列为**可执行任务**（可补负责人/时间）；与 §2.1 / §六 优先级一致；可含「按类目核对主图/商详与 §2.1 表」类项。*",
-                    "",
-                ]
-            ),
-            "- [ ] 锁定主推款与对标；过法务与合规。",
-            "- [ ] 统一对外数据口径与话术。",
-            "- [ ] 下轮监测更新后迭代策略。",
-            "",
-        ]
-    )
+    lines.extend(_nine_ten_markdown_blocks(rk=rk, rp=rp, rc=rc, for_llm_input=for_llm_input))
 
     notes = _esc(business_notes)
     lines.extend(
@@ -864,11 +776,9 @@ def build_strategy_draft_markdown(
             if bits:
                 lines.append(f"- **采集参数快照**：{'; '.join(bits)}")
     raw = brief.get("pc_search_raw") or {}
-    if raw.get("result_count_consensus") is not None:
+    if raw.get("result_count_consensus") is not None and not for_llm_input:
         lines.append(
-            f"- **平台申报检索规模**：{_num(raw.get('result_count_consensus'))}"
-            if for_llm_input
-            else f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}"
+            f"- **列表申报规模（resultCount）**：{_num(raw.get('result_count_consensus'))}"
         )
     if for_llm_input:
         lines.extend(

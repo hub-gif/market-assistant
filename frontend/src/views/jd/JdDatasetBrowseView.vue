@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import JobDatasetModal from '../../components/JobDatasetModal.vue'
 import { api, refreshJobs, useJobs } from '../../composables/useJobs'
+import { useJobStore } from '../../stores/jobs'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
@@ -36,8 +37,7 @@ async function refreshSelectedJob() {
     const r = await api(`/api/jobs/${id}/`)
     if (r.ok) {
       const j = await r.json()
-      const idx = jobs.value.findIndex((x) => x.id === j.id)
-      if (idx >= 0) jobs.value[idx] = j
+      useJobStore().mergeJob(j)
     }
   } catch {
     /* ignore */

@@ -85,6 +85,75 @@ def _analyze_price_promotions(rows: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
+def price_promotion_signals_strategy_brief_cn(p: Any) -> str:
+    """
+    与 ``_analyze_price_promotions`` 数字严格一致的中文摘要，供策略 LLM **固定**读取，
+    避免同输入下 §8.3 在「有价差统计」与「未检测到促销」之间随机摇摆。
+    """
+    if not isinstance(p, dict) or not p:
+        return (
+            "监测摘要未携带列表侧价差统计（price_promotion_signals 为空）。"
+            "§8.3 勿编造「已监测到/未监测到」具体满减门槛或价差行数；可写结合商详与运营核对。"
+        )
+    n = int(p.get("row_count") or 0)
+    wb = int(p.get("rows_with_both_list_and_coupon") or 0)
+    cb = int(p.get("rows_coupon_below_list_price") or 0)
+    wj = int(p.get("rows_with_list_price") or 0)
+    wc = int(p.get("rows_with_coupon_price") or 0)
+    sh = p.get("share_coupon_below_list_when_both")
+    med = p.get("median_discount_pct_when_coupon_below")
+    mean = p.get("mean_discount_pct_when_coupon_below")
+    oa = int(p.get("rows_original_price_above_list_price") or 0)
+
+    parts: list[str] = [
+        "（以下为**监测边界**摘要：用于核对 §8.3 **不得否认**下列事实；**禁止**把本段行数、占比抄进 §8.3 当正文。"
+        "§8.3 正文须以**本品促销决策**为主——如拟采用的满减/满折档位、到手价呈现原则等。"
+        "竞品页面上已出现的「满××减××」等**原文**仅当报告节选或 brief 已收录时可作对标复述；"
+        "**本品主张**的具体门槛/折扣可写为「拟满…减…」「拟满…享…折」，无输入数字时须标注待运营按毛利与后台规则核定。）"
+    ]
+    parts.append(
+        f"监测行数 **{n}**；其中解析到标价字段 **{wj}** 行、券后/到手价字段 **{wc}** 行。"
+    )
+    if wb > 0:
+        frag_sh = (
+            f"占可对齐行的 **{100.0 * float(sh):.1f}%**"
+            if isinstance(sh, (int, float))
+            else ""
+        ).strip()
+        line = (
+            f"**同时有标价与券后/到手价且数值可对齐** 的行 **{wb}** 行；"
+            f"其中展示券后/到手**严格低于**标价的行 **{cb}** 行"
+            + (f"（{frag_sh}）" if frag_sh else "")
+            + "。"
+        )
+        parts.append(line)
+        if isinstance(med, (int, float)) and cb > 0:
+            frag_mean = (
+                f"，平均相对标价约 **{float(mean):.1f}%**"
+                if isinstance(mean, (int, float))
+                else ""
+            )
+            parts.append(
+                f"在「券后低于标价」子集中，展示价差的中位数约 **{float(med):.1f}%**（相对标价）{frag_mean}；"
+                "通常对应列表上满减、券、限时价等叠加呈现。"
+            )
+        elif cb > 0:
+            parts.append("存在券后低于标价的样本；条数较少故未给稳健分位数。")
+    else:
+        parts.append(
+            "**缺少**「标价与券后/到手价同时可解析且可对齐」的有效行，不宜写「全样本普遍存在到手价差」；"
+            "若报告第六章或节选有促销形态归纳，§8.3 应与之对齐。"
+        )
+    if oa > 0:
+        parts.append(
+            f"另有约 **{oa}** 行呈现「划线原价高于当前标价」类陈列（页面展示口径）。"
+        )
+    parts.append(
+        "（再次提醒：上列数字**不得**作为 §8.3 主体段落；§8.3 请写清**我方**在促销上的决定或拟定方案。）"
+    )
+    return "\n".join(parts)
+
+
 def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
     """第六章第一节：优惠活动与价差信号（Markdown 行列表）。"""
     lines: list[str] = [
@@ -144,4 +213,5 @@ def _markdown_price_promotion_section(p: dict[str, Any]) -> list[str]:
 __all__ = [
     "_analyze_price_promotions",
     "_markdown_price_promotion_section",
+    "price_promotion_signals_strategy_brief_cn",
 ]

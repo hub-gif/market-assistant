@@ -7,6 +7,7 @@ import {
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
 import {
+  loadStrategyDraftRecord,
   loadStrategyMatrixScope,
   saveStrategyDraftRecord,
   saveStrategyMatrixScope,
@@ -60,6 +61,7 @@ const decisions = reactive({
   pillar_price: '',
   pillar_channel: '',
   pillar_comm: '',
+  tactic_promotion: '',
   audience_segment: '',
   competitor_reference: '',
   resource_notes: '',
@@ -108,6 +110,7 @@ function buildPayload() {
     pillar_price: decisions.pillar_price,
     pillar_channel: decisions.pillar_channel,
     pillar_comm: decisions.pillar_comm,
+    tactic_promotion: decisions.tactic_promotion,
     audience_segment: decisions.audience_segment,
     competitor_reference: decisions.competitor_reference,
     resource_notes: decisions.resource_notes,
@@ -119,6 +122,56 @@ function buildPayload() {
     ...(strategyMatrixScope.value
       ? { strategy_matrix_group: strategyMatrixScope.value }
       : {}),
+  }
+}
+
+/** 与 backend ``pipeline/strategy_decision_keys.STRATEGY_DECISION_FIELD_NAMES`` 一致 */
+const SAVED_DECISION_KEYS = [
+  'product_role',
+  'stage_goal_type',
+  'time_horizon',
+  'success_criteria',
+  'non_goals',
+  'battlefield_one_line',
+  'positioning_choice',
+  'competitive_stance',
+  'pillar_product',
+  'pillar_price',
+  'pillar_channel',
+  'pillar_comm',
+  'tactic_promotion',
+  'audience_segment',
+  'competitor_reference',
+  'resource_notes',
+  'marketing_strategy',
+  'general_strategy',
+  'ack_risk_keywords',
+  'ack_risk_price',
+  'ack_risk_concentration',
+]
+
+/**
+ * 从本任务上次已保存的「生成请求」恢复表单，使用户决策与成稿/再次提交一致。
+ */
+function applyDecisionsFromSavedRecord(jobId) {
+  if (!jobId) return
+  const rec = loadStrategyDraftRecord(String(jobId))
+  const lr = rec?.last_request
+  if (!lr || typeof lr !== 'object') return
+  for (const k of SAVED_DECISION_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(lr, k)) continue
+    if (k.startsWith('ack_')) {
+      decisions[k] = Boolean(lr[k])
+    } else {
+      const v = lr[k]
+      decisions[k] = v == null || typeof v === 'boolean' ? '' : String(v)
+    }
+  }
+  if (typeof lr.business_notes === 'string') {
+    businessNotes.value = lr.business_notes
+  }
+  if (lr.generator === 'rules' || lr.generator === 'llm') {
+    rulesOnlyThisRun.value = lr.generator === 'rules'
   }
 }
 
@@ -228,8 +281,16 @@ onUnmounted(() => {
   }
 })
 
-watch(selectedId, (id) => {
-  loadMatrixGroupsForJob(id)
+watch(selectedId, async (id) => {
+  await loadMatrixGroupsForJob(id)
+  if (id) {
+    applyDecisionsFromSavedRecord(String(id))
+    const rec = loadStrategyDraftRecord(String(id))
+    const mg = rec?.last_request?.strategy_matrix_group
+    if (typeof mg === 'string' && mg.trim() && matrixGroups.value.some((g) => g.group === mg)) {
+      strategyMatrixScope.value = mg
+    }
+  }
 })
 
 watch(strategyMatrixScope, (v) => {
@@ -262,8 +323,7 @@ watch(
     <section class="ma-card">
       <h2>策略生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>（主推类目，与报告矩阵一致）。策略稿与矩阵选择保存在本机 <strong>localStorage</strong>，同域名下可跨标签查看；与其它页面的耗时任务通过全局任务锁同步。下方字段按策略文档常见顺序排列；成稿里的小节标题与编号由系统自动对应。有关痛点、购买理由、品牌承诺等由监测与模型撰写，本页主要收集<strong>业务决策与战术要点</strong>。生成结果见
-        <RouterLink to="/jd/strategy-view">策略稿预览</RouterLink>。<strong>已填项</strong>进入底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
+        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>。<strong>已填项</strong>进入底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
       </p>
 
 
@@ -443,50 +503,67 @@ watch(
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend>品牌四线与战术动作</legend>
-        <p class="fieldset-hint">
-          下列内容会在策略稿中用于<strong>品牌四线</strong>与<strong>战术支柱</strong>相关段落（系统会自动落到对应小节）。价位阵地为单选；促销与活动细节无单独表单项，由监测与模型归纳。品牌承诺与调性由模型依据数据撰写。
-        </p>
+        <legend>品牌四线：建设 · 打造 · 运营 · 体验</legend>
         <label class="fld fld-block">
-          <span>产品</span>
-          <textarea
-            v-model="decisions.pillar_product"
-            rows="2"
-            placeholder="规格、配方或功能叙事、计划中的产品动作（可选）"
-          />
+          <span>品牌建设</span>
+          <textarea v-model="decisions.pillar_product" rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
-          <span>价位阵地（单选）</span>
-          <select v-model="decisions.positioning_choice" class="job-select full">
-            <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
-              {{ o.label }}
-            </option>
-          </select>
+          <span>品牌打造</span>
+          <textarea v-model="decisions.pillar_price" rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
-          <span>定价（补充说明）</span>
-          <textarea
-            v-model="decisions.pillar_price"
-            rows="2"
-            placeholder="在价位阵地之外：到手价呈现、跟价或避战原则、与大促关系等（可选）"
-          />
+          <span>品牌运营</span>
+          <textarea v-model="decisions.pillar_channel" rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
-          <span>渠道与触点</span>
-          <textarea
-            v-model="decisions.pillar_channel"
-            rows="2"
-            placeholder="货架、店铺类型、站内路径、触点优先级等（可选）"
-          />
+          <span>品牌体验</span>
+          <textarea v-model="decisions.pillar_comm" rows="2" placeholder="选填" />
         </label>
-        <label class="fld fld-block">
-          <span>传播与内容</span>
-          <textarea
-            v-model="decisions.pillar_comm"
-            rows="2"
-            placeholder="内容形态、达人/自播、搜索承接与话术方向等（可选）"
-          />
-        </label>
+      </fieldset>
+
+      <fieldset class="fieldset fieldset-tactic-pillars">
+        <legend>战术支柱</legend>
+        <div class="tactic-sec">
+          <h4 class="tactic-sec-t">产品策略</h4>
+          <label class="fld fld-block fld-tight">
+            <textarea v-model="decisions.pillar_product" rows="2" placeholder="选填" />
+          </label>
+        </div>
+        <div class="tactic-sec">
+          <h4 class="tactic-sec-t">定价策略</h4>
+          <label class="fld fld-block">
+            <span>价位阵地</span>
+            <select v-model="decisions.positioning_choice" class="job-select full">
+              <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
+                {{ o.label }}
+              </option>
+            </select>
+          </label>
+          <label class="fld fld-block">
+            <span>补充说明</span>
+            <textarea v-model="decisions.pillar_price" rows="2" placeholder="选填" />
+          </label>
+        </div>
+        <div class="tactic-sec">
+          <h4 class="tactic-sec-t">促销与活动策略</h4>
+          <label class="fld fld-block fld-tight">
+            <textarea v-model="decisions.tactic_promotion" rows="2" placeholder="选填" />
+          </label>
+        </div>
+        <div class="tactic-sec">
+          <h4 class="tactic-sec-t">渠道与传播</h4>
+          <div class="tactic-ch-row">
+            <label class="fld fld-block">
+              <span>渠道</span>
+              <textarea v-model="decisions.pillar_channel" rows="2" placeholder="选填" />
+            </label>
+            <label class="fld fld-block">
+              <span>传播</span>
+              <textarea v-model="decisions.pillar_comm" rows="2" placeholder="选填" />
+            </label>
+          </div>
+        </div>
       </fieldset>
 
       <fieldset class="fieldset">
@@ -684,5 +761,34 @@ watch(
 }
 .form-skip-note strong {
   color: #334155;
+}
+.fieldset-tactic-pillars .tactic-sec {
+  margin-top: 0.65rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #e5e7eb;
+}
+.fieldset-tactic-pillars .tactic-sec:first-of-type {
+  margin-top: 0.25rem;
+  padding-top: 0;
+  border-top: none;
+}
+.tactic-sec-t {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+.tactic-ch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+}
+@media (max-width: 640px) {
+  .tactic-ch-row {
+    grid-template-columns: 1fr;
+  }
+}
+.fld-tight {
+  margin-top: 0.15rem;
 }
 </style>
