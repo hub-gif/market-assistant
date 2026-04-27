@@ -1,47 +1,30 @@
-"""竞品报告 LLM 调用：路径注入与网关 ``chat_completion_text`` 封装。"""
+"""竞品报告 LLM 调用：经 `providers` 工厂选择后端，并统一对输出做去围栏等归一化。"""
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-from django.conf import settings
+from .providers.factory import get_text_llm
+from .providers.output_normalize import strip_outer_markdown_fence
 
 
-def ensure_ai_crawler_path() -> None:
-    root = Path(settings.CRAWLER_JD_ROOT).resolve()
-    if not root.is_dir():
-        raise FileNotFoundError(f"爬虫副本目录不存在: {root}")
-    rs = str(root)
-    if rs not in sys.path:
-        sys.path.insert(0, rs)
-
-
-def call_llm(system_prompt: str, user_prompt: str) -> str:
-    ensure_ai_crawler_path()
-    import AI_crawler as ac  # noqa: WPS433
-
-    raw = ac.chat_completion_text(
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
+def call_llm(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    temperature: float | None = None,
+) -> str:
+    raw = get_text_llm().complete_text(
+        system_prompt,
+        user_prompt,
+        temperature=temperature,
     )
-    return ac.strip_outer_markdown_fence(raw)
+    return strip_outer_markdown_fence(raw)
 
 
 def estimate_chat_input_tokens(system_prompt: str, user_prompt: str) -> int:
-    """与 ``AI_crawler._estimate_chat_input_tokens`` 一致，用于在调用前预判上下文。"""
-    total_chars = len(system_prompt or "") + len(user_prompt or "")
-    return int(total_chars * 0.55) + 512
+    """与当前所选文本后端的预检一致；默认与 ``AI_crawler`` 的保守估算同口径。"""
+    return get_text_llm().estimate_input_tokens(system_prompt, user_prompt)
 
 
 def llm_context_window_size() -> int:
-    """与 ``AI_crawler.chat_completion_text`` 使用的上下文上限一致。"""
-    raw = (
-        os.environ.get("LLM_CONTEXT_WINDOW")
-        or os.environ.get("OPENAI_CONTEXT_WINDOW")
-        or "32768"
-    ).strip()
-    try:
-        return max(4096, int(raw))
-    except ValueError:
-        return 32768
+    """与当前所选后端的上下文上限一致；默认与 ``AI_crawler.chat_completion_text`` 使用的环境变量一致。"""
+    return get_text_llm().context_window_tokens()
+
