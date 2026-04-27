@@ -1,44 +1,5 @@
-import { ref, watch } from 'vue'
-
-const jobs = ref([])
-
-/** 终态 */
-const TERMINAL_JOB_STATUSES = new Set(['success', 'failed', 'cancelled'])
-
-function isActiveJobStatus(status) {
-  return status === 'pending' || status === 'running'
-}
-
-/** 单一定时器轮询列表（避免 N 个任务 → N 路 GET /api/jobs/:id/） */
-let jobsListPollTimer = null
-
-function stopJobsListPoll() {
-  if (jobsListPollTimer != null) {
-    clearInterval(jobsListPollTimer)
-    jobsListPollTimer = null
-  }
-}
-
-async function fetchJobsListQuietly() {
-  try {
-    const r = await api('/api/jobs/')
-    if (r.ok) {
-      jobs.value = await r.json()
-    }
-  } catch {
-    /* 忽略网络错误，下一轮再试 */
-  }
-}
-
-function syncJobsListPoll() {
-  const hasActive = jobs.value.some((j) => isActiveJobStatus(j.status))
-  if (!hasActive) {
-    stopJobsListPoll()
-    return
-  }
-  if (jobsListPollTimer != null) return
-  jobsListPollTimer = setInterval(fetchJobsListQuietly, 3000)
-}
+import { storeToRefs } from 'pinia'
+import { useJobStore } from '../stores/jobs'
 
 export function api(path, opts = {}) {
   return fetch(path, {
@@ -48,9 +9,7 @@ export function api(path, opts = {}) {
 }
 
 export async function refreshJobs() {
-  const r = await api('/api/jobs/')
-  if (!r.ok) throw new Error(await r.text())
-  jobs.value = await r.json()
+  return useJobStore().refreshJobs()
 }
 
 export function jobCancelUrl(jobId) {
@@ -82,24 +41,77 @@ export function jobExportReportDocumentUrl(jobId, fmt = 'docx') {
   return `/api/jobs/${jobId}/export-document/?kind=report&fmt=${encodeURIComponent(fmt)}`
 }
 
-/** 策略稿正文（浏览器 sessionStorage）→ Word/PDF */
-export async function exportStrategyDocument(jobId, markdown, fmt = 'docx') {
-  const r = await api(`/api/jobs/${jobId}/export-document/`, {
-    method: 'POST',
-    body: JSON.stringify({ kind: 'strategy', fmt, markdown }),
-  })
+/** 竞品报告 GET 导出 Word/PDF（blob 下载，失败时解析服务端 JSON 提示） */
+export async function exportReportDocument(jobId, fmt = 'docx') {
+  const url = jobExportReportDocumentUrl(jobId, fmt)
+  const r = await fetch(url)
+  const ct = r.headers.get('Content-Type') || ''
   if (!r.ok) {
-    const t = await r.text()
-    throw new Error(t || `HTTP ${r.status}`)
+    let msg = `HTTP ${r.status}`
+    try {
+      if (ct.includes('application/json')) {
+        const j = await r.json()
+        msg = typeof j?.detail === 'string' ? j.detail : JSON.stringify(j)
+      } else {
+        const t = await r.text()
+        if (t) msg = t.length > 500 ? `${t.slice(0, 500)}…` : t
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
   }
   const blob = await r.blob()
-  const dispo = r.headers.get('Content-Disposition') || ''
-  const m = dispo.match(/filename="([^"]+)"/)
-  const name = m ? m[1] : `job_${jobId}_strategy_draft.${fmt}`
+  const filename =
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) ||
+    `job_${jobId}_competitor_report.${fmt}`
   const u = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = u
-  a.download = name
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(u)
+}
+
+/**
+ * 策略稿或营销内容 Markdown → Word/PDF
+ * @param {'strategy' | 'marketing_detail'} [kind]
+ */
+export async function exportStrategyDocument(jobId, markdown, fmt = 'docx', kind = 'strategy') {
+  const r = await api(`/api/jobs/${jobId}/export-document/`, {
+    method: 'POST',
+    body: JSON.stringify({ kind, fmt, markdown }),
+  })
+  const ct = r.headers.get('Content-Type') || ''
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`
+    try {
+      if (ct.includes('application/json')) {
+        const j = await r.json()
+        msg = typeof j?.detail === 'string' ? j.detail : JSON.stringify(j)
+      } else {
+        const t = await r.text()
+        if (t) msg = t.length > 500 ? `${t.slice(0, 500)}…` : t
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
+  }
+  const blob = await r.blob()
+  const fallback =
+    kind === 'marketing_detail'
+      ? `job_${jobId}_marketing_detail_pack.${fmt}`
+      : `job_${jobId}_strategy_draft.${fmt}`
+  const filename =
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) || fallback
+  const u = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = u
+  a.download = filename
   a.rel = 'noopener'
   document.body.appendChild(a)
   a.click()
@@ -145,12 +157,39 @@ export function reportConfigDefaultsUrl() {
   return '/api/report-config-defaults/'
 }
 
-export function jobDatasetPageUrl(jobId, kind, page = 1, pageSize = 50, skuId = '') {
+export function strategyConfigDefaultsUrl() {
+  return '/api/strategy-config-defaults/'
+}
+
+/**
+ * @param {Record<string, string | number | undefined> | string} [opts] 筛选参数对象；兼容旧调用：传入字符串视为 comments 的 sku_id
+ */
+export function jobDatasetPageUrl(jobId, kind, page = 1, pageSize = 50, opts = {}) {
+  const o = typeof opts === 'string' ? { skuId: opts } : opts || {}
   const p = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
   })
-  if (skuId) p.set('sku_id', skuId)
+  const sku = o.skuId ?? o.sku_id
+  if (sku) p.set('sku_id', String(sku))
+  if (o.sort) p.set('sort', String(o.sort))
+  if (o.order) p.set('order', String(o.order))
+  const rg =
+    o.reportGroup ?? o.report_group ?? o.categoryNormId ?? o.category_norm_id
+  if (rg !== undefined && rg !== null && String(rg).trim() !== '')
+    p.set('report_group', String(rg).trim())
+  const shop = o.shop ?? o.shop_name ?? o.shopQ ?? o.shop_q
+  if (shop !== undefined && shop !== null && String(shop).trim() !== '')
+    p.set('shop', String(shop).trim())
+  const pmin = o.priceMin ?? o.price_min
+  if (pmin !== undefined && pmin !== null && String(pmin).trim() !== '')
+    p.set('price_min', String(pmin).trim())
+  const pmax = o.priceMax ?? o.price_max
+  if (pmax !== undefined && pmax !== null && String(pmax).trim() !== '')
+    p.set('price_max', String(pmax).trim())
+  const dcq = o.detailCategoryQ ?? o.detail_category_q
+  if (dcq !== undefined && dcq !== null && String(dcq).trim() !== '')
+    p.set('detail_category_q', String(dcq).trim())
   return `/api/jobs/${jobId}/dataset/${kind}/?${p.toString()}`
 }
 
@@ -208,14 +247,6 @@ export async function downloadJobDatasetExport(jobId, kind, exportFmt) {
   URL.revokeObjectURL(u)
 }
 
-watch(
-  jobs,
-  () => {
-    syncJobsListPoll()
-  },
-  { deep: true },
-)
-
 export function jobConfigHint(j) {
   const parts = []
   if (j.page_start != null || j.page_to != null) {
@@ -237,6 +268,8 @@ export function jobConfigHint(j) {
 }
 
 export function useJobs() {
+  const store = useJobStore()
+  const { jobs } = storeToRefs(store)
   return {
     jobs,
     refreshJobs,

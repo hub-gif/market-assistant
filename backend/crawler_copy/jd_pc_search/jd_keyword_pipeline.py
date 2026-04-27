@@ -16,7 +16,8 @@
 
 每次运行默认在 ``data/JD/pipeline_runs/<时间戳>_<关键词>/`` 下集中写入：合并表、
 PC 搜索导出 CSV、评价扁平 CSV、详情汇总 CSV（``detail_ware_export.csv``）、
-各 SKU 规整 JSON（``detail/ware_{sku}_response.json``），以及（可选）pc_search 原始包与请求记录。
+各 SKU 规整 JSON（``detail/ware_{sku}_response.json``）、
+购买者优惠摘要 JSON（``buyer_offer_profiles/ware_{sku}_buyer_profile.json``），以及（可选）pc_search 原始包与请求记录。
 
 合并表 ``keyword_pipeline_merged.csv`` 默认 ``MERGED_CSV_MODE=lean``：搜索全列 + **竞品报告/入库实际用到的商详子集**（见 ``_MERGED_LEAN_DETAIL_FIELDNAMES``）+ 评论摘要；全量商详扁平请设 ``MERGED_CSV_MODE="full"``（``WARE_BUSINESS_MERGE_FIELDNAMES``）。
 ``detail_ware_export.csv`` 默认 ``DETAIL_WARE_CSV_MODE=lean``，为 ``skuId`` + 与合并表一致的商详子集（品牌/到手价/店铺/类目/参数/配料）；全列请设 ``DETAIL_WARE_CSV_MODE="full"``。
@@ -24,17 +25,15 @@ PC 搜索导出 CSV、评价扁平 CSV、详情汇总 CSV（``detail_ware_export
 默认启用 **应用场景筛选**（``brief_content.txt`` 4.1 中式面点/主食 + 4.2 烘焙）：仅命中关键词的 SKU 进入详情与评论队列；词表见 ``scenario_filter.py``。``SCENARIO_FILTER_ENABLED=False`` 可关闭；``SCENARIO_FILTER_PC_SEARCH_CSV="filtered"`` 可使导出 CSV 与筛选后列表一致。
 各 SKU 完整接口 JSON 仍在 ``detail/ware_{sku}_response.json``。
 
-端到端竞品速览 Markdown：配置 ``jd_competitor_report.py`` 顶部 ``KEYWORD`` 后执行 ``python jd_competitor_report.py``（内部调用本模块 ``main(keyword=...)``）。
+端到端竞品速览 Markdown：在 ``backend`` 下配置 ``pipeline.competitor_report.jd_report`` 顶部 ``KEYWORD`` 后执行 ``python -m pipeline.competitor_report.jd_report``；或执行本目录兼容入口 ``python jd_competitor_report.py``（调用同一 ``jd_report.main``）。
 """
 
 from __future__ import annotations
 
-import csv
 import json
 import random
 import sys
 import time
-from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -110,6 +109,8 @@ FILE_PC_SEARCH_CSV = "pc_search_export.csv"
 FILE_COMMENTS_FLAT_CSV = "comments_flat.csv"
 FILE_DETAIL_WARE_CSV = "detail_ware_export.csv"
 FILE_RUN_META_JSON = "run_meta.json"
+# 与 ``detail/`` 同级：购买者视角优惠摘要（非原始接口 JSON）
+DIR_BUYER_OFFER_PROFILES = "buyer_offer_profiles"
 # MERGED_CSV_MODE：``lean`` 时合并表为搜索全列 + 商详子集（``_MERGED_LEAN_DETAIL_FIELDNAMES``）+ 评论摘要；``full`` 为搜索全列 + ``WARE_BUSINESS_MERGE_FIELDNAMES`` 全量
 MERGED_CSV_MODE = "lean"
 # DETAIL_WARE_CSV_MODE：``lean`` 时 ``detail_ware_export.csv`` 为 ``skuId`` + lean 商详子集；``full`` 为完整详情扁平列（含 http_status 与各 detail_*）
@@ -136,12 +137,21 @@ for _p in (_SEARCH_DIR, _COMMENT_DIR, _DETAIL_DIR):
     if s not in sys.path:
         sys.path.insert(0, s)
 
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+
 from collect_pc_search_items import (  # noqa: E402
     SearchCollectionCancelled,
     collect_pc_search_export_rows,
 )
 from common.jd_delay_utils import parse_request_delay_range  # noqa: E402
 from scenario_filter import filter_rows_by_scenario  # noqa: E402
+from jd_detail_buyer_extraction import (  # noqa: E402
+    buyer_promo_text_from_profile,
+    buyer_ranking_line_from_profile,
+    extract_buyer_offer_profile_from_json_text,
+)
 from jd_detail_ware_business_requests import (  # noqa: E402
     DETAIL_WARE_LEAN_CSV_FIELDNAMES,
     WARE_BUSINESS_MERGE_FIELDNAMES,
@@ -164,67 +174,18 @@ from jd_h5_item_comment_requests import (  # noqa: E402
 )
 from jd_h5_search_requests import (  # noqa: E402
     CSV_FIELDS,
-    JD_EXPORT_COLUMN_HEADERS,
     jd_row_to_export,
 )
-
-
-_SKU_CSV_HEADER = JD_EXPORT_COLUMN_HEADERS["sku_id"]
-
-_MERGED_EXTRA_FIELDS = (
-    ["pipeline_keyword"]
-    + list(WARE_BUSINESS_MERGE_FIELDNAMES)
-    + ["comment_count", "comment_preview"]
+from jd_pipeline_export import (  # noqa: E402
+    SKU_CSV_HEADER,
+    comment_fields_from_rows,
+    dedupe_comment_rows,
+    finalize_merged_row_for_disk,
+    write_detail_ware_csv,
+    write_merged_csv,
+    write_pc_search_export_csv,
+    write_run_meta_json,
 )
-
-# lean 合并表·商详块（jd_competitor_report + ingest + 配料）；须与 pipeline/csv_schema.MERGED_LEAN_DETAIL_KEYS 一致
-_MERGED_LEAN_DETAIL_FIELDNAMES: tuple[str, ...] = (
-    "detail_brand",
-    "detail_price_final",
-    "detail_shop_name",
-    "detail_category_path",
-    "detail_product_attributes",
-    "detail_body_ingredients",
-)
-
-# 合并表精简列：搜索列与 jd_h5_search_requests 一致 + 上表商详子集 + 评论摘要
-_MERGED_LEAN_FIELDNAMES: tuple[str, ...] = (
-    "pipeline_keyword",
-    "SKU(skuId)",
-    "主商品ID(wareId)",
-    "标题(wareName)",
-    "标价(jdPrice,jdPriceText,realPrice)",
-    "券后到手价(couponPrice,subsidyPrice,finalPrice.estimatedPrice,priceShow)",
-    "原价(oriPrice,originalPrice,marketPrice)",
-    "卖点(sellingPoint)",
-    "榜单类文案(标签/腰带/标题数组中的榜、TOP 等)",
-    "评价量(commentFuzzy)",
-    "销量楼层(commentSalesFloor)",
-    "店铺名(shopName)",
-    "商品链接(toUrl,clickUrl,item.m.jd.com)",
-    "主图(imageurl,imageUrl)",
-    "规格属性(propertyList,color,catid,shortName)",
-    "类目(leafCategory,cid3Name,catid)",
-    "搜索词(keyword)",
-    "页码(page)",
-    *_MERGED_LEAN_DETAIL_FIELDNAMES,
-    "comment_count",
-    "comment_preview",
-)
-
-
-def _merged_csv_fieldnames() -> list[str]:
-    if (MERGED_CSV_MODE or "lean").strip().lower() == "full":
-        return list(CSV_FIELDS) + [
-            f for f in _MERGED_EXTRA_FIELDS if f not in CSV_FIELDS
-        ]
-    return list(_MERGED_LEAN_FIELDNAMES)
-
-
-def _detail_ware_csv_fieldnames() -> list[str]:
-    if (DETAIL_WARE_CSV_MODE or "lean").strip().lower() == "full":
-        return list(WARE_PARSED_CSV_FIELDNAMES)
-    return list(DETAIL_WARE_LEAN_CSV_FIELDNAMES)
 
 
 def _sleep_range(spec: str, label: str) -> None:
@@ -237,33 +198,6 @@ def _sleep_range(spec: str, label: str) -> None:
     t = random.uniform(lo, hi)
     print(f"[流水线] {label} 等待 {t:.1f}s", file=sys.stderr)
     time.sleep(t)
-
-
-def _dedupe_comment_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """按 commentId 去重（跨首屏 + 多页列表）。"""
-    seen: set[str] = set()
-    out: list[dict[str, Any]] = []
-    for r in rows:
-        cid = str(r.get("commentId") or "").strip()
-        if cid:
-            if cid in seen:
-                continue
-            seen.add(cid)
-        out.append(r)
-    return out
-
-
-def _comment_fields_from_rows(rows: list[dict[str, Any]]) -> dict[str, str]:
-    previews: list[str] = []
-    for r in rows[:8]:
-        t = str(r.get("tagCommentContent") or "").strip()
-        if t:
-            previews.append(t[:400])
-    joined = " | ".join(previews)[:4000]
-    return {
-        "comment_count": str(len(rows)),
-        "comment_preview": joined,
-    }
 
 
 def _loads_json(text: str) -> Any:
@@ -312,7 +246,7 @@ def main(keyword: str | None = None) -> Path:
     """
     跑完整条流水线。``keyword`` 非空时覆盖文件内 ``KEYWORD``；返回本次运行目录。
 
-    供 ``jd_competitor_report`` 等脚本 ``import`` 调用；命令行仍执行 ``main()`` 无参。
+    供 ``pipeline.competitor_report.jd_report`` 等脚本 ``import`` 调用；命令行仍执行 ``main()`` 无参。
     """
     try:
         if hasattr(sys.stdout, "reconfigure"):
@@ -384,9 +318,9 @@ def main(keyword: str | None = None) -> Path:
     _ingredient_vision_ok = False
     if EXTRACT_INGREDIENTS_FROM_DETAIL_BODY_IMAGES:
         try:
-            import AI_crawler as _ac_mod  # noqa: WPS433
+            import pipeline.openai_gateway as _ac_mod  # noqa: WPS433
 
-            _ac_mod._resolve_credentials(None, None, None)
+            _ac_mod.resolve_credentials(None, None, None)
             _ingredient_vision_ok = True
         except Exception as e:
             print(
@@ -474,7 +408,7 @@ def main(keyword: str | None = None) -> Path:
         skus_ordered: list[str] = []
         seen: set[str] = set()
         for row in export_rows_for_skus:
-            sid = str(row.get(_SKU_CSV_HEADER) or "").strip()
+            sid = str(row.get(SKU_CSV_HEADER) or "").strip()
             if not sid or sid in seen:
                 continue
             seen.add(sid)
@@ -491,13 +425,7 @@ def main(keyword: str | None = None) -> Path:
             stop_pipeline = True
 
         search_csv_path = run_dir / FILE_PC_SEARCH_CSV
-        sbuf = StringIO()
-        sw = csv.DictWriter(
-            sbuf, fieldnames=list(CSV_FIELDS), extrasaction="ignore"
-        )
-        sw.writeheader()
-        sw.writerows(rows_for_search_csv)
-        search_csv_path.write_text("\ufeff" + sbuf.getvalue(), encoding="utf-8")
+        write_pc_search_export_csv(search_csv_path, rows_for_search_csv)
         print(
             f"[流水线] 已写 PC 搜索导出 {search_csv_path}",
             file=sys.stderr,
@@ -505,6 +433,8 @@ def main(keyword: str | None = None) -> Path:
 
         detail_dir = run_dir / "detail"
         detail_dir.mkdir(parents=True, exist_ok=True)
+        buyer_prof_dir = run_dir / DIR_BUYER_OFFER_PROFILES
+        buyer_prof_dir.mkdir(parents=True, exist_ok=True)
 
         detail_ctx = browser.new_context(
             user_agent=_JD_DETAIL_UA,
@@ -528,12 +458,12 @@ def main(keyword: str | None = None) -> Path:
                 (
                     r
                     for r in export_rows_full
-                    if str(r.get(_SKU_CSV_HEADER) or "").strip() == sku
+                    if str(r.get(SKU_CSV_HEADER) or "").strip() == sku
                 ),
                 {},
             )
             merged: dict[str, str] = {k: str(search_row.get(k) or "") for k in CSV_FIELDS}
-            merged["pipeline_keyword"] = kw
+            merged["流水线关键词"] = kw
 
             if stop_pipeline or _pipeline_cancel_requested():
                 stop_pipeline = True
@@ -627,6 +557,23 @@ def main(keyword: str | None = None) -> Path:
             (detail_dir / f"ware_{sku}_response.json").write_text(
                 response_body, encoding="utf-8"
             )
+            rline, ptext = "", ""
+            if response_body.strip():
+                try:
+                    _prof = extract_buyer_offer_profile_from_json_text(response_body)
+                    rline = buyer_ranking_line_from_profile(_prof)
+                    ptext = buyer_promo_text_from_profile(_prof)
+                    (buyer_prof_dir / f"ware_{sku}_buyer_profile.json").write_text(
+                        json.dumps(_prof, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                except Exception as e:
+                    print(
+                        f"[流水线] sku={sku} 购买者摘要写入失败: {e}",
+                        file=sys.stderr,
+                    )
+            merged["buyer_ranking_line"] = rline
+            merged["buyer_promo_text"] = ptext
             _d_ing = str(merged.get("detail_body_ingredients") or "").strip()
             _d_src = str(
                 merged.get("detail_body_ingredients_source_url") or ""
@@ -649,6 +596,8 @@ def main(keyword: str | None = None) -> Path:
                         d_text or "",
                         detail_body_ingredients=_d_ing,
                         detail_body_ingredients_source_url=_d_src,
+                        buyer_ranking_line=rline,
+                        buyer_promo_text=ptext,
                     )
                 )
 
@@ -656,6 +605,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -665,6 +615,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -678,6 +629,7 @@ def main(keyword: str | None = None) -> Path:
             except SystemExit:
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 continue
 
@@ -685,6 +637,7 @@ def main(keyword: str | None = None) -> Path:
                 stop_pipeline = True
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
+                finalize_merged_row_for_disk(merged)
                 merged_rows.append(merged)
                 break
 
@@ -783,8 +736,8 @@ def main(keyword: str | None = None) -> Path:
                             "firstCommentGuid，仅保留首屏评价",
                             file=sys.stderr,
                         )
-                comment_rows = _dedupe_comment_rows(comment_rows)
-                merged.update(_comment_fields_from_rows(comment_rows))
+                comment_rows = dedupe_comment_rows(comment_rows)
+                merged.update(comment_fields_from_rows(comment_rows))
                 all_comment_rows.extend(comment_rows)
             except Exception as e:
                 print(
@@ -794,6 +747,7 @@ def main(keyword: str | None = None) -> Path:
                 merged["comment_count"] = "0"
                 merged["comment_preview"] = ""
 
+            finalize_merged_row_for_disk(merged)
             merged_rows.append(merged)
             print(f"[流水线] [{idx + 1}/{len(skus_ordered)}] sku={sku} OK", file=sys.stderr)
             if stop_pipeline:
@@ -810,34 +764,48 @@ def main(keyword: str | None = None) -> Path:
         browser.close()
 
     out_path = run_dir / FILE_MERGED_CSV
-    fieldnames = _merged_csv_fieldnames()
-    buf = StringIO()
-    w = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
-    w.writeheader()
-    w.writerows(merged_rows)
-    out_path.write_text("\ufeff" + buf.getvalue(), encoding="utf-8")
+    _, merged_col_count = write_merged_csv(
+        out_path,
+        merged_rows,
+        merged_csv_mode=MERGED_CSV_MODE,
+    )
     print(
         f"[流水线] 已写合并表 {out_path} 共 {len(merged_rows)} 行 "
-        f"（MERGED_CSV_MODE={MERGED_CSV_MODE!r}，{len(fieldnames)} 列）",
+        f"（MERGED_CSV_MODE={MERGED_CSV_MODE!r}，{merged_col_count} 列）",
         file=sys.stderr,
     )
 
     detail_csv_path = run_dir / FILE_DETAIL_WARE_CSV
-    detail_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    detail_fn = _detail_ware_csv_fieldnames()
-    with detail_csv_path.open("w", encoding="utf-8-sig", newline="") as dcf:
-        dw = csv.DictWriter(
-            dcf,
-            fieldnames=detail_fn,
-            extrasaction="ignore",
-        )
-        dw.writeheader()
-        dw.writerows(detail_csv_rows)
+    _, detail_col_count = write_detail_ware_csv(
+        detail_csv_path,
+        detail_csv_rows,
+        detail_ware_csv_mode=DETAIL_WARE_CSV_MODE,
+    )
     print(
         f"[流水线] 已写详情扁平表 {detail_csv_path} 共 {len(detail_csv_rows)} 行 "
-        f"（DETAIL_WARE_CSV_MODE={DETAIL_WARE_CSV_MODE!r}，{len(detail_fn)} 列）",
+        f"（DETAIL_WARE_CSV_MODE={DETAIL_WARE_CSV_MODE!r}，{detail_col_count} 列）",
         file=sys.stderr,
     )
+
+    _backend_root = Path(__file__).resolve().parents[2]
+    if str(_backend_root) not in sys.path:
+        sys.path.insert(0, str(_backend_root))
+    try:
+        from pipeline.jd.buyer_offer_export_csv import (  # noqa: WPS433
+            export_buyer_offer_with_detail_csv,
+        )
+
+        export_buyer_offer_with_detail_csv(run_dir)
+        print(
+            f"[流水线] 已写 {DIR_BUYER_OFFER_PROFILES}/"
+            "buyer_offer_with_detail.csv（与 detail_ware 列一致，含购买者摘要）",
+            file=sys.stderr,
+        )
+    except Exception as e:
+        print(
+            f"[流水线] 跳过 buyer_offer_with_detail.csv：{e}",
+            file=sys.stderr,
+        )
 
     comments_path = run_dir / FILE_COMMENTS_FLAT_CSV
     write_comments_flat_csv(comments_path, all_comment_rows)
@@ -864,18 +832,16 @@ def main(keyword: str | None = None) -> Path:
         "pc_search_export_rows_full": len(export_rows_full),
         "merged_rows": len(merged_rows),
         "merged_csv_mode": (MERGED_CSV_MODE or "lean").strip().lower(),
-        "merged_csv_column_count": len(fieldnames),
+        "merged_csv_column_count": merged_col_count,
         "detail_ware_csv_mode": (DETAIL_WARE_CSV_MODE or "lean").strip().lower(),
-        "detail_ware_csv_column_count": len(detail_fn),
+        "detail_ware_csv_column_count": detail_col_count,
         "comment_flat_rows": len(all_comment_rows),
         "detail_ware_csv_rows": len(detail_csv_rows),
+        "buyer_offer_profiles_dir": DIR_BUYER_OFFER_PROFILES,
         "with_comment_list": bool(WITH_COMMENT_LIST),
         "list_pages": (LIST_PAGES or "").strip(),
     }
-    (run_dir / FILE_RUN_META_JSON).write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_run_meta_json(run_dir / FILE_RUN_META_JSON, meta)
     if stop_pipeline:
         print("[流水线] 已按请求终止（已写出当前进度）", file=sys.stderr)
         raise PipelineCancelled(run_dir)

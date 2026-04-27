@@ -2,6 +2,126 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
+
+/** 将结构化摘要转为非技术用户可读的条目（不出现 cr1 等字段名）。 */
+function pctShare(x) {
+  if (x == null || x === '') return '—'
+  const n = Number(x)
+  if (Number.isNaN(n)) return '—'
+  return `${(n * 100).toFixed(1)}%`
+}
+
+/** 集中度块：新键 first_share / top_three_combined_share，旧键 cr1 / cr3 */
+function concShare(block, key) {
+  if (!block || typeof block !== 'object') return null
+  const v0 = key === 'first' ? block.first_share : block.top_three_combined_share
+  if (v0 != null && v0 !== '') return v0
+  const legacy = key === 'first' ? block.cr1 : block.cr3
+  return legacy != null && legacy !== '' ? legacy : null
+}
+
+function briefHumanSummary(j) {
+  const rows = []
+  if (!j || typeof j !== 'object') return rows
+  if (j.keyword) rows.push({ label: '搜索关键词', value: String(j.keyword) })
+  if (j.batch_label) rows.push({ label: '批次', value: String(j.batch_label) })
+  const sc = j.scope
+  if (sc && typeof sc === 'object') {
+    if (sc.merged_sku_count != null)
+      rows.push({ label: '深入采集的商品款数（SKU）', value: String(sc.merged_sku_count) })
+    if (sc.comment_flat_rows != null)
+      rows.push({ label: '评价条数', value: String(sc.comment_flat_rows) })
+    if (sc.structure_source_rows != null)
+      rows.push({ label: '列表/结构统计所用行数', value: String(sc.structure_source_rows) })
+    if (sc.uses_pc_search_list_export === true)
+      rows.push({ label: '是否含搜索列表全量', value: '是' })
+  }
+  const conc = j.concentration
+  if (conc && typeof conc === 'object') {
+    const shops = conc.shops_from_list
+    if (shops && typeof shops === 'object') {
+      const cr1 = concShare(shops, 'first')
+      const cr3 = concShare(shops, 'top3')
+      if (shops.top_label && cr1 != null) {
+        rows.push({
+          label: '第一大店铺（占列表行比例）',
+          value: `${pctShare(cr1)} · ${shops.top_label}`,
+        })
+      }
+      if (cr3 != null) {
+        rows.push({
+          label: '前三大店铺合计（占列表行比例）',
+          value: pctShare(cr3),
+        })
+      }
+      const usb = shops.unique_sku_basis
+      if (usb && typeof usb === 'object' && usb.n_unique_skus != null) {
+        const u1 = concShare(usb, 'first')
+        const u3 = concShare(usb, 'top3')
+        if (usb.top_label && u1 != null) {
+          rows.push({
+            label: '第一大店铺（占去重 SKU 比例）',
+            value: `${pctShare(u1)} · ${usb.top_label} · 共 ${usb.n_unique_skus} 个 SKU`,
+          })
+        }
+        if (u3 != null) {
+          rows.push({
+            label: '前三大店铺合计（占去重 SKU）',
+            value: pctShare(u3),
+          })
+        }
+      }
+    }
+    const lb = conc.list_brand_field
+    if (lb && typeof lb === 'object') {
+      const l1 = concShare(lb, 'first')
+      const l3 = concShare(lb, 'top3')
+      if (lb.top_label && l1 != null) {
+        rows.push({
+          label: '第一大品牌（列表侧，按行）',
+          value: `${pctShare(l1)} · ${lb.top_label}`,
+        })
+      }
+      if (l3 != null) {
+        rows.push({
+          label: '前三大品牌合计（列表侧）',
+          value: pctShare(l3),
+        })
+      }
+    }
+    const db = conc.detail_brand_among_merged
+    if (db && typeof db === 'object') {
+      const d1 = concShare(db, 'first')
+      const d3 = concShare(db, 'top3')
+      if (db.top_label && d1 != null) {
+        rows.push({
+          label: '第一大品牌（深入样本）',
+          value: `${pctShare(d1)} · ${db.top_label}`,
+        })
+      }
+      if (d3 != null) {
+        rows.push({
+          label: '前三大品牌合计（深入样本）',
+          value: pctShare(d3),
+        })
+      }
+    }
+  }
+  const p = j.price_stats
+  if (p && typeof p === 'object' && p.n > 0) {
+    rows.push({ label: '价格统计·样本量', value: String(p.n) })
+    if (p.median != null)
+      rows.push({ label: '价格统计·中位数（元）', value: Number(p.median).toFixed(2) })
+    if (p.mean != null)
+      rows.push({ label: '价格统计·平均（元）', value: Number(p.mean).toFixed(2) })
+  }
+  const src = j.price_stats_source
+  if (src === 'pc_search_export_all_rows')
+    rows.push({ label: '价格统计·数据来源', value: '搜索列表全量' })
+  else if (src === 'keyword_pipeline_merged')
+    rows.push({ label: '价格统计·数据来源', value: '深入采集合并表' })
+  return rows
+}
 import {
   refreshJobs,
   useJobs,
@@ -10,7 +130,7 @@ import {
   previewUrl,
   jobCompetitorBriefUrl,
   downloadCompetitorBriefPack,
-  jobExportReportDocumentUrl,
+  exportReportDocument,
 } from '../../composables/useJobs'
 import {
   generationInFlightKey,
@@ -23,9 +143,27 @@ const reportMd = ref('')
 const err = ref('')
 const viewMode = ref('render')
 const briefJson = ref('')
+const briefData = ref(null)
 const briefErr = ref('')
 const briefCopyOk = ref(false)
 const packErr = ref('')
+const exportDocErr = ref('')
+/** 正在导出的格式：docx | pdf | null */
+const exportDocFmt = ref(null)
+
+async function exportReportFmt(fmt) {
+  const id = selectedId.value
+  if (!id) return
+  exportDocErr.value = ''
+  exportDocFmt.value = fmt
+  try {
+    await exportReportDocument(id, fmt)
+  } catch (e) {
+    exportDocErr.value = String(e?.message || e)
+  } finally {
+    exportDocFmt.value = null
+  }
+}
 
 /** 将 Markdown 中的 report_assets 相对路径转为可访问的 API URL（在线预览插图） */
 function reportMdWithAssetUrls(md, jobId) {
@@ -47,19 +185,21 @@ const K_PACK = 'brief-pack:'
 function genKeyMatches(prefix) {
   const id = selectedId.value
   if (!id) return false
-  return genInFlight.value === `${prefix}${id}`
+  return genInFlight.value.includes(`${prefix}${id}`)
 }
 const loading = computed(() => genKeyMatches(K_PREVIEW))
 const briefLoading = computed(() => genKeyMatches(K_BRIEF))
 const packLoading = computed(() => genKeyMatches(K_PACK))
 const viewInFlightOtherJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k) return null
-  const i = k.lastIndexOf(':')
-  if (i < 0) return null
-  const jid = k.slice(i + 1)
-  if (jid === selectedId.value) return null
-  return jid
+  const sid = selectedId.value
+  if (!sid) return null
+  for (const k of genInFlight.value) {
+    const i = k.lastIndexOf(':')
+    if (i < 0) continue
+    const jid = k.slice(i + 1)
+    if (jid && jid !== sid) return jid
+  }
+  return null
 })
 
 const successJobs = computed(() =>
@@ -69,6 +209,8 @@ const successJobs = computed(() =>
 const selectedJob = computed(() =>
   successJobs.value.find((j) => String(j.id) === selectedId.value),
 )
+
+const briefHumanRows = computed(() => briefHumanSummary(briefData.value))
 
 async function loadList() {
   try {
@@ -105,6 +247,7 @@ async function loadReport() {
 
 async function loadCompetitorBrief() {
   briefJson.value = ''
+  briefData.value = null
   briefErr.value = ''
   briefCopyOk.value = false
   const id = selectedId.value
@@ -118,11 +261,12 @@ async function loadCompetitorBrief() {
           const j = JSON.parse(text)
           briefErr.value = j.detail || text
         } catch {
-          briefErr.value = text || `HTTP ${r.status}`
+          briefErr.value = text || `请求失败（${r.status}）`
         }
         return
       }
       const j = JSON.parse(text)
+      briefData.value = j
       briefJson.value = JSON.stringify(j, null, 2)
     } catch (e) {
       briefErr.value = String(e)
@@ -174,6 +318,7 @@ onMounted(loadList)
 
 watch(selectedId, async () => {
   briefJson.value = ''
+  briefData.value = null
   briefErr.value = ''
   packErr.value = ''
   const id = selectedId.value
@@ -206,9 +351,9 @@ watch(
       <h2>分析报告查看</h2>
       <p class="hint-top">
         选择<strong>已成功</strong>的任务，在线阅读报告或下载。
-        流水线生成报告时会<strong>自动</strong>基于<strong>全部评价正文</strong>分块调用大模型扩展关注词，并写入统计图（PNG，见「二点五」章与简报包 <code>report_assets</code>）。
-        <strong>一键下载简报包</strong>含报告稿、统计图、结构化 JSON、要点摘录。
-        需要改规则或重算，请至
+        若开启大模型，系统会在后台根据评价正文补充<strong>关注词</strong>与<strong>使用场景</strong>标签，并生成报告中的统计图（与报告插图章节对应）。
+        <strong>一键下载简报包</strong>内含：报告正文、插图文件夹、机器整理的<strong>数据摘要</strong>、以及便于扫读的<strong>要点摘录</strong>。
+        需要改分析规则或重新出稿，请至
         <RouterLink to="/jd/analysis-build">报告生成</RouterLink>。
       </p>
 
@@ -233,40 +378,36 @@ watch(
         >
           下载报告
         </a>
-        <a
-          class="ma-btn ma-btn-secondary dl-link"
-          :class="{ disabled: !selectedId }"
-          :href="selectedId ? jobExportReportDocumentUrl(selectedId, 'docx') : '#'"
-          target="_blank"
-          rel="noreferrer"
-          @click="(e) => { if (!selectedId) e.preventDefault() }"
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!selectedId || exportDocFmt || loading"
+          @click="exportReportFmt('docx')"
         >
-          导出 Word
-        </a>
-        <a
-          class="ma-btn ma-btn-secondary dl-link"
-          :class="{ disabled: !selectedId }"
-          :href="selectedId ? jobExportReportDocumentUrl(selectedId, 'pdf') : '#'"
-          target="_blank"
-          rel="noreferrer"
-          @click="(e) => { if (!selectedId) e.preventDefault() }"
+          {{ exportDocFmt === 'docx' ? '导出中…' : '导出 Word' }}
+        </button>
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!selectedId || exportDocFmt || loading"
+          @click="exportReportFmt('pdf')"
         >
-          导出 PDF
-        </a>
+          {{ exportDocFmt === 'pdf' ? '导出中…' : '导出 PDF' }}
+        </button>
         <button
           type="button"
           class="ma-btn ma-btn-secondary"
           :disabled="!selectedId || briefLoading || loading"
-          title="生成与报告相同统计口径的结构化数据"
+          title="加载与报告数字一致的数据摘要（可先读易读版，再展开原始格式）"
           @click="loadCompetitorBrief"
         >
-          {{ briefLoading ? '摘要加载中…' : '加载结构化摘要' }}
+          {{ briefLoading ? '摘要加载中…' : '加载数据摘要' }}
         </button>
         <button
           type="button"
           class="ma-btn ma-btn-primary"
           :disabled="!selectedId || packLoading || loading || briefLoading"
-          title="ZIP：报告稿、结构化数据、要点摘录、说明"
+          title="下载压缩包：报告、配图、数据与说明"
           @click="downloadBriefPack"
         >
           {{ packLoading ? '打包中…' : '一键下载简报包' }}
@@ -277,27 +418,40 @@ watch(
       </p>
 
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        本任务输出目录（原始表格复核请至「库内数据浏览」）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
+        本任务在本机上的结果文件夹（表格明细可在「库内数据浏览」查看）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
 
       <p v-if="briefErr" class="ma-err">{{ briefErr }}</p>
       <p v-if="packErr" class="ma-err">{{ packErr }}</p>
+      <p v-if="exportDocErr" class="ma-err">{{ exportDocErr }}</p>
       <p v-if="err" class="ma-err">{{ err }}</p>
       <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
     </section>
 
-    <section v-if="briefJson" class="ma-card preview-card">
+    <section v-if="briefData" class="ma-card preview-card">
       <div class="preview-head">
-        <h2>结构化竞品摘要</h2>
+        <h2>竞品数据摘要（机器整理）</h2>
         <div class="tabs">
           <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="copyBriefJson">
-            {{ briefCopyOk ? '已复制' : '复制' }}
+            {{ briefCopyOk ? '已复制' : '复制原始数据' }}
           </button>
-          <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="downloadBriefJson">下载文件</button>
+          <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="downloadBriefJson">下载数据文件</button>
         </div>
       </div>
-      <p class="hint-top brief-hint">与上方报告统计口径一致的数据汇总，可复制或下载给其它工具使用。</p>
-      <pre class="raw-md brief-json">{{ briefJson }}</pre>
+      <p class="hint-top brief-hint">
+        以下数字与上方报告一致，用日常用语列出；需要交给其它系统或技术人员时，可展开下方「原始数据」或复制/下载。
+      </p>
+      <dl v-if="briefHumanRows.length" class="brief-dl">
+        <template v-for="(row, idx) in briefHumanRows" :key="idx">
+          <dt>{{ row.label }}</dt>
+          <dd>{{ row.value }}</dd>
+        </template>
+      </dl>
+      <p v-else class="ma-muted brief-hint">暂无摘要条目（可能缺少列表或品牌字段）。</p>
+      <details class="brief-raw-wrap">
+        <summary>展开原始数据（机器可读格式）</summary>
+        <pre class="raw-md brief-json">{{ briefJson }}</pre>
+      </details>
     </section>
 
     <section v-if="reportMd" class="ma-card preview-card">
@@ -444,5 +598,39 @@ watch(
 }
 .brief-json {
   max-height: min(50vh, 560px);
+}
+.brief-dl {
+  margin: 0.5rem 0 1rem;
+  display: grid;
+  grid-template-columns: minmax(10rem, 38%) 1fr;
+  gap: 0.35rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.brief-dl dt {
+  margin: 0;
+  font-weight: 600;
+  color: #374151;
+}
+.brief-dl dd {
+  margin: 0;
+  color: #1f2937;
+  word-break: break-word;
+}
+.brief-raw-wrap {
+  margin-top: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  background: #fafafa;
+}
+.brief-raw-wrap summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #4b5563;
+  user-select: none;
+}
+.brief-raw-wrap .brief-json {
+  margin-top: 0.75rem;
 }
 </style>

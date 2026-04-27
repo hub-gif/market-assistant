@@ -1,21 +1,71 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
-import { refreshJobs, useJobs, exportStrategyDocument } from '../../composables/useJobs'
+import {
+  api,
+  refreshJobs,
+  useJobs,
+  exportStrategyDocument,
+} from '../../composables/useJobs'
+import { generationInFlightKey, withGenerationInFlight } from '../../composables/useGenerationInFlight'
+import { loadStrategyDraftRecord } from '../../lib/strategyDraftStorage'
+import { marketingPackResultToMarkdown } from '../../lib/marketingPackMarkdown'
 
 const route = useRoute()
 const router = useRouter()
 const { jobs } = useJobs()
+
+const genInFlight = generationInFlightKey()
 
 const selectedId = ref('')
 const draftMd = ref('')
 const draftMeta = ref(null)
 const viewMode = ref('render')
 const exportErr = ref('')
-const exportBusy = ref(false)
+const marketingErr = ref('')
+const marketingExportErr = ref('')
+const marketingResult = ref(null)
 
-const STORAGE_KEY = (id) => `ma_strategy_draft_${id}`
+const exportBusy = computed(() => {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.some((k) => String(k).startsWith(`export-strategy:${id}:`))
+})
+
+const marketingBusy = computed(() => {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.includes(`marketing-detail-pack:${id}`)
+})
+
+const marketingExportBusy = computed(() => {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.some((k) => String(k).startsWith(`export-marketing-pack:${id}:`))
+})
+
+function isMarketingExporting(fmt) {
+  const id = selectedId.value
+  if (!id) return false
+  return genInFlight.value.includes(`export-marketing-pack:${id}:${fmt}`)
+}
+
+function payloadForMarketing(lastRequest) {
+  if (!lastRequest || typeof lastRequest !== 'object') {
+    return { business_notes: '', strategy_decisions: {} }
+  }
+  const {
+    generator: _g,
+    business_notes: bn,
+    strategy_matrix_group: _mg,
+    ...rest
+  } = lastRequest
+  return {
+    business_notes: (bn || '').trim(),
+    strategy_decisions: rest,
+  }
+}
 
 const successJobs = computed(() =>
   [...jobs.value].filter((j) => j.status === 'success').sort((a, b) => b.id - a.id),
@@ -23,6 +73,44 @@ const successJobs = computed(() =>
 
 const selectedJob = computed(() =>
   successJobs.value.find((j) => String(j.id) === selectedId.value),
+)
+
+function pickDetailPackSubset(pack, keys) {
+  if (!pack || typeof pack !== 'object') return null
+  const o = {}
+  for (const k of keys) {
+    if (Object.prototype.hasOwnProperty.call(pack, k)) o[k] = pack[k]
+  }
+  return Object.keys(o).length ? o : null
+}
+
+/** 列表/详情页主文案（与「触点」分开展示） */
+const marketingPackDetailList = computed(() =>
+  pickDetailPackSubset(marketingResult.value?.detail_page_pack, [
+    'listing_titles',
+    'listing_subtitle',
+    'detail_headline',
+    'detail_mid_story_paragraphs',
+    'selling_bullets',
+    'usage_and_pairing_tips',
+    'spec_sidebar_lines',
+    'faq',
+    'short_graphic_post_variants',
+  ]),
+)
+
+/** 依据、主图要点、文生图/文生视频提示词、短视频钩句、客服 */
+const marketingPackTouchBlock = computed(() =>
+  pickDetailPackSubset(marketingResult.value?.detail_page_pack, [
+    'traceability_note',
+    'main_image_three_points',
+    'text_to_image_prompt_main',
+    'text_to_image_prompt_scene',
+    'text_to_video_prompt',
+    'live_or_short_hook',
+    'live_script_bullets',
+    'customer_service_opening',
+  ]),
 )
 
 function loadDraft() {
@@ -33,17 +121,17 @@ function loadDraft() {
     return
   }
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY(id))
-    if (!raw) {
+    const o = loadStrategyDraftRecord(id)
+    if (!o) {
       draftMd.value = ''
       draftMeta.value = null
       return
     }
-    const o = JSON.parse(raw)
     draftMd.value = o.markdown || ''
     draftMeta.value = {
       keyword: o.keyword || '',
       generated_at: o.generated_at || '',
+      last_request: o.last_request || null,
     }
   } catch {
     draftMd.value = ''
@@ -73,16 +161,86 @@ function downloadDraftMd() {
   URL.revokeObjectURL(u)
 }
 
+function downloadMarketingPackJson() {
+  if (!marketingResult.value || !selectedId.value) return
+  const blob = new Blob([JSON.stringify(marketingResult.value, null, 2)], {
+    type: 'application/json;charset=utf-8',
+  })
+  const u = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = u
+  a.download = `job_${selectedId.value}_marketing_detail_pack.json`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(u)
+}
+
+async function exportMarketingPackFmt(fmt) {
+  if (!marketingResult.value || !selectedId.value) return
+  marketingExportErr.value = ''
+  const id = selectedId.value
+  const md = marketingPackResultToMarkdown(marketingResult.value)
+  if (!md.trim()) {
+    marketingExportErr.value = '无可导出的营销内容'
+    return
+  }
+  try {
+    await withGenerationInFlight(`export-marketing-pack:${id}:${fmt}`, async () => {
+      await exportStrategyDocument(id, md, fmt, 'marketing_detail')
+    })
+  } catch (e) {
+    marketingExportErr.value = String(e)
+  }
+}
+
+async function generateMarketingDetailPack() {
+  if (!draftMd.value || !selectedId.value) return
+  marketingErr.value = ''
+  marketingExportErr.value = ''
+  marketingResult.value = null
+  const id = selectedId.value
+  const { business_notes, strategy_decisions } = payloadForMarketing(
+    draftMeta.value?.last_request,
+  )
+  try {
+    await withGenerationInFlight(`marketing-detail-pack:${id}`, async () => {
+      const r = await api(`/api/jobs/${id}/marketing-detail-pack/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          strategy_markdown: draftMd.value,
+          business_notes,
+          strategy_decisions,
+        }),
+      })
+      const text = await r.text()
+      if (!r.ok) {
+        try {
+          const j = JSON.parse(text)
+          marketingErr.value = j.detail || text
+        } catch {
+          marketingErr.value = text || `HTTP ${r.status}`
+        }
+        return
+      }
+      marketingResult.value = JSON.parse(text)
+    })
+  } catch (e) {
+    marketingErr.value = String(e)
+  }
+}
+
 async function exportStrategyFmt(fmt) {
   if (!draftMd.value || !selectedId.value) return
   exportErr.value = ''
-  exportBusy.value = true
+  const id = selectedId.value
   try {
-    await exportStrategyDocument(selectedId.value, draftMd.value, fmt)
+    await withGenerationInFlight(`export-strategy:${id}:${fmt}`, async () => {
+      await exportStrategyDocument(id, draftMd.value, fmt)
+    })
   } catch (e) {
     exportErr.value = String(e)
-  } finally {
-    exportBusy.value = false
   }
 }
 
@@ -105,10 +263,26 @@ function syncSelectionFromRouteAndJobs() {
   }
 }
 
+function onStorageDraftSync(ev) {
+  const prefix = 'ma_strategy_draft_'
+  if (!ev.key || !ev.key.startsWith(prefix)) return
+  const jid = ev.key.slice(prefix.length)
+  if (jid === String(selectedId.value)) loadDraft()
+}
+
 onMounted(async () => {
   await loadList()
   syncSelectionFromRouteAndJobs()
   loadDraft()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', onStorageDraftSync)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('storage', onStorageDraftSync)
+  }
 })
 
 watch(
@@ -124,6 +298,8 @@ watch(
 )
 
 watch(selectedId, (id) => {
+  marketingResult.value = null
+  marketingExportErr.value = ''
   loadDraft()
   const want = id ? String(id) : ''
   if (String(route.query.job || '') !== want) {
@@ -146,7 +322,7 @@ watch(successJobs, (list) => {
     <section class="ma-card">
       <h2>策略稿预览</h2>
       <p class="hint-top">
-        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本浏览器会话内）。需要改决策请回到
+        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本机浏览器 <strong>localStorage</strong>，同域名下可跨标签查看）。生成/导出/营销内容等耗时操作状态在全局任务锁中同步，跨标签页可看到进行中。需要改决策请回到
         <RouterLink to="/jd/strategy-build">策略生成</RouterLink>
         重新提交。分析数据见
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
@@ -187,6 +363,14 @@ watch(successJobs, (list) => {
         <button type="button" class="ma-btn ma-btn-primary" @click="goBuildSameJob">
           去策略生成
         </button>
+        <button
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          :disabled="!draftMd || !selectedId || marketingBusy"
+          @click="generateMarketingDetailPack"
+        >
+          {{ marketingBusy ? '营销内容生成中…' : '生成营销内容' }}
+        </button>
       </div>
 
       <p v-if="draftMeta?.generated_at" class="meta-line ma-muted">
@@ -194,6 +378,60 @@ watch(successJobs, (list) => {
         <template v-if="draftMeta.keyword"> · 关键词：{{ draftMeta.keyword }}</template>
       </p>
       <p v-if="exportErr" class="ma-err">{{ exportErr }}</p>
+      <p v-if="marketingErr" class="ma-err">{{ marketingErr }}</p>
+      <p v-if="marketingExportErr" class="ma-err">{{ marketingExportErr }}</p>
+      <div v-if="marketingResult" class="marketing-pack-out">
+        <h3 class="marketing-pack-h">营销内容</h3>
+        <p class="ma-muted marketing-pack-meta">
+          {{ marketingResult.generated_at }} · {{ marketingResult.source }}
+        </p>
+        <p class="ma-muted marketing-pack-disk">
+          服务端会将本包写入任务目录
+          <code>marketing/marketing_detail_pack_v1.json</code>（与批次一并归档；目录不可写时仅内存结果）。
+        </p>
+        <div class="toolbar marketing-pack-actions">
+          <button
+            type="button"
+            class="ma-btn ma-btn-secondary"
+            :disabled="!selectedId || marketingExportBusy || marketingBusy"
+            @click="downloadMarketingPackJson"
+          >
+            下载 JSON
+          </button>
+          <button
+            type="button"
+            class="ma-btn ma-btn-secondary"
+            :disabled="!selectedId || marketingExportBusy || marketingBusy"
+            @click="exportMarketingPackFmt('docx')"
+          >
+            {{ isMarketingExporting('docx') ? '导出中…' : '营销内容导出 Word' }}
+          </button>
+          <button
+            type="button"
+            class="ma-btn ma-btn-secondary"
+            :disabled="!selectedId || marketingExportBusy || marketingBusy"
+            @click="exportMarketingPackFmt('pdf')"
+          >
+            {{ isMarketingExporting('pdf') ? '导出中…' : '营销内容导出 PDF' }}
+          </button>
+        </div>
+        <details open class="marketing-details">
+          <summary>核心信息卡</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.core_info_card, null, 2) }}</pre>
+        </details>
+        <details v-if="marketingPackDetailList" open class="marketing-details">
+          <summary>列表与详情页主文案</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingPackDetailList, null, 2) }}</pre>
+        </details>
+        <details v-else-if="marketingResult.detail_page_pack" open class="marketing-details">
+          <summary>详情页包字段</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.detail_page_pack, null, 2) }}</pre>
+        </details>
+        <details v-if="marketingPackTouchBlock" open class="marketing-details">
+          <summary>依据、主图、文生图/文生视频提示词、钩句与客服</summary>
+          <pre class="marketing-pre">{{ JSON.stringify(marketingPackTouchBlock, null, 2) }}</pre>
+        </details>
+      </div>
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
         任务目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
@@ -334,5 +572,64 @@ watch(successJobs, (list) => {
   background: #fafafa;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+}
+.marketing-pack-out {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.marketing-pack-h {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: #1e293b;
+}
+.marketing-pack-meta {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+.marketing-pack-disk {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+.marketing-pack-disk code {
+  font-size: 0.85em;
+  background: #e2e8f0;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.marketing-product-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+.marketing-pack-actions {
+  margin: 0 0 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.marketing-details {
+  margin-bottom: 0.65rem;
+}
+.marketing-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #334155;
+}
+.marketing-pre {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow: auto;
+  max-height: 320px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 </style>

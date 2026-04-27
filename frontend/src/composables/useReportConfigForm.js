@@ -12,6 +12,18 @@ function splitTriggers(text) {
 }
 
 /**
+ * 表单未展示的大模型/细类归纳等布尔项：从任务读入后在「保存」时原样写回，避免误清空。
+ * （与 backend ``validate_report_config_body`` 允许的键一致。）
+ */
+const REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS = [
+  'llm_comment_sentiment',
+  'llm_matrix_group_summaries',
+  'llm_price_group_summaries',
+  'llm_comment_group_summaries',
+  'llm_scenario_group_summaries',
+]
+
+/**
  * 报告调参表单（与后端 report_config 字段对应），面向非技术用户。
  */
 export function useReportConfigForm() {
@@ -20,11 +32,14 @@ export function useReportConfigForm() {
   const marketRows = ref([
     { indicator: '', value_and_scope: '', source: '', year: '' },
   ])
+  /** 表单未编辑的布尔项，从任务配置读入后随保存写回 */
+  const passthroughBools = ref({})
 
   function resetToEmpty() {
     focusWordRows.value = [{ text: '' }]
     scenarioGroups.value = [{ label: '', triggersText: '' }]
     marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
+    passthroughBools.value = {}
   }
 
   /**
@@ -94,6 +109,12 @@ export function useReportConfigForm() {
     } else {
       marketRows.value = [{ indicator: '', value_and_scope: '', source: '', year: '' }]
     }
+
+    const pass = {}
+    for (const k of REPORT_CONFIG_PASSTHROUGH_BOOL_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(cfg, k)) pass[k] = Boolean(cfg[k])
+    }
+    passthroughBools.value = pass
   }
 
   /** @returns {Record<string, unknown>} 可 PATCH 到后端的 report_config；全空则为 {} */
@@ -133,6 +154,7 @@ export function useReportConfigForm() {
       }))
     }
 
+    Object.assign(out, passthroughBools.value)
     return out
   }
 
@@ -178,6 +200,7 @@ export function useReportConfigForm() {
     focusWordRows,
     scenarioGroups,
     marketRows,
+    passthroughBools,
     resetToEmpty,
     applyFromApiConfig,
     buildPayload,

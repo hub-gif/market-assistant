@@ -26,15 +26,15 @@
   },
   "concentration": {
     "shops_from_list": {
-      "cr1": 0.12,
-      "cr3": 0.35,
+      "first_share": 0.12,
+      "top_three_combined_share": 0.35,
       "top_label": "某旗舰店",
       "top_share_pct": "12.0%"
     },
     "list_brand_field": null,
     "detail_brand_among_merged": {
-      "cr1": 0.2,
-      "cr3": 0.6,
+      "first_share": 0.2,
+      "top_three_combined_share": 0.6,
       "top_label": "品牌A",
       "top_share_pct": "20.0%"
     }
@@ -82,7 +82,8 @@
           "shop": "示例店",
           "category": "休闲食品 > 饼干 > 粗粮饼干",
           "selling_point": "",
-          "comment_fuzzy": "20万+"
+          "comment_fuzzy": "1万+",
+          "total_sales": "已售50万+ | good:99%好评"
         }
       ]
     }
@@ -102,7 +103,7 @@
     }
   ],
   "notes": [
-    "与在线分析报告统计口径一致；主题词与场景为预设词表，非 NLP 主题模型。",
+    "与在线分析报告各章计数规则一致；主题词与场景为预设词表，非 NLP 主题模型。",
     "价格来自展示字段抽取，含促销与规格差异。"
   ]
 }

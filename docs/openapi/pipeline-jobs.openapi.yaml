@@ -70,7 +70,7 @@ paths:
           description: Not found
     patch:
       tags: [jobs]
-      summary: 仅更新 report_config（报告关注词/场景/外部市场表等）
+      summary: 仅更新 report_config（外部市场表等；预设关注词/场景已废弃的请求字段将被忽略）
       parameters:
         - $ref: "#/components/parameters/JobId"
       requestBody:
@@ -112,7 +112,7 @@ paths:
   /api/report-config-defaults/:
     get:
       tags: [jobs]
-      summary: 报告调参默认模板（与 jd_competitor_report 脚本常量一致）
+      summary: 报告调参默认模板（与 pipeline.competitor_report.jd_report 脚本常量一致）
       responses:
         "200":
           description: OK
@@ -217,7 +217,7 @@ paths:
   /api/jobs/{id}/competitor-brief/:
     get:
       tags: [jobs]
-      summary: 结构化竞品摘要 JSON（与 Markdown 报告统计口径一致）
+      summary: 结构化竞品摘要 JSON（与 Markdown 报告同一套计数规则）
       parameters:
         - $ref: "#/components/parameters/JobId"
       responses:
@@ -367,23 +367,9 @@ components:
     ReportConfig:
       type: object
       description: |
-        允许键仅限下列三项；可全部省略或 `{}` 表示使用脚本内置默认。
+        允许键以后端 ``validate_report_config_body`` 为准（含各 ``llm_*``、``chapter8_text_mining_probe*``、``external_market_table_rows`` 等）。
+        已废弃：``comment_focus_words``、``comment_scenario_groups``、``llm_scenario_group_summaries``（请求中若出现将被忽略）。
       properties:
-        comment_focus_words:
-          type: array
-          items:
-            type: string
-        comment_scenario_groups:
-          type: array
-          items:
-            type: object
-            properties:
-              label:
-                type: string
-              triggers:
-                type: array
-                items:
-                  type: string
         external_market_table_rows:
           type: array
           items:
@@ -501,7 +487,7 @@ components:
           type: string
           enum: [rules, llm]
           default: rules
-          description: rules=jd_competitor_report 规则引擎；llm=结构化摘要 JSON + AI_crawler 文本接口
+          description: rules=竞品报告规则引擎（jd_report）；llm=结构化摘要 JSON + AI_crawler 文本接口
 
     StrategyDraftRequest:
       type: object
@@ -533,7 +519,7 @@ components:
         positioning_choice:
           type: string
           enum: ['', 'top', 'mid', 'entry', 'different']
-          description: 价格带主定位；空字符串表示文稿中四项均为未勾选
+          description: 价位阵地取向（贴顶/卡腰/下探/另起带），写入策略稿「八、战术支柱 · 8.2 定价策略」；与「四、为什么要选这个品牌」（承诺与信任）分离。空字符串表示文稿中四项均为未勾选
         competitive_stance:
           type: string
           enum: ['', 'flank', 'head_on', 'both', 'undecided']
@@ -549,6 +535,26 @@ components:
         pillar_comm:
           type: string
           maxLength: 800
+        audience_segment:
+          type: string
+          maxLength: 500
+          description: 目标客群一句话（可选）
+        competitor_reference:
+          type: string
+          maxLength: 800
+          description: 主要对标品牌或价位带（可选）
+        resource_notes:
+          type: string
+          maxLength: 1000
+          description: 资源与预算量级备注（可选）
+        marketing_strategy:
+          type: string
+          maxLength: 2000
+          description: 营销策略（传播、活动、投放、内容等，可选）
+        general_strategy:
+          type: string
+          maxLength: 2000
+          description: 总体策略（增长/品类/经营总原则，可选）
         ack_risk_keywords:
           type: boolean
           default: false
@@ -585,3 +591,10 @@ components:
           example: structured_summary_rules_v1
         markdown:
           type: string
+        report_strategy_excerpt_source:
+          type: string
+          description: none=未找到第九章正文；json_markdown=strategy_opportunities_llm.json 的 markdown；competitor_analysis_md=从 competitor_analysis.md 截取
+          enum: [none, json_markdown, competitor_analysis_md]
+        report_strategy_excerpt_chars:
+          type: integer
+          description: 参与对齐的第九章节选字符数（供策略稿 LLM 的 report_strategy_excerpt；generator=rules 时仅元数据）

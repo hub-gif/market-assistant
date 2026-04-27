@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import {
+  clearRegenerateReportInFlightOnly,
   generationInFlightKey,
   withGenerationInFlight,
 } from '../../composables/useGenerationInFlight'
@@ -11,18 +12,22 @@ import { useReportConfigForm } from '../../composables/useReportConfigForm'
 
 const { jobs } = useJobs()
 const selectedId = ref('')
-const useLlm = ref(false)
+/** 勾选则本次只出规则统计稿（仍先跑规则落盘，不做全文智能润色） */
+const useRulesOnly = ref(false)
 const regenErr = ref('')
 const genInFlight = generationInFlightKey()
 const REGEN_PREFIX = 'regenerate-report:'
 const regenPendingJobId = computed(() => {
-  const k = genInFlight.value
-  if (!k || !k.startsWith(REGEN_PREFIX)) return null
-  return k.slice(REGEN_PREFIX.length)
+  for (const k of genInFlight.value) {
+    if (k.startsWith(REGEN_PREFIX)) return k.slice(REGEN_PREFIX.length)
+  }
+  return null
 })
 const regenBusyThisTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value === selectedId.value,
 )
+/** 任意任务正在重新生成时都应禁用按钮，避免切换页签后 selectedId 被重置导致误判可点 */
+const regenBusyAny = computed(() => regenPendingJobId.value != null)
 const regenBusyOtherTask = computed(
   () => regenPendingJobId.value != null && regenPendingJobId.value !== selectedId.value,
 )
@@ -148,16 +153,23 @@ async function loadList() {
   }
 }
 
+function clearLocalRegenLock() {
+  regenErr.value = ''
+  clearRegenerateReportInFlightOnly()
+}
+
 async function regenerateReport() {
   const id = selectedId.value
   if (!id) return
   regenErr.value = ''
   const key = `${REGEN_PREFIX}${id}`
-  await withGenerationInFlight(key, async () => {
-    try {
+  try {
+    await withGenerationInFlight(key, async () => {
       const r = await api(`/api/jobs/${id}/regenerate-report/`, {
         method: 'POST',
-        body: JSON.stringify({ generator: useLlm.value ? 'llm' : 'rules' }),
+        body: JSON.stringify({
+          generator: useRulesOnly.value ? 'rules' : 'llm',
+        }),
       })
       const text = await r.text()
       if (!r.ok) {
@@ -172,10 +184,10 @@ async function regenerateReport() {
       const updated = JSON.parse(text)
       const idx = jobs.value.findIndex((x) => x.id === updated.id)
       if (idx >= 0) jobs.value[idx] = updated
-    } catch (e) {
-      regenErr.value = String(e)
-    }
-  })
+    })
+  } catch (e) {
+    regenErr.value = String(e)
+  }
 }
 
 onMounted(loadList)
@@ -211,15 +223,15 @@ watch(
     <section class="ma-card">
       <h2>分析报告生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，调整报告统计规则后保存。<strong>未勾选</strong>下方选项时，按固定统计规则生成报告；<strong>勾选「使用大模型生成」</strong>后，由大模型根据本批次摘要撰写全文（通常更慢且可能计费）。均不重新爬取。
+        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。默认会<strong>先按系统规则生成统计稿</strong>，再<strong>用全文智能润色与补充</strong>（需本系统已配置可用的智能服务）；不会重新爬取数据。各章是否做评价智能解读等，可用「填入推荐示例」带上，或在下方「高级选项」里微调（多数情况不必动）。
         阅读与下载请至
         <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
       </p>
 
       <div class="toolbar">
-        <label class="chk-inline">
-          <input v-model="useLlm" type="checkbox" />
-          使用大模型生成（服务端需已配置并可用）
+        <label class="chk-inline chk-rules-only">
+          <input v-model="useRulesOnly" type="checkbox" />
+          本次只生成规则统计稿（不做全文智能润色，更快、不调用智能服务）
         </label>
       </div>
       <div class="toolbar">
@@ -233,13 +245,28 @@ watch(
         <button
           type="button"
           class="ma-btn ma-btn-primary"
-          :disabled="!selectedId || regenBusyThisTask"
+          :disabled="!selectedId || regenBusyAny"
           title="不重新爬取，仅根据本批次已有数据更新报告文件"
           @click="regenerateReport"
         >
           {{ regenBusyThisTask ? '生成中…' : '重新生成报告' }}
         </button>
+        <button
+          v-if="regenBusyAny"
+          type="button"
+          class="ma-btn ma-btn-secondary"
+          title="仅清除浏览器里记录的「报告生成中」状态；若后端仍在执行请勿点"
+          @click="clearLocalRegenLock"
+        >
+          清除误锁（本地）
+        </button>
       </div>
+      <p v-if="!successJobs.length" class="hint-top">
+        当前没有<strong>已成功</strong>的任务，无法生成报告；请先在任务列表确认流水线成功。
+      </p>
+      <p v-else-if="regenBusyAny" class="hint-top">
+        按钮因本页记录的「生成中」状态而暂时不可用。若你已重启服务或确定没有在生成，可先点「清除误锁（本地）」再试。
+      </p>
       <p v-if="regenBusyOtherTask" class="ma-warn-banner">
         任务 #{{ regenPendingJobId }} 的报告正在重新生成中，请稍候再切换任务或重复提交。
       </p>
@@ -247,7 +274,8 @@ watch(
       <div v-if="selectedId" class="report-config-block">
         <h3 class="report-config-title">报告里的评价统计怎么算</h3>
         <p class="hint-top report-config-hint">
-          下面三项都<strong>可以不改</strong>：留空并保存，表示沿用系统内置规则。请先点「保存以上设置」，再点「重新生成报告」（需要大模型时先勾选页面上方对应选项）。
+          关注词、场景词组、外部市场表等<strong>可以不改</strong>：留空并保存即沿用内置规则。大模型相关布尔项（如
+          <code>llm_comment_sentiment</code>）不再单独占勾选框：若任务里已有，会在保存时保留；要改请展开「高级 JSON」。
         </p>
         <div class="report-config-actions">
           <button
@@ -281,17 +309,22 @@ watch(
         />
 
         <details class="rc-advanced" @toggle="onAdvancedJsonToggle">
-          <summary>高级：用 JSON 编辑（一般不需要）</summary>
-          <p class="rc-help">打开时会根据上面表单生成内容；改完后点「写回表单」再保存。</p>
+          <summary>高级选项（编辑底层配置，一般不需要）</summary>
+          <p class="rc-help">
+            打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
+            <code>llm_comment_sentiment</code>、<code>llm_matrix_group_summaries</code>
+            等布尔字段（须为 <code>true</code>/<code>false</code>）。页顶「重新生成报告」默认已使用
+            <code>generator:&quot;llm&quot;</code>；若只要规则稿请勾选「本次仅用规则引擎」。
+          </p>
           <textarea v-model="advancedJsonText" class="report-config-editor" rows="10" spellcheck="false" />
-          <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将 JSON 写回表单</button>
+          <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将配置写回表单</button>
         </details>
 
         <p v-if="reportConfigErr" class="ma-err">{{ reportConfigErr }}</p>
       </div>
 
       <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        本任务输出目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
+        本任务在本机的数据目录（排查问题时可用）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
       </p>
 
       <p v-if="regenErr" class="ma-err">{{ regenErr }}</p>
@@ -318,6 +351,10 @@ watch(
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+.chk-rules-only {
+  width: auto;
+  max-width: 100%;
 }
 .chk-inline {
   display: flex;

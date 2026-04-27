@@ -29,7 +29,10 @@ venv/
 
 .idea/
 .vscode/
-.cursor/
+# Cursor 本地状态忽略；项目规则见 .cursor/rules/（可提交）
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 frontend/node_modules/
 frontend/dist/

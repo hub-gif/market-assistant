@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from django.test import SimpleTestCase
 
-from pipeline.brief_compact import compact_brief_for_llm, matrix_overview_for_llm
+from pipeline.reporting.brief_compact import (
+    compact_brief_for_llm,
+    matrix_overview_for_llm,
+)
 
 
 class BriefCompactTests(SimpleTestCase):

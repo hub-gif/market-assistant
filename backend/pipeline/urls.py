@@ -8,12 +8,22 @@ urlpatterns = [
         views.ReportConfigDefaultsView.as_view(),
         name="report-config-defaults",
     ),
+    path(
+        "strategy-config-defaults/",
+        views.StrategyConfigDefaultsView.as_view(),
+        name="strategy-config-defaults",
+    ),
     path("jobs/", views.JobListCreateView.as_view(), name="job-list-create"),
     path("jobs/<int:pk>/", views.JobDetailView.as_view(), name="job-detail"),
     path(
         "jobs/<int:pk>/cancel/",
         views.JobCancelView.as_view(),
         name="job-cancel",
+    ),
+    path(
+        "jobs/<int:pk>/resume/",
+        views.JobResumeView.as_view(),
+        name="job-resume",
     ),
     path("jobs/<int:pk>/download/", views.JobDownloadView.as_view(), name="job-download"),
     path("jobs/<int:pk>/preview/", views.JobPreviewView.as_view(), name="job-preview"),
@@ -66,6 +76,11 @@ urlpatterns = [
         "jobs/<int:pk>/strategy-draft/",
         views.JobStrategyDraftView.as_view(),
         name="job-strategy-draft",
+    ),
+    path(
+        "jobs/<int:pk>/marketing-detail-pack/",
+        views.JobMarketingDetailPackView.as_view(),
+        name="job-marketing-detail-pack",
     ),
     path(
         "jobs/<int:pk>/export-document/",

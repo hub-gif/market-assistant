@@ -7,6 +7,7 @@ class JobStatus(models.TextChoices):
     SUCCESS = "success", "成功"
     FAILED = "failed", "失败"
     CANCELLED = "cancelled", "已终止"
+    PAUSED = "paused", "已暂停（待换 Cookie 续跑）"
 
 
 class PipelineJob(models.Model):
@@ -36,6 +37,8 @@ class PipelineJob(models.Model):
     scenario_filter_enabled = models.BooleanField(null=True, blank=True)
     # 竞品报告 / competitor-brief：关注词、场景词组、外部市场表等（JSON，空对象=用爬虫脚本默认）
     report_config = models.JSONField(default=dict, blank=True)
+    # 策略生成页独立配置（与 report_config 无关），如默认是否使用大模型润色等
+    strategy_config = models.JSONField(default=dict, blank=True)
     status = models.CharField(
         max_length=16,
         choices=JobStatus.choices,
@@ -43,6 +46,7 @@ class PipelineJob(models.Model):
         db_index=True,
     )
     cancellation_requested = models.BooleanField(default=False, db_index=True)
+    resume_from_checkpoint = models.BooleanField(default=False, db_index=True)
     run_dir = models.TextField(blank=True, default="")
     error_message = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -53,6 +57,26 @@ class PipelineJob(models.Model):
 
     def __str__(self) -> str:
         return f"[{self.platform}] {self.keyword} ({self.status})"
+
+
+class PipelineJobCheckpoint(models.Model):
+    """Cookie 暂停续跑等场景的断点元数据（与任务一对一）。"""
+
+    job = models.OneToOneField(
+        PipelineJob,
+        on_delete=models.CASCADE,
+        related_name="checkpoint_row",
+    )
+    phase = models.CharField(max_length=32, db_index=True)
+    payload = models.JSONField(default=dict, blank=True)
+    hint_zh = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self) -> str:
+        return f"checkpoint job={self.job_id} phase={self.phase}"
 
 
 class JdProduct(models.Model):
@@ -120,6 +144,18 @@ class JdProductSnapshot(models.Model):
         return f"{self.product_id} @ job {self.job_id}"
 
 
+class JdLeafCategoryNorm(models.Model):
+    """叶类目归一：与导出 ``leaf_category`` 原文一致（去空格），用于任务内类目筛选索引。"""
+
+    label = models.CharField(max_length=512, unique=True, db_index=True)
+
+    class Meta:
+        ordering = ["label"]
+
+    def __str__(self) -> str:
+        return self.label[:80]
+
+
 class JdJobSearchRow(models.Model):
     """单次任务下 PC 搜索导出表一行，字段与 ``pc_search_export.csv`` 列一一对应（内部英文属性名）。"""
 
@@ -137,6 +173,7 @@ class JdJobSearchRow(models.Model):
     original_price = models.TextField(blank=True, default="")
     selling_point = models.TextField(blank=True, default="")
     comment_sales_floor = models.TextField(blank=True, default="")
+    total_sales = models.TextField(blank=True, default="")
     hot_list_rank = models.TextField(blank=True, default="")
     comment_count = models.TextField(blank=True, default="")
     shop_name = models.TextField(blank=True, default="")
@@ -148,6 +185,34 @@ class JdJobSearchRow(models.Model):
     seckill_info = models.TextField(blank=True, default="")
     attributes = models.TextField(blank=True, default="")
     leaf_category = models.TextField(blank=True, default="")
+    leaf_category_norm = models.ForeignKey(
+        JdLeafCategoryNorm,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="search_rows",
+    )
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="类目",
+        help_text="与 §5 矩阵同源：由合并表商详路径解析；可按 SKU 从合并表回填",
+    )
+    price_value = models.FloatField(null=True, blank=True, db_index=True)
+    sales_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 total_sales / 销量楼层解析，供排序",
+    )
+    comment_count_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从评价量文案解析，供排序",
+    )
     platform = models.TextField(blank=True, default="")
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
@@ -162,6 +227,11 @@ class JdJobSearchRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "matrix_group_label"]),
+            models.Index(fields=["job", "price_value"]),
+            models.Index(fields=["job", "sales_sort_value"]),
+            models.Index(fields=["job", "comment_count_sort_value"]),
         ]
 
     def __str__(self) -> str:
@@ -184,6 +254,17 @@ class JdJobDetailRow(models.Model):
     detail_category_path = models.TextField(blank=True, default="")
     detail_product_attributes = models.TextField(blank=True, default="")
     detail_body_ingredients = models.TextField(blank=True, default="")
+    buyer_ranking_line = models.TextField(blank=True, default="")
+    buyer_promo_text = models.TextField(blank=True, default="")
+    detail_price_value = models.FloatField(null=True, blank=True, db_index=True)
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="类目",
+        help_text="与 §5 矩阵同源：由 detail_category_path 解析",
+    )
 
     class Meta:
         ordering = ["row_index"]
@@ -195,6 +276,8 @@ class JdJobDetailRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "detail_price_value"]),
+            models.Index(fields=["job", "matrix_group_label"]),
         ]
 
     def __str__(self) -> str:
@@ -255,11 +338,40 @@ class JdJobMergedRow(models.Model):
     hot_list_rank = models.TextField(blank=True, default="")
     comment_fuzzy = models.TextField(blank=True, default="")
     comment_sales_floor = models.TextField(blank=True, default="")
+    total_sales = models.TextField(blank=True, default="")
     shop_name = models.TextField(blank=True, default="")
     detail_url = models.TextField(blank=True, default="")
     image = models.TextField(blank=True, default="")
     attributes = models.TextField(blank=True, default="")
     leaf_category = models.TextField(blank=True, default="")
+    leaf_category_norm = models.ForeignKey(
+        JdLeafCategoryNorm,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="merged_rows",
+    )
+    matrix_group_label = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="类目",
+        help_text="与 §5 矩阵同源：由 detail_category_path 解析",
+    )
+    price_value = models.FloatField(null=True, blank=True, db_index=True)
+    sales_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 total_sales / 销量楼层解析，供排序",
+    )
+    comment_count_sort_value = models.BigIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="从 pipeline_comment_count 解析，供排序",
+    )
     keyword = models.TextField(blank=True, default="")
     page = models.TextField(blank=True, default="")
     detail_brand = models.TextField(blank=True, default="")
@@ -268,6 +380,8 @@ class JdJobMergedRow(models.Model):
     detail_category_path = models.TextField(blank=True, default="")
     detail_product_attributes = models.TextField(blank=True, default="")
     detail_body_ingredients = models.TextField(blank=True, default="")
+    buyer_ranking_line = models.TextField(blank=True, default="")
+    buyer_promo_text = models.TextField(blank=True, default="")
     pipeline_comment_count = models.TextField(blank=True, default="")
     comment_preview = models.TextField(blank=True, default="")
 
@@ -281,6 +395,11 @@ class JdJobMergedRow(models.Model):
         ]
         indexes = [
             models.Index(fields=["job", "sku_id"]),
+            models.Index(fields=["job", "leaf_category_norm"]),
+            models.Index(fields=["job", "matrix_group_label"]),
+            models.Index(fields=["job", "price_value"]),
+            models.Index(fields=["job", "sales_sort_value"]),
+            models.Index(fields=["job", "comment_count_sort_value"]),
         ]
 
     def __str__(self) -> str:

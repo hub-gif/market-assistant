@@ -1,55 +1,24 @@
 <script setup>
 defineProps({
-  focusWordRows: { type: Array, required: true },
-  scenarioGroups: { type: Array, required: true },
   marketRows: { type: Array, required: true },
 })
-defineEmits([
-  'add-focus',
-  'remove-focus',
-  'add-scenario',
-  'remove-scenario',
-  'add-market',
-  'remove-market',
-])
+defineEmits(['add-market', 'remove-market'])
 </script>
 
 <template>
   <div>
     <div class="rc-section">
-      <h4 class="rc-subtitle">1. 评价里要统计的「关注词」</h4>
-      <p class="rc-help">报告会数这些词在评价里出现了多少次（适合看大家常提什么，例如口感、控糖、价格等）。</p>
-      <div class="rc-rows">
-        <div v-for="(row, i) in focusWordRows" :key="'f' + i" class="rc-inline">
-          <input v-model="row.text" type="text" class="rc-input" placeholder="输入一个词，如：控糖" />
-          <button type="button" class="ma-btn ma-btn-secondary rc-mini" @click="$emit('remove-focus', i)">删除</button>
-        </div>
-      </div>
-      <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="$emit('add-focus')">添加词</button>
-    </div>
-
-    <div class="rc-section">
-      <h4 class="rc-subtitle">2. 用途 / 场景分组</h4>
+      <h4 class="rc-subtitle">1. 第八章评论分析</h4>
       <p class="rc-help">
-        每一组有一个<strong>场景名称</strong>，和若干<strong>触发词</strong>。若一条评价里出现了其中任意一个词，这条评价就会算进该场景（一条评价可以同时属于多个场景）。触发词请用顿号、逗号或换行分开。
+        报告<strong>不再</strong>使用「预设关注词 / 预设场景词组」子串统计。请在报告配置（高级 JSON 或接口）中维护
+        <code>chapter8_text_mining_probe</code>
+        等开关，以生成开放词表、词频与共现等文本挖掘内容。可选
+        <code>llm_comment_sentiment</code>：按矩阵细类分别调用模型，在报告<strong>8.3</strong>生成「正/负向主题」归纳，与探针及「细类评论要点归纳」并列、互不替代。
       </p>
-      <div v-for="(g, i) in scenarioGroups" :key="'s' + i" class="rc-scenario-card">
-        <label class="rc-label">场景名称</label>
-        <input v-model="g.label" type="text" class="rc-input" placeholder="如：早餐 / 代餐" />
-        <label class="rc-label">触发词</label>
-        <textarea
-          v-model="g.triggersText"
-          class="rc-textarea"
-          rows="2"
-          placeholder="如：早餐、代餐、早饭（可用顿号或换行分隔）"
-        />
-        <button type="button" class="ma-btn ma-btn-secondary rc-mini" @click="$emit('remove-scenario', i)">删除本组</button>
-      </div>
-      <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="$emit('add-scenario')">添加场景组</button>
     </div>
 
     <div class="rc-section">
-      <h4 class="rc-subtitle">3. 外部市场信息（可选）</h4>
+      <h4 class="rc-subtitle">2. 外部市场信息（可选）</h4>
       <p class="rc-help">若手边有第三方市场规模、增速等摘录，可填在表里，报告会多一节说明；不需要可整表留空。</p>
       <div class="rc-market-wrap">
         <table class="rc-market">
@@ -107,17 +76,6 @@ defineEmits([
   color: #6b7280;
   line-height: 1.5;
 }
-.rc-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-.rc-inline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
 .rc-input {
   flex: 1;
   min-width: 140px;
@@ -128,7 +86,6 @@ defineEmits([
   font-size: 0.88rem;
   box-sizing: border-box;
 }
-/* 表内输入：不占 flex，宽度受列约束，避免撑进邻列 */
 .rc-input.rc-td {
   flex: none;
   display: block;
@@ -136,28 +93,6 @@ defineEmits([
   width: 100%;
   max-width: 100%;
   font-size: 0.8rem;
-}
-.rc-textarea {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 0.88rem;
-  resize: vertical;
-  margin: 0.35rem 0 0.5rem;
-}
-.rc-label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #4b5563;
-  margin-top: 0.35rem;
-}
-.rc-label:first-of-type {
-  margin-top: 0;
 }
 .rc-mini {
   font-size: 0.8rem;
@@ -167,13 +102,6 @@ defineEmits([
 .rc-add {
   margin-top: 0.5rem;
   font-size: 0.85rem;
-}
-.rc-scenario-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0.75rem 0.85rem;
-  margin-bottom: 0.65rem;
 }
 .rc-market-wrap {
   overflow-x: auto;

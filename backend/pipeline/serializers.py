@@ -5,15 +5,52 @@ from django.conf import settings
 from rest_framework import serializers
 
 from .cookie_paste import normalize_browser_cookie_paste
-from .models import JdProduct, JdProductSnapshot, JobStatus, PipelineJob
+from .models import (
+    JdProduct,
+    JdProductSnapshot,
+    JobStatus,
+    PipelineJob,
+    PipelineJobCheckpoint,
+)
 
 # 与 views._safe_file_for_job 中 mapping 一致，供前端展示「数据源是否就绪」
 _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
     {
         "llm_comment_sentiment",
-        "comment_focus_words",
-        "comment_scenario_groups",
+        "llm_matrix_group_summaries",
+        "llm_price_group_summaries",
+        "llm_promo_group_summaries",
+        "llm_strategy_opportunities",
+        "llm_comment_group_summaries",
+        "llm_group_summaries_chunk_by_matrix",
+        "chapter8_text_mining_probe",
+        "chapter8_text_mining_probe_live_llm",
+        "chapter8_text_mining_probe_llm_chunked",
+        "chapter8_text_mining_probe_wordcloud",
+        "chapter8_probe_min_texts",
+        "chapter8_probe_lda_topics",
+        "chapter8_probe_top_k_words",
+        "chapter8_probe_cooc_vocab",
+        "chapter8_probe_cooc_pairs",
+        "chapter8_probe_wordcloud_max",
         "external_market_table_rows",
+    }
+)
+
+# 与 ``validate_report_config_body`` 中布尔校验一致；``null`` 视为未设置（须让默认 true/false 生效）
+REPORT_CONFIG_BOOL_KEYS = frozenset(
+    {
+        "llm_comment_sentiment",
+        "llm_matrix_group_summaries",
+        "llm_price_group_summaries",
+        "llm_promo_group_summaries",
+        "llm_strategy_opportunities",
+        "llm_comment_group_summaries",
+        "llm_group_summaries_chunk_by_matrix",
+        "chapter8_text_mining_probe",
+        "chapter8_text_mining_probe_live_llm",
+        "chapter8_text_mining_probe_llm_chunked",
+        "chapter8_text_mining_probe_wordcloud",
     }
 )
 
@@ -21,18 +58,65 @@ _REPORT_CONFIG_ALLOWED_KEYS = frozenset(
 def validate_report_config_body(value: dict) -> dict:
     if not isinstance(value, dict):
         raise serializers.ValidationError("须为 JSON 对象")
+    value = dict(value)
+    for _bk in REPORT_CONFIG_BOOL_KEYS:
+        if value.get(_bk) is None:
+            value.pop(_bk, None)
+    value.pop("llm_section_bridges", None)
+    # 已废弃字段：静默丢弃，兼容旧任务 JSON
+    value.pop("comment_focus_words", None)
+    value.pop("comment_scenario_groups", None)
+    value.pop("llm_scenario_group_summaries", None)
     extra = set(value.keys()) - _REPORT_CONFIG_ALLOWED_KEYS
     if extra:
         raise serializers.ValidationError(
             f"未知字段：{', '.join(sorted(extra))}"
         )
-    if "llm_comment_sentiment" in value and value["llm_comment_sentiment"] is not None:
-        if not isinstance(value["llm_comment_sentiment"], bool):
-            raise serializers.ValidationError("llm_comment_sentiment 须为 true 或 false")
+    for k in REPORT_CONFIG_BOOL_KEYS:
+        if k in value and not isinstance(value[k], bool):
+            raise serializers.ValidationError(f"{k} 须为 true 或 false")
+    for k in (
+        "chapter8_probe_min_texts",
+        "chapter8_probe_lda_topics",
+        "chapter8_probe_top_k_words",
+        "chapter8_probe_cooc_vocab",
+        "chapter8_probe_cooc_pairs",
+        "chapter8_probe_wordcloud_max",
+    ):
+        if k in value and value[k] is not None:
+            if not isinstance(value[k], int):
+                raise serializers.ValidationError(f"{k} 须为整数")
     raw = json.dumps(value, ensure_ascii=False)
     if len(raw) > 120_000:
         raise serializers.ValidationError("报告配置体积过大")
     return value
+
+
+_STRATEGY_CONFIG_ALLOWED_KEYS = frozenset({"use_llm_default"})
+_DEFAULT_STRATEGY_CONFIG: dict[str, bool] = {"use_llm_default": True}
+
+
+def validate_strategy_config_body(value: dict) -> dict:
+    """策略生成页独立 JSON（与 ``report_config`` 无关）。"""
+    if not isinstance(value, dict):
+        raise serializers.ValidationError("须为 JSON 对象")
+    value = dict(value)
+    extra = set(value.keys()) - _STRATEGY_CONFIG_ALLOWED_KEYS
+    if extra:
+        raise serializers.ValidationError(
+            f"未知字段：{', '.join(sorted(extra))}"
+        )
+    if "use_llm_default" in value and value["use_llm_default"] is not None:
+        if not isinstance(value["use_llm_default"], bool):
+            raise serializers.ValidationError("use_llm_default 须为 true 或 false")
+    merged = {
+        **_DEFAULT_STRATEGY_CONFIG,
+        **{k: value[k] for k in _STRATEGY_CONFIG_ALLOWED_KEYS if k in value},
+    }
+    raw = json.dumps(merged, ensure_ascii=False)
+    if len(raw) > 32_000:
+        raise serializers.ValidationError("策略配置体积过大")
+    return merged
 
 
 _ARTIFACT_FILES: tuple[tuple[str, str], ...] = (
@@ -49,6 +133,7 @@ class PipelineJobSerializer(serializers.ModelSerializer):
 
     inline_cookie_used = serializers.SerializerMethodField()
     analysis_artifacts = serializers.SerializerMethodField()
+    checkpoint = serializers.SerializerMethodField()
 
     class Meta:
         model = PipelineJob
@@ -67,8 +152,11 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "list_pages",
             "scenario_filter_enabled",
             "report_config",
+            "strategy_config",
             "status",
             "cancellation_requested",
+            "resume_from_checkpoint",
+            "checkpoint",
             "run_dir",
             "error_message",
             "analysis_artifacts",
@@ -79,22 +167,39 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "id",
             "inline_cookie_used",
             "analysis_artifacts",
+            "checkpoint",
             "status",
             "cancellation_requested",
+            "resume_from_checkpoint",
             "run_dir",
             "error_message",
             "created_at",
             "updated_at",
             "report_config",
+            "strategy_config",
         ]
 
     def get_inline_cookie_used(self, obj: PipelineJob) -> bool:
         return bool((obj.cookie_text or "").strip())
 
+    def get_checkpoint(self, obj: PipelineJob) -> dict | None:
+        try:
+            c = obj.checkpoint_row
+        except PipelineJobCheckpoint.DoesNotExist:
+            return None
+        return {
+            "phase": c.phase,
+            "payload": c.payload,
+            "hint_zh": c.hint_zh,
+            "updated_at": c.updated_at,
+        }
+
     def get_analysis_artifacts(self, obj: PipelineJob) -> dict[str, bool] | None:
-        if obj.status not in (JobStatus.SUCCESS, JobStatus.CANCELLED) or not (
-            obj.run_dir or ""
-        ).strip():
+        if obj.status not in (
+            JobStatus.SUCCESS,
+            JobStatus.CANCELLED,
+            JobStatus.PAUSED,
+        ) or not (obj.run_dir or "").strip():
             return None
         try:
             base = Path(obj.run_dir).expanduser().resolve()
@@ -181,6 +286,17 @@ def _jd_data_root() -> Path:
     return (Path(root) / "data" / "JD").resolve()
 
 
+class JobResumeRequestSerializer(serializers.Serializer):
+    """从断点续跑时可选更新 Cookie。"""
+
+    cookie_text = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=500_000,
+    )
+
+
 class CreatePipelineJobSerializer(serializers.Serializer):
     keyword = serializers.CharField(max_length=256, trim_whitespace=True)
     platform = serializers.ChoiceField(choices=["jd"], default="jd")
@@ -262,6 +378,15 @@ class JobReportConfigPatchSerializer(serializers.Serializer):
         return validate_report_config_body(value)
 
 
+class JobStrategyConfigPatchSerializer(serializers.Serializer):
+    strategy_config = serializers.JSONField()
+
+    def validate_strategy_config(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("须为 JSON 对象")
+        return validate_strategy_config_body(value)
+
+
 class RegenerateReportRequestSerializer(serializers.Serializer):
     """重新生成竞品报告：规则引擎或大模型（与 ``AI_crawler.chat_completion_text`` 同一网关）。"""
 
@@ -284,6 +409,13 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
     )
     product_role = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=500, trim_whitespace=False
+    )
+    stage_goal_type = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=1000,
+        trim_whitespace=False,
     )
     time_horizon = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=200, trim_whitespace=False
@@ -319,6 +451,21 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
     pillar_comm = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
     )
+    audience_segment = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=500, trim_whitespace=False
+    )
+    competitor_reference = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=800, trim_whitespace=False
+    )
+    resource_notes = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=1000, trim_whitespace=False
+    )
+    marketing_strategy = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=2000, trim_whitespace=False
+    )
+    general_strategy = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=2000, trim_whitespace=False
+    )
     ack_risk_keywords = serializers.BooleanField(required=False, default=False)
     ack_risk_price = serializers.BooleanField(required=False, default=False)
     ack_risk_concentration = serializers.BooleanField(required=False, default=False)
@@ -327,3 +474,42 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
         default="rules",
         required=False,
     )
+    strategy_matrix_group_index = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        min_value=0,
+    )
+    strategy_matrix_group = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=200,
+        trim_whitespace=True,
+    )
+
+
+class MarketingDetailPackRequestSerializer(serializers.Serializer):
+    """策略稿正文 → 核心信息卡 → 营销内容（多触点文案，两步 LLM）。"""
+
+    strategy_markdown = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        min_length=20,
+        max_length=600_000,
+        trim_whitespace=False,
+    )
+    business_notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=20_000,
+        trim_whitespace=False,
+    )
+    strategy_decisions = serializers.JSONField(required=False, allow_null=True)
+
+    def validate_strategy_decisions(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("须为 JSON 对象")
+        return value
