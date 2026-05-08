@@ -110,3 +110,31 @@ CORS_ALLOW_CREDENTIALS = True
 
 _csrf = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 CSRF_TRUSTED_ORIGINS = [x.strip() for x in _csrf.split(",") if x.strip()]
+
+# 未配置时根 logger 多为 WARNING，``pipeline`` 内 ``logging.info`` 在 runserver 下不可见。
+_pipeline_log = (os.environ.get("PIPELINE_LOG_LEVEL") or "INFO").strip().upper()
+if _pipeline_log not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    _pipeline_log = "INFO"
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "pipeline_console": {
+            "format": "[{levelname}] {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console_pipeline": {
+            "class": "logging.StreamHandler",
+            "formatter": "pipeline_console",
+        },
+    },
+    "loggers": {
+        "pipeline": {
+            "handlers": ["console_pipeline"],
+            "level": _pipeline_log,
+            "propagate": False,
+        },
+    },
+}
