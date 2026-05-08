@@ -1,5 +1,6 @@
 """
-策略润色 LLM 调用前：按启发式 token 估算压缩上下文（矩阵 SKU、报告摘录、细类证据 MD）。
+策略润色 LLM 调用前：按与 ``chat_completion_text`` 一致的 **budgeted** token 估算（``LLM_INPUT_TOKEN_BUDGET_PAD``）
+压缩上下文（矩阵 SKU、报告摘录、细类证据 MD）。
 
 默认开启（``MA_STRATEGY_CONTEXT_COMPRESS``）；关闭时 ``maybe_compress_strategy_llm_context`` 原样返回。
 
@@ -34,7 +35,7 @@ def _token_slack() -> int:
 
 def _input_token_target_est() -> int:
     """
-    ``estimate_chat_input_tokens(STRATEGY_SYSTEM, user)`` 的上限目标。
+    ``budgeted_chat_input_tokens(STRATEGY_SYSTEM, user)`` 的上限目标（含 ``LLM_INPUT_TOKEN_BUDGET_PAD``）。
     未设置 ``MA_STRATEGY_INPUT_TOKEN_TARGET_EST`` 时：``context_window - min_completion - slack``。
     """
     raw = (os.environ.get("MA_STRATEGY_INPUT_TOKEN_TARGET_EST") or "").strip()
@@ -73,8 +74,9 @@ def _measure_est(
     strategy_decisions: dict[str, Any],
     report_config: dict[str, Any] | None,
 ) -> int:
+    from pipeline.openai_gateway.estimate import budgeted_chat_input_tokens
+
     from .generate_strategy import STRATEGY_SYSTEM, resolve_strategy_draft_llm_input_snapshot
-    from .llm_client import estimate_chat_input_tokens
 
     _p, user, _tier = resolve_strategy_draft_llm_input_snapshot(
         job_id=job_id,
@@ -87,7 +89,7 @@ def _measure_est(
         report_matrix_group_evidence_md=report_matrix_group_evidence_md,
         report_config=report_config,
     )
-    return estimate_chat_input_tokens(STRATEGY_SYSTEM, user)
+    return budgeted_chat_input_tokens(STRATEGY_SYSTEM, user)
 
 
 def maybe_compress_strategy_llm_context(

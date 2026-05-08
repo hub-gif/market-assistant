@@ -12,7 +12,7 @@ import requests
 
 from .chat_content import normalize_message_content
 from .credentials import resolve_text_channel_credentials, resolve_text_model_name
-from .estimate import estimate_chat_input_tokens
+from .estimate import budgeted_chat_input_tokens, completion_budget_slack_tokens
 from .timeouts import chat_completion_read_timeout as _chat_completion_timeout
 
 
@@ -66,15 +66,22 @@ def chat_completion_text(
     except ValueError:
         context_window = 32768
     buf = 256
-    input_est = estimate_chat_input_tokens(system_prompt, user_prompt)
-    if input_est >= context_window - buf - 256:
+    slack = completion_budget_slack_tokens()
+    input_est = budgeted_chat_input_tokens(system_prompt, user_prompt)
+    if input_est >= context_window - buf - 256 - slack:
         raise ValueError(
             f"提示词过长（估算输入约 {input_est} tokens，上下文上限 {context_window}），"
             "请缩小报告/摘要输入或换更大上下文的模型；也可设置环境变量 LLM_CONTEXT_WINDOW。"
         )
-    avail = context_window - input_est - buf
+    avail = context_window - input_est - buf - slack
     want = int(body.get("max_tokens") or max_tokens)
-    body["max_tokens"] = max(256, min(want, max(avail, 256)))
+    mt = min(want, max(0, avail))
+    if mt < 1:
+        raise ValueError(
+            f"扣除输入估算与安全余量（LLM_COMPLETION_CONTEXT_SLACK={slack}）后无 completion 预算；"
+            "请缩短输入或调大 LLM_CONTEXT_WINDOW / 调低 LLM_COMPLETION_CONTEXT_SLACK。"
+        )
+    body["max_tokens"] = mt
     r = requests.post(
         f"{b}/chat/completions",
         headers={

@@ -8,13 +8,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..competitor_report.price_promo import price_promotion_signals_strategy_brief_cn
-from ..openai_gateway.estimate import completion_budget_slack_tokens
+from ..openai_gateway.estimate import (
+    budgeted_chat_input_tokens,
+    completion_budget_slack_tokens,
+)
 from ..reporting.brief_compact import compact_brief_for_llm
 from ..reporting.strategy_draft import (
     build_strategy_draft_markdown,
     report_uses_chapter8_text_mining_probe,
 )
-from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
+from .llm_client import call_llm, llm_context_window_size
 
 
 @dataclass(frozen=True)
@@ -732,7 +735,7 @@ def _truncate_strategy_narrative(text: str, max_chars: int) -> str:
 
 def _strategy_prompt_fits_context(system: str, user: str) -> bool:
     """若为 False，``chat_completion_text`` 会在发请求前因过长而抛错。"""
-    est = estimate_chat_input_tokens(system, user)
+    est = budgeted_chat_input_tokens(system, user)
     ctx = llm_context_window_size()
     buf = 256
     slack = completion_budget_slack_tokens()
@@ -742,10 +745,11 @@ def _strategy_prompt_fits_context(system: str, user: str) -> bool:
 def _strategy_completion_avail_tokens(system: str, user: str) -> int:
     """
     与 ``chat_completion_text`` 中 ``avail = context_window - input_est - buf - slack`` 一致
-    （``slack`` 为 ``LLM_COMPLETION_CONTEXT_SLACK`` / ``completion_budget_slack_tokens()``），
+    （``input_est`` 为 ``budgeted_chat_input_tokens``，与压缩逻辑及网关收紧口径一致；
+    ``slack`` 为 ``LLM_COMPLETION_CONTEXT_SLACK`` / ``completion_budget_slack_tokens()``），
     即本次调用最终用于 **max_tokens** 的上限（再与请求体里的 want 取 min）。
     """
-    est = estimate_chat_input_tokens(system, user)
+    est = budgeted_chat_input_tokens(system, user)
     ctx = llm_context_window_size()
     buf = 256
     slack = completion_budget_slack_tokens()

@@ -19,6 +19,8 @@ import requests
 
 from pipeline.openai_gateway.chat_content import normalize_message_content
 from pipeline.openai_gateway.estimate import (
+    budgeted_chat_input_tokens,
+    completion_budget_slack_tokens,
     estimate_chat_input_tokens as estimate_crawler_style_input_tokens,
 )
 
@@ -129,16 +131,22 @@ class DeepSeekTextLlm:
             body["reasoning_effort"] = _reasoning_effort()
         else:
             body["temperature"] = _default_temperature() if temperature is None else float(temperature)
-        est = estimate_crawler_style_input_tokens(system_prompt, user_prompt)
+        est = budgeted_chat_input_tokens(system_prompt, user_prompt)
         context_window = _context_window()
-        if est >= context_window - _BUF - 256:
+        slack = completion_budget_slack_tokens()
+        if est >= context_window - _BUF - 256 - slack:
             raise ValueError(
                 f"提示词过长（估算输入约 {est} tokens，DEEPSEEK_CONTEXT_WINDOW={context_window}），"
                 "请缩小输入或调大 DEEPSEEK_TEXT_MODEL / DEEPSEEK_CONTEXT_WINDOW。"
             )
-        avail = context_window - est - _BUF
+        avail = context_window - est - _BUF - slack
         want = int(body.get("max_tokens") or _WANT_MAX)
-        body["max_tokens"] = max(256, min(want, max(avail, 256)))
+        mt = min(want, max(0, avail))
+        if mt < 1:
+            raise ValueError(
+                f"扣除安全余量（LLM_COMPLETION_CONTEXT_SLACK={slack}）后无 completion 预算；请缩短输入或调整环境变量。"
+            )
+        body["max_tokens"] = mt
         r = requests.post(
             f"{base}/chat/completions",
             headers={
