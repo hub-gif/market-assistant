@@ -306,7 +306,7 @@ def main() -> int:
 
     hashes: list[str] = []
     for i in range(1, args.rounds + 1):
-        md = generate_strategy_draft_markdown_llm(
+        llm_out = generate_strategy_draft_markdown_llm(
             job_id=job_id,
             keyword=kw,
             brief=brief,
@@ -317,6 +317,14 @@ def main() -> int:
             report_matrix_group_evidence_md=(evidence_md or "").strip() or None,
             report_config=rc,
         )
+        md = llm_out.markdown
+        print(
+            "策略 LLM 上下文压缩："
+            f"enabled={llm_out.context_compress_enabled} "
+            f"applied={llm_out.context_compress_applied}"
+        )
+        if llm_out.context_compress_note:
+            print("  note:", llm_out.context_compress_note)
         digest = hashlib.sha256(md.encode("utf-8")).hexdigest()
         hashes.append(digest)
         if write_dir is not None:

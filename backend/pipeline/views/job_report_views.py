@@ -20,6 +20,7 @@ from ..jd.runner import (
     regenerate_competitor_report,
 )
 from ..llm.generate import generate_strategy_draft_markdown_llm
+from ..llm.strategy_context_compress import strategy_llm_context_compress_enabled
 from ..llm.generate_marketing_detail import generate_marketing_detail_pack
 from ..models import JobStatus, PipelineJob
 from ..reporting.brief_pack import build_brief_pack_zip_bytes
@@ -195,9 +196,12 @@ class JobStrategyDraftView(APIView):
         except OSError:
             report_excerpt, excerpt_src = "", "none"
         rc_job = job.report_config if isinstance(job.report_config, dict) else None
+        compress_enabled = strategy_llm_context_compress_enabled()
+        compress_applied = False
+        compress_note = ""
         try:
             if generator == "llm":
-                md = generate_strategy_draft_markdown_llm(
+                llm_out = generate_strategy_draft_markdown_llm(
                     job_id=job.id,
                     keyword=job.keyword,
                     brief=brief,
@@ -209,6 +213,10 @@ class JobStrategyDraftView(APIView):
                     or None,
                     report_config=rc_job,
                 )
+                md = llm_out.markdown
+                compress_enabled = llm_out.context_compress_enabled
+                compress_applied = llm_out.context_compress_applied
+                compress_note = llm_out.context_compress_note
                 src = "llm_text_ai_crawler_v1"
             else:
                 md = build_strategy_draft_markdown(
@@ -241,6 +249,9 @@ class JobStrategyDraftView(APIView):
             "strategy_scope_applied": strategy_scope_applied,
             "report_matrix_group_evidence_source": report_matrix_evidence_src,
             "report_matrix_group_evidence_chars": len(report_matrix_evidence_md or ""),
+            "strategy_llm_context_compress_enabled": compress_enabled,
+            "strategy_llm_context_compress_applied": compress_applied,
+            "strategy_llm_context_compress_note": compress_note,
         }
         return Response(body)
 

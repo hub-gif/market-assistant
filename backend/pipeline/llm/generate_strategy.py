@@ -4,15 +4,27 @@ from __future__ import annotations
 import json
 import os
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from ..competitor_report.price_promo import price_promotion_signals_strategy_brief_cn
+from ..openai_gateway.estimate import completion_budget_slack_tokens
 from ..reporting.brief_compact import compact_brief_for_llm
 from ..reporting.strategy_draft import (
     build_strategy_draft_markdown,
     report_uses_chapter8_text_mining_probe,
 )
 from .llm_client import call_llm, estimate_chat_input_tokens, llm_context_window_size
+
+
+@dataclass(frozen=True)
+class StrategyDraftMarkdownLlmResult:
+    """独立策略稿 LLM 出稿；``context_compress_*`` 与 ``maybe_compress_strategy_llm_context`` 一致。"""
+
+    markdown: str
+    context_compress_enabled: bool
+    context_compress_applied: bool
+    context_compress_note: str
 
 
 def _strategy_llm_temperature() -> float:
@@ -194,7 +206,7 @@ STRATEGY_SYSTEM = f"""你是市场策略顾问，根据**结构化监测摘要**
 - **五**：**禁止**另起「对比对象（摘录）」「店铺分布…」「品牌分布…」等与《竞品分析报告》同构的集中度长篇复述；格局与份额**一句结论**或「详见报告」即可。**§5.1 差异化、§5.2 竞争应对**须写清**相对竞品多做什么/少做什么、具体一步动作**。
 - **六**：成功标准与 §6.2 路径须与 **§2.1** 动作**可对齐或合并叙述**；营销/总体策略句须为**动词导向**。
 - **七**：品牌四线**每一条**至少一句：**服务哪类痛点、本周/本阶段具体做哪一步**。
-- **八**：四支柱**每一支柱**须回扣 **痛点→动作→落地**（可与 §2.1 合并叙述，避免重复堆砌）。**§8.2** **禁止**以勾选问卷、四行并列「贴顶/卡腰/下探/另起带」或「价位阵地取向（表单…）」式标题呈现；已定 `positioning_choice` 与监测价带须**融入连贯定价叙述**，**禁止**「表单勾选」「与监测价带可对读」等内部提示语入正文。
+- **八**：四支柱**每一支柱**须回扣 **痛点→动作→落地**（可与 §2.1 合并叙述，避免重复堆砌）。**§8.1～§8.4 禁止**使用**彼此相同**或与 §4.1 **逐字相同**的「一句话 + 调性」填空式套话；每节须写**该支柱独有**的落地内容（产品：规格/主图/信任与合规；定价：价位取向与锚点落实；促销：本品满减/到手价呈现；渠道与传播：触点与节奏）。**§8.2** **禁止**以勾选问卷、四行并列「贴顶/卡腰/下探/另起带」或「价位阵地取向（表单…）」式标题呈现；已定 `positioning_choice` 与监测价带须**融入连贯定价叙述**，**禁止**「表单勾选」「与监测价带可对读」等内部提示语入正文。
 - **九**：**每条风险**尽量带**应对动作或验证计划**（抽样、核对规则），勿只列标题。**禁止** `[ ]`/`[x]` 问卷式风险清单、仅列问句不落地；须用叙述句写风险、假设与验证。
 - **十**：下一步须为**可执行任务**（可含负责人/时间占位），与 §2.1 或 §六 优先级一致。**禁止** `- [ ]` 待办勾选排版；用编号或分条**动作句**表述。
 
@@ -230,7 +242,7 @@ STRATEGY_USER_PREFIX = (
     "输出前自检（§2.1 痛点列 ① 定义）**：**「用户痛点（简述）」**格是否 条条 为 **有场景、可感受的 困难/烦恼/不便/负面体验/刚需未得满足**，**而** 非 优点/卖点/「存疑/可核/信任/认知」空话？**若否**，先改再输出。\n"
     "输出前自检（§2.1 痛点列 ② 证据）**：**每一**痛点句**是否**在 `report_matrix_group_evidence_md` 中有**可指回** 的评论/负向/混合依据？**是否** 未写 **无**据 的「**部分竞品**…」？**若** 无 评论 价/透明 同向 主题，**是否** 未 把 到手价/透明/对价差敏感 等 **策略** 当 成 用户痛 写在 本列？**若否**，先改再输出。\n"
     "输出前自检（§2.1 痛点列 ③ 负向 有限 时）**：**若** 摘录 以 正评 为 主，是否 已 在 **表前** 一句 说明 且 假设痛 行 带 **（典型场景假设…待核实）** 前缀？**若否**，先改再输出。\n"
-    "输出前自检（表单与 §7/§8）**：`strategy_decisions` 中已填 的 四柱、`positioning_choice`、`tactic_promotion` 等 是否 已 在 **§七～§八** 落为 可执行 叙述、**未** 与 底稿 表单锚点 矛盾 或 被 监测 复述 **顶替**？**若否**，先改再输出。\n"
+    "输出前自检（表单与 §7/§8）**：`strategy_decisions` 中已填 的 四柱、`positioning_choice`、`tactic_promotion` 等 是否 已 在 **§七～§八** 落为 可执行 叙述、**未** 与 底稿 表单锚点 矛盾 或 被 监测 复述 **顶替**？**是否** **未** 在 **§8.1～§8.4** 用**完全相同**的「一句话/调性」句机械填空？**若否**，先改再输出。\n"
     "若 JSON 中 `strategy_decisions_substantive` 为 false：你须基于监测摘要与细类报告节选**主动推断**完整策略草案（含 §2.1 多行实质内容），"
     "在「策略范围与前提」标明假设前提，并对阶段目标给出 A～E 类型选项及**推荐倾向**；禁止全文停留在待填占位。\n"
     "若 `strategy_decisions_substantive` 为 true：已填表单项视为已定须落实；空项结合数据补全，并与后文一致。\n\n"
@@ -585,17 +597,28 @@ def generate_strategy_draft_markdown_llm(
     report_strategy_excerpt: str | None = None,
     report_matrix_group_evidence_md: str | None = None,
     report_config: dict[str, Any] | None = None,
-) -> str:
+) -> StrategyDraftMarkdownLlmResult:
     """
     ``report_strategy_excerpt``：可选；由 ``load_report_strategy_excerpt`` 加载（见 ``reporting.report_strategy_excerpt``）。**默认产线**下多为空；非空多见于历史任务或曾显式开启报告内策略 LLM 的落盘。
 
     ``report_matrix_group_evidence_md``：按所选矩阵细类从 ``competitor_analysis.md`` 抽取的第五～第八章大模型小节摘录（见
     ``reporting.report_matrix_group_evidence.load_report_matrix_group_evidence_markdown``）；用于与收窄后的 ``structured_brief`` 一并支撑策略叙事。
+
+    若环境未关闭 ``MA_STRATEGY_CONTEXT_COMPRESS``，在解析快照前会据启发式 token 目标压缩矩阵 SKU 或报告摘录（见 ``strategy_context_compress``）。
+    返回体中的 ``context_compress_*`` 便于接口与日志确认本次是否裁剪了上下文。
     """
-    _payload, user, _tier = resolve_strategy_draft_llm_input_snapshot(
+    import logging
+
+    from .strategy_context_compress import (
+        maybe_compress_strategy_llm_context,
+        strategy_llm_context_compress_enabled,
+    )
+
+    compress_enabled = strategy_llm_context_compress_enabled()
+    brief_u, excerpt_u, evidence_u, compress_note = maybe_compress_strategy_llm_context(
+        brief=brief,
         job_id=job_id,
         keyword=keyword,
-        brief=brief,
         business_notes=business_notes,
         generated_at_iso=generated_at_iso,
         strategy_decisions=strategy_decisions,
@@ -603,10 +626,40 @@ def generate_strategy_draft_markdown_llm(
         report_matrix_group_evidence_md=report_matrix_group_evidence_md,
         report_config=report_config,
     )
+    log = logging.getLogger(__name__)
+    if compress_note:
+        log.info("%s", compress_note)
+    elif compress_enabled:
+        log.info(
+            "策略 LLM：上下文压缩已开启（MA_STRATEGY_CONTEXT_COMPRESS），"
+            "本次启发式输入未超目标，未对矩阵 SKU / 报告摘录做裁剪。"
+        )
+    else:
+        log.info(
+            "策略 LLM：上下文压缩已关闭（MA_STRATEGY_CONTEXT_COMPRESS=0），"
+            "未尝试裁剪矩阵 SKU 或报告摘录。"
+        )
+
+    _payload, user, _tier = resolve_strategy_draft_llm_input_snapshot(
+        job_id=job_id,
+        keyword=keyword,
+        brief=brief_u,
+        business_notes=business_notes,
+        generated_at_iso=generated_at_iso,
+        strategy_decisions=strategy_decisions,
+        report_strategy_excerpt=excerpt_u,
+        report_matrix_group_evidence_md=evidence_u,
+        report_config=report_config,
+    )
     raw = call_llm(
         STRATEGY_SYSTEM, user, temperature=_strategy_llm_temperature()
     )
-    return sanitize_strategy_s21_pain_column_md(raw)
+    return StrategyDraftMarkdownLlmResult(
+        markdown=sanitize_strategy_s21_pain_column_md(raw),
+        context_compress_enabled=compress_enabled,
+        context_compress_applied=bool((compress_note or "").strip()),
+        context_compress_note=(compress_note or "").strip(),
+    )
 
 
 STRATEGY_OPPORTUNITIES_SYSTEM = (
@@ -682,19 +735,21 @@ def _strategy_prompt_fits_context(system: str, user: str) -> bool:
     est = estimate_chat_input_tokens(system, user)
     ctx = llm_context_window_size()
     buf = 256
-    return est < ctx - buf - 256
+    slack = completion_budget_slack_tokens()
+    return est < ctx - buf - 256 - slack
 
 
 def _strategy_completion_avail_tokens(system: str, user: str) -> int:
     """
-    与 ``AI_crawler.chat_completion_text`` 中 ``avail = context_window - input_est - buf`` 一致，
-    即本次调用实际可用于 **completion** 的上限（随后还会与 ``max_tokens`` 取 min）。
-    若该值过小，长文会在句中被截断（例如「转化与体验」末段不完整）。
+    与 ``chat_completion_text`` 中 ``avail = context_window - input_est - buf - slack`` 一致
+    （``slack`` 为 ``LLM_COMPLETION_CONTEXT_SLACK`` / ``completion_budget_slack_tokens()``），
+    即本次调用最终用于 **max_tokens** 的上限（再与请求体里的 want 取 min）。
     """
     est = estimate_chat_input_tokens(system, user)
     ctx = llm_context_window_size()
     buf = 256
-    return ctx - est - buf
+    slack = completion_budget_slack_tokens()
+    return ctx - est - buf - slack
 
 
 def _min_strategy_completion_tokens() -> int:
