@@ -139,13 +139,16 @@ def start_semiauto_job(job_id: int) -> None:
     后台线程主函数。执行完整半自动生命周期：
 
     1. 创建 run_dir，更新 job.run_dir
-    2. 启动 run_listen_demo.py 子进程
-    3. 等待 .status_waiting_login → 更新 phase=waiting_login
-    4. 等待 .status_listening → 更新 phase=listening
-    5. 等待子进程退出（支持任务列表「终止」：轮询 ``cancellation_requested`` 并 terminate）
-    6. 运行 run_parse_semiauto_to_csv
-    7. 调用 try_ingest_job_full
-    8. 更新 status=success
+    2. 启动 ``run_listen_demo.py`` 子进程
+    3. 等待 ``.status_waiting_login``（过程可因任务列表「终止」而中止）
+    4. 等待 ``.status_listening``（同上）
+    5. 等待子进程退出（半自动页写 ``.stop_requested`` 或任务列表置 ``cancellation_requested`` 后
+       会 ``terminate`` 子进程；正常退出后进入后处理）
+    6. 若用户终止：``status=cancelled``，不跑 CSV/入库
+    7. 否则：JSON→CSV、``try_ingest_job_full``、``status=success``
+
+    卡在「执行中 + 终止处理中」且后台线程已失联时，可用
+    ``manage.py semiauto_settle_stuck`` 收敛数据库状态。
     """
     job = PipelineJob.objects.filter(pk=job_id).first()
     if not job:
@@ -318,6 +321,42 @@ def start_semiauto_job(job_id: int) -> None:
     # ── 完成 ──────────────────────────────────────────────────────────────────
     _update_job(job_id, status=JobStatus.SUCCESS, semiauto_phase="done")
     logger.info("semiauto_tasks: job=%s 完成", job_id)
+
+
+def settle_semiauto_stuck_cancel_flags(
+    *,
+    job_id: int | None = None,
+    dry_run: bool = False,
+) -> tuple[int, list[int]]:
+    """
+    将仍为 **执行中** 且 **已请求终止** 的半自动任务批量改为 **已终止**（只改数据库）。
+
+    适用于后台守护线程已退出、无法自动清 ``cancellation_requested`` 的残留行。
+    使用前请确认已无对应 ``run_listen_demo`` 进程，避免与真实在跑任务打架。
+    """
+    qs = PipelineJob.objects.filter(
+        source_type="semiauto",
+        status=JobStatus.RUNNING,
+        cancellation_requested=True,
+    )
+    if job_id is not None:
+        qs = qs.filter(pk=job_id)
+    ids = list(qs.values_list("pk", flat=True))
+    if dry_run or not ids:
+        return (len(ids), ids)
+    qs.update(
+        status=JobStatus.CANCELLED,
+        cancellation_requested=False,
+        semiauto_phase="done",
+        error_message=(
+            "已终止：由 manage.py semiauto_settle_stuck 同步数据库"
+            "（此前「终止」未由后台线程自动收尾）。"
+        ),
+        updated_at=timezone.now(),
+    )
+    for pk in ids:
+        logger.info("semiauto_tasks: settle_semiauto_stuck_cancel_flags 已收敛 job_id=%s", pk)
+    return (len(ids), ids)
 
 
 def finish_semiauto_after_browser(
