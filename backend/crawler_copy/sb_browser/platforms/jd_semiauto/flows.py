@@ -367,23 +367,48 @@ class _MultiTabListener:
             self._tab_sessions = surviving
         return removed
 
-    def finalize_all(self, tout: float, per_send: float) -> None:
-        """对所有存活标签逐一拉取 pending 正文；已关闭的标签归档 captures 后从列表移除。"""
+    def finalize_all(
+        self,
+        tout: float,
+        per_send: float,
+        *,
+        stop_file: Path | None = None,
+    ) -> None:
+        """对所有存活标签逐一拉取 pending 正文；已关闭的标签归档 captures 后从列表移除。
+
+        ``stop_file``：若存在则不再对后续标签调用 ``finalize_tab_blocking``，尽快交还主循环以便退出监听。
+        """
         burst_at = int(getattr(_cfg, "SEMI_JD_PENDING_BURST_CLEAR_AT", 17) or 0)
         self._burst_clear_pending_if_strictly_over(burst_at)
 
         prog_every = int(getattr(_cfg, "SEMI_JD_FINALIZE_PROGRESS_EVERY", 8) or 0)
         n_tab = len(self._tab_sessions)
         surviving: list[tuple[str, Any, JsonListenSession]] = []
+        items = list(self._tab_sessions)
         done_alive = 0
-        for tid, conn, sess in self._tab_sessions:
+
+        idx = 0
+        while idx < len(items):
+            tid, conn, sess = items[idx]
             if tid and tid in self._destroyed_target_ids:
-                # 标签已关闭：归档已捕获数据，清空 pending，从 _tab_sessions 剔除
                 self._archived_captures.extend(sess.captures)
                 pending = getattr(sess, "pending_by_request", None)
                 if pending:
                     pending.clear()
+                idx += 1
                 continue
+            # 尽早响应停止：剩余标签不再拉 body（仍归档已关页的会话）
+            if stop_file is not None and stop_file.is_file():
+                for j in range(idx, len(items)):
+                    t2, c2, s2 = items[j]
+                    if t2 and t2 in self._destroyed_target_ids:
+                        self._archived_captures.extend(s2.captures)
+                        p2 = getattr(s2, "pending_by_request", None)
+                        if p2:
+                            p2.clear()
+                        continue
+                    surviving.append((t2, c2, s2))
+                break
             try:
                 finalize_tab_blocking(
                     conn,
@@ -396,6 +421,7 @@ class _MultiTabListener:
                 self._note_error(f"finalize: {e!s}")
             surviving.append((tid, conn, sess))
             done_alive += 1
+            idx += 1
             if (
                 prog_every > 0
                 and n_tab >= 12
@@ -407,6 +433,7 @@ class _MultiTabListener:
                     file=sys.stderr,
                     flush=True,
                 )
+
         self._tab_sessions = surviving
         self._burst_clear_pending_if_strictly_over(burst_at)
 
@@ -589,9 +616,13 @@ def listen_until_stopped(
 
         # 每轮都调 finalize_all；_run() 内部 if not pending: return 保证无 pending 时快速返回
         try:
-            tap.finalize_all(tout, per_send)
+            tap.finalize_all(tout, per_send, stop_file=stop_file)
         except BaseException as e:
             tap._note_error(f"finalize(loop): {e!s}")
+
+        if stop_file is not None and stop_file.is_file():
+            sink("[jd_semiauto] 收到停止信号，退出监听。")
+            break
 
         # 定期心跳：通过 patched_send 路径重新发送 Network.enable()，保证 Listener 持续活跃
         if (now - last_keepalive) >= keepalive_every:
