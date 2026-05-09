@@ -142,8 +142,18 @@ class _MultiTabListener:
         try:
             browser = getattr(getattr(sb, "cdp", None), "browser", None)
             if browser is not None:
-                browser.add_handler(_cdp_target.TargetCreated, on_target_created)
-                browser.add_handler(_cdp_target.TargetDestroyed, on_target_destroyed)
+                # UC 的 ``Browser`` 本身无 ``add_handler``，事件挂在根 WebSocket ``Connection`` 上。
+                root = getattr(browser, "connection", None)
+                registrars = (
+                    r
+                    for r in (root, browser)
+                    if r is not None and callable(getattr(r, "add_handler", None))
+                )
+                reg = next(registrars, None)
+                if reg is None:
+                    raise AttributeError("'Browser' 与 browser.connection 均无 add_handler")
+                reg.add_handler(_cdp_target.TargetCreated, on_target_created)
+                reg.add_handler(_cdp_target.TargetDestroyed, on_target_destroyed)
                 self._target_listener_active = True
         except Exception as e:
             self._note_error(f"Target 事件订阅失败（降级为 HTTP 轮询）: {e!s}")
