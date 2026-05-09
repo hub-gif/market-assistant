@@ -6,7 +6,7 @@
 
 手动模式：打开 jd.com → 等候登录（终端回车确认）→ 挂 API 监听 → Ctrl+C 停止 → 落盘。
 前端集成模式：传入 --run-dir / --login-file / --stop-file，用文件信号代替终端交互。
-有 --run-dir 且未传 --restart-file 时，默认监听 ``<run-dir>/.restart_listen_requested`` 以支持重启监听。
+有 --run-dir 且未传 --stop-file 时，默认使用 ``<run-dir>/.stop_requested``，与前端「结束任务」一致。
 
 监听常量见 constants_jd_semiauto.py；落盘目录默认 data/JD/sb_cdp_api_semiauto/<时间戳>/。
 """
@@ -67,7 +67,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--stop-file",
         default="",
-        help="停止信号文件路径；文件存在时退出监听，替代 Ctrl+C",
+        help="停止信号路径；为空且提供 --run-dir 时默认 <run-dir>/.stop_requested",
     )
     p.add_argument(
         "--restart-file",
@@ -108,7 +108,13 @@ def main() -> int:
     run_dir: Path | None = Path(run_dir_arg) if run_dir_arg else None
     keyword = (args.keyword or SEMI_CAPTURE_LABEL or "manual").strip() or "manual"
     login_file: Path | None = Path(args.login_file) if (args.login_file or "").strip() else None
-    stop_file: Path | None = Path(args.stop_file) if (args.stop_file or "").strip() else None
+    st = (args.stop_file or "").strip()
+    if st:
+        stop_file: Path | None = Path(st)
+    elif run_dir is not None:
+        stop_file = run_dir / ".stop_requested"
+    else:
+        stop_file = None
     rs = (args.restart_file or "").strip()
     if rs:
         restart_file: Path | None = Path(rs)
