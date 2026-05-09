@@ -60,18 +60,78 @@ def _update_job(job_id: int, **kwargs) -> PipelineJob | None:
         return None
 
 
-def _wait_for_status_file(
+def _poll_semiauto_status_or_cancel(
+    *,
     run_dir: Path,
-    filename: str,
-    timeout: float = _PHASE_TIMEOUT,
-) -> bool:
-    """等待 run_dir 下出现 filename，返回是否在 timeout 内出现。"""
+    marker: str,
+    timeout: float,
+    job_id: int,
+    proc: subprocess.Popen,
+    phase_if_ok: str,
+) -> str:
+    """
+    轮询 marker 文件、用户终止、子进程死活。
+
+    返回 ``ok`` | ``timeout`` | ``cancelled`` | ``proc_dead``。
+    ok 时已写入 ``semiauto_phase=phase_if_ok``。
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if (run_dir / filename).is_file():
-            return True
+        if (run_dir / marker).is_file():
+            _update_job(job_id, semiauto_phase=phase_if_ok)
+            return "ok"
+        if PipelineJob.objects.filter(pk=job_id, cancellation_requested=True).exists():
+            return "cancelled"
+        if proc.poll() is not None:
+            return "proc_dead"
         time.sleep(_POLL_INTERVAL)
-    return False
+    return "timeout"
+
+
+def _reap_listen_proc(proc: subprocess.Popen) -> int | None:
+    """阻塞直至子进程结束；必要时 escalate 到 kill（对齐 ``tasks.execute_job``）。"""
+    if proc.poll() is None:
+        try:
+            proc.wait(timeout=25)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            try:
+                proc.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                pass
+    else:
+        try:
+            proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            pass
+    return proc.returncode
+
+
+def _semiauto_abort_on_user_cancel(proc: subprocess.Popen, stop_file: Path, job_id: int) -> None:
+    """任务列表「终止」：写 stop + terminate + 收口 + 标记已终止。"""
+    logger.info("semiauto_tasks: job=%s 收到 cancellation_requested，结束监听子进程", job_id)
+    try:
+        stop_file.parent.mkdir(parents=True, exist_ok=True)
+        stop_file.touch()
+    except OSError:
+        logger.exception("semiauto_tasks: touch stop_file 失败 job=%s path=%s", job_id, stop_file)
+    try:
+        proc.terminate()
+    except OSError:
+        logger.exception("semiauto_tasks: proc.terminate 失败 job=%s", job_id)
+
+    rc = _reap_listen_proc(proc)
+    logger.info("semiauto_tasks: job=%s 监听子进程已结束 rc=%s（用户终止）", job_id, rc)
+
+    _update_job(
+        job_id,
+        status=JobStatus.CANCELLED,
+        semiauto_phase="done",
+        cancellation_requested=False,
+        error_message=(
+            "已终止：已结束半自动监听子进程；run_dir 内若有 JSON 可保留，可自行补解析入库。"
+        ),
+    )
 
 
 def start_semiauto_job(job_id: int) -> None:
@@ -82,7 +142,7 @@ def start_semiauto_job(job_id: int) -> None:
     2. 启动 run_listen_demo.py 子进程
     3. 等待 .status_waiting_login → 更新 phase=waiting_login
     4. 等待 .status_listening → 更新 phase=listening
-    5. 等待子进程退出
+    5. 等待子进程退出（支持任务列表「终止」：轮询 ``cancellation_requested`` 并 terminate）
     6. 运行 run_parse_semiauto_to_csv
     7. 调用 try_ingest_job_full
     8. 更新 status=success
@@ -134,26 +194,105 @@ def start_semiauto_job(job_id: int) -> None:
         _update_job(job_id, status=JobStatus.FAILED, error_message="启动浏览器进程失败")
         return
 
-    # ── 等待进入等待登录状态 ───────────────────────────────────────────────────
-    if _wait_for_status_file(run_dir, ".status_waiting_login", timeout=_PHASE_TIMEOUT):
-        _update_job(job_id, semiauto_phase="waiting_login")
-        logger.info("semiauto_tasks: job=%s phase=waiting_login", job_id)
-    else:
+    # ── 等待进入等待登录状态（兼容任务列表「终止」：轮询 cancellation_requested）────────
+    r0 = _poll_semiauto_status_or_cancel(
+        run_dir=run_dir,
+        marker=".status_waiting_login",
+        timeout=_PHASE_TIMEOUT,
+        job_id=job_id,
+        proc=proc,
+        phase_if_ok="waiting_login",
+    )
+    if r0 == "cancelled":
+        _semiauto_abort_on_user_cancel(proc, stop_file, job_id)
+        return
+    if r0 == "proc_dead":
+        logger.warning(
+            "semiauto_tasks: job=%s 子进程在 .status_waiting_login 前退出，进入失败",
+            job_id,
+        )
+        _reap_listen_proc(proc)
+        _update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            cancellation_requested=False,
+            error_message="半自动监听子进程在早期异常退出（未进入等待登录状态）。",
+        )
+        return
+    if r0 == "timeout":
         logger.warning("semiauto_tasks: job=%s .status_waiting_login 超时，强制前进", job_id)
         _update_job(job_id, semiauto_phase="waiting_login")
-
-    # ── 等待进入监听状态 ───────────────────────────────────────────────────────
-    # timeout 设长一些，用户登录可能需要较长时间（最多等 30 分钟）
-    if _wait_for_status_file(run_dir, ".status_listening", timeout=1800.0):
-        _update_job(job_id, semiauto_phase="listening")
-        logger.info("semiauto_tasks: job=%s phase=listening", job_id)
     else:
+        logger.info("semiauto_tasks: job=%s phase=waiting_login", job_id)
+
+    # ── 等待进入监听状态（最长 30 分钟，可被「终止」打断）────────────────────────────
+    r1 = _poll_semiauto_status_or_cancel(
+        run_dir=run_dir,
+        marker=".status_listening",
+        timeout=1800.0,
+        job_id=job_id,
+        proc=proc,
+        phase_if_ok="listening",
+    )
+    if r1 == "cancelled":
+        _semiauto_abort_on_user_cancel(proc, stop_file, job_id)
+        return
+    if r1 == "proc_dead":
+        logger.warning(
+            "semiauto_tasks: job=%s 子进程在监听开始前退出，进入失败",
+            job_id,
+        )
+        _reap_listen_proc(proc)
+        _update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            cancellation_requested=False,
+            error_message="半自动监听子进程在未进入监听阶段时退出。",
+        )
+        return
+    if r1 == "timeout":
         logger.warning("semiauto_tasks: job=%s .status_listening 超时，强制前进", job_id)
         _update_job(job_id, semiauto_phase="listening")
+    else:
+        logger.info("semiauto_tasks: job=%s phase=listening", job_id)
 
-    # ── 等待子进程退出（用户点"结束任务"后子进程保存 JSON 并退出）─────────────
+    # ── 等待子进程退出（半自动页「结束任务」写 stop；任务列表「终止」见上行轮询）───────
+    user_cancelled = False
     while proc.poll() is None:
         time.sleep(_POLL_INTERVAL)
+        if PipelineJob.objects.filter(pk=job_id, cancellation_requested=True).exists():
+            user_cancelled = True
+            try:
+                stop_file.touch()
+            except OSError:
+                logger.exception(
+                    "semiauto_tasks: stop_file.touch 失败 job=%s path=%s",
+                    job_id,
+                    stop_file,
+                )
+            try:
+                proc.terminate()
+            except OSError:
+                logger.exception("semiauto_tasks: terminate 失败 job=%s", job_id)
+            break
+
+    _reap_listen_proc(proc)
+
+    if user_cancelled or PipelineJob.objects.filter(
+        pk=job_id,
+        cancellation_requested=True,
+    ).exists():
+        _update_job(
+            job_id,
+            status=JobStatus.CANCELLED,
+            semiauto_phase="done",
+            cancellation_requested=False,
+            error_message=(
+                "已终止：已结束半自动监听子进程；run_dir 内若有 JSON 可保留，可自行补解析入库。"
+            ),
+        )
+        logger.info("semiauto_tasks: job=%s 已进入已终止状态（任务列表终止）", job_id)
+        return
 
     rc = proc.returncode
     logger.info("semiauto_tasks: job=%s 子进程退出 rc=%s", job_id, rc)
