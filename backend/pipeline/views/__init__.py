@@ -35,6 +35,12 @@ from .product_views import (
     JdProductSnapshotDetailView,
     JdProductSnapshotListView,
 )
+from .semiauto_views import (
+    SemiAutoConfirmLoginView,
+    SemiAutoJobCreateView,
+    SemiAutoRestartListenView,
+    SemiAutoStopView,
+)
 
 __all__ = [
     "JobDatasetCommentsView",
@@ -63,4 +69,8 @@ __all__ = [
     "JdProductListView",
     "JdProductSnapshotDetailView",
     "JdProductSnapshotListView",
+    "SemiAutoJobCreateView",
+    "SemiAutoConfirmLoginView",
+    "SemiAutoRestartListenView",
+    "SemiAutoStopView",
 ]

@@ -14,6 +14,22 @@ urlpatterns = [
         name="strategy-config-defaults",
     ),
     path("jobs/", views.JobListCreateView.as_view(), name="job-list-create"),
+    path("jobs/semiauto/", views.SemiAutoJobCreateView.as_view(), name="job-semiauto-create"),
+    path(
+        "jobs/<int:pk>/semiauto/confirm-login/",
+        views.SemiAutoConfirmLoginView.as_view(),
+        name="job-semiauto-confirm-login",
+    ),
+    path(
+        "jobs/<int:pk>/semiauto/restart-listen/",
+        views.SemiAutoRestartListenView.as_view(),
+        name="job-semiauto-restart-listen",
+    ),
+    path(
+        "jobs/<int:pk>/semiauto/stop/",
+        views.SemiAutoStopView.as_view(),
+        name="job-semiauto-stop",
+    ),
     path("jobs/<int:pk>/", views.JobDetailView.as_view(), name="job-detail"),
     path(
         "jobs/<int:pk>/cancel/",

@@ -18,6 +18,7 @@ from sb_browser.cdp_json_listen import (
     JsonListenSession,
     attach_sb_cdp_json_listener,
     attach_to_tab,
+    detach_json_listen_session_handlers,
     finalize_tab_blocking,
     keepalive_tab,
 )
@@ -68,6 +69,7 @@ class _MultiTabListener:
     ) -> None:
         self._needles = needles
         self._max_tab_captures = max_tab_captures
+        self._sb = sb
         self._debug_url = _get_chrome_debug_url(sb)
         self._loop = sb.cdp.get_event_loop()
 
@@ -258,6 +260,42 @@ class _MultiTabListener:
             count += self._attach_to_ws_url(tid, ws_url, url_hint=url_hint)
 
         return count
+
+    def remount_network_listeners(self, sb: Any) -> int:
+        """浏览器不关、只重新挂 ``Network.responseReceived``：摘掉旧钩子，主标签再接一次，并按 /json/list 补挂其余页。
+
+        已抓取条目并入 ``_archived_captures``，不丢数；仅放弃各 tab 上未 finalize 的 ``pending``。
+        返回本次新挂上的 **额外** 标签数（``scan_new_tabs`` 结果）。
+        """
+        for tid, _conn, sess in list(self._tab_sessions):
+            self._archived_captures.extend(sess.captures)
+            detach_json_listen_session_handlers(sess)
+            pend = getattr(sess, "pending_by_request", None)
+            if pend:
+                pend.clear()
+
+        main_tid = ""
+        try:
+            page_conn = getattr(getattr(sb, "cdp", None), "page", None)
+            targ = getattr(page_conn, "target", None)
+            if targ is not None:
+                main_tid = str(
+                    getattr(targ, "target_id", "") or getattr(targ, "targetId", "") or "",
+                ).strip()
+        except Exception:
+            pass
+        # 仅保留当前主标签 id，使 /json/list 慢路径会对其余已打开页重新 attach（与启动时 _initialize_known_targets 行为对齐）
+        self._known_target_ids = {main_tid} if main_tid else set()
+
+        new_sess = attach_sb_cdp_json_listener(
+            sb,
+            url_contains=self._needles,
+            resource_types=(),
+            mime_contains=None,
+            max_captures=self._max_tab_captures,
+        )
+        self._tab_sessions = [("", getattr(sb.cdp, "page", None), new_sess)]
+        return self.scan_new_tabs(force_http=True)
 
     def prune_stale_tab_sessions(self) -> int:
         """
@@ -456,10 +494,14 @@ def listen_until_stopped(
     tap: _MultiTabListener,
     *,
     stop_file: Path | None = None,
+    restart_file: Path | None = None,
     status_sink: Callable[[str], None] | None = None,
     save_sink: Callable[[list[CapturedJsonResponse]], None] | None = None,
 ) -> None:
     """持续扫描新标签 + 轮询 ``finalize_all``，直至收到 Ctrl+C 或 stop_file 出现。
+
+    ``restart_file``：路径上文件出现后 **删除该文件**，并调用 ``tap.remount_network_listeners(sb)``，
+    不关闭浏览器以便继续采集。
 
     ``save_sink``：每次 finalize 后发现新数据即刻调用，实现增量落盘；
     不传则仅在调用方 finally 里统一落盘。
@@ -484,6 +526,28 @@ def listen_until_stopped(
         if stop_file is not None and stop_file.is_file():
             sink("[jd_semiauto] 收到停止信号，退出监听。")
             break
+
+        if restart_file is not None and restart_file.is_file():
+            try:
+                restart_file.unlink()
+            except OSError:
+                pass
+            sink("[jd_semiauto] 收到重启监听信号，正在重新挂载 Network 监听（浏览器保持打开）…")
+            try:
+                n_rem = tap.remount_network_listeners(sb)
+                if n_rem:
+                    sink(
+                        f"[jd_semiauto] 重启后已补挂 {n_rem} 个标签的监听"
+                        f"（共 {len(tap._tab_sessions)} 路）。"
+                    )
+                else:
+                    sink(
+                        f"[jd_semiauto] 重启后主标签已挂好"
+                        f"（当前 {len(tap._tab_sessions)} 路会话）。"
+                    )
+            except BaseException as e:
+                tap._note_error(f"重启监听失败: {e!s}")
+                sink(f"[jd_semiauto] 重启监听失败: {e!s}")
 
         now = time.monotonic()
 
