@@ -22,8 +22,9 @@ SEMI_JD_POST_ACTIVATE_SLEEP_SEC: float = 3.0
 SEMI_JD_FINALIZE_OVERALL_TIMEOUT_SEC: float = 10.0   # 整体上限
 SEMI_JD_FINALIZE_PER_SEND_TIMEOUT_SEC: float = 3.0   # 单次 getResponseBody 上限
 
-# 存活标签 pending 条目合计 ≥ 该值时，每轮 finalize 前先清空 pending（不落库这些 URL 的正文）；
-# 避免积压拖满整体超时；不卸监听，后续响应仍照常登记。≤0 关闭。
+# 存活标签 pending 条目合计 **严格大于** 该值时清空（设为 17 即 pending≥18 时清空，
+# 若为 16 即 pending≥17）。每轮 finalize 开始与结束前各检查一次，避免逐 tab finalize 中途再次堆满。
+# ≤0 关闭。
 SEMI_JD_PENDING_BURST_CLEAR_AT: int = 17
 
 # 监听轮询间隔（秒）；新标签扫描间隔（秒）；状态打印间隔（秒）；最大捕获条数

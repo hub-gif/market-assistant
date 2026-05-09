@@ -297,6 +297,34 @@ class _MultiTabListener:
         self._tab_sessions = [("", getattr(sb.cdp, "page", None), new_sess)]
         return self.scan_new_tabs(force_http=True)
 
+    def _alive_tab_sessions(self) -> list[tuple[str, Any, JsonListenSession]]:
+        return [
+            (tid, conn, sess)
+            for tid, conn, sess in self._tab_sessions
+            if not (tid and tid in self._destroyed_target_ids)
+        ]
+
+    def _total_pending_alive(self) -> int:
+        return sum(
+            len(getattr(sess, "pending_by_request", None) or {})
+            for _tid, _conn, sess in self._alive_tab_sessions()
+        )
+
+    def _burst_clear_pending_if_strictly_over(self, burst_at: int) -> None:
+        """存活 pending 总和若 **大于** burst_at 则清空；burst_at≤0 不启用。"""
+        if burst_at <= 0:
+            return
+        n_before = self._total_pending_alive()
+        if n_before <= burst_at:
+            return
+        for _tid, _conn, sess in self._alive_tab_sessions():
+            pend = getattr(sess, "pending_by_request", None)
+            if pend:
+                pend.clear()
+        self._note_error(
+            f"pending 积压 {n_before}>{burst_at}，已清空以保持监听流畅（本轮未入库的正文丢弃）"
+        )
+
     def prune_stale_tab_sessions(self) -> int:
         """
         用 Chrome ``/json/list`` 与当前仍存在的 ``page`` target 对账。
@@ -342,24 +370,7 @@ class _MultiTabListener:
     def finalize_all(self, tout: float, per_send: float) -> None:
         """对所有存活标签逐一拉取 pending 正文；已关闭的标签归档 captures 后从列表移除。"""
         burst_at = int(getattr(_cfg, "SEMI_JD_PENDING_BURST_CLEAR_AT", 17) or 0)
-        if burst_at > 0:
-            alive = [
-                (tid, conn, sess)
-                for tid, conn, sess in self._tab_sessions
-                if not (tid and tid in self._destroyed_target_ids)
-            ]
-            n_pend = sum(
-                len(getattr(sess, "pending_by_request", None) or {})
-                for tid, conn, sess in alive
-            )
-            if n_pend >= burst_at:
-                for tid, conn, sess in alive:
-                    pend = getattr(sess, "pending_by_request", None)
-                    if pend:
-                        pend.clear()
-                self._note_error(
-                    f"pending 积压 {n_pend}≥{burst_at}，已清空以保持监听流畅（本轮未入库的正文丢弃）"
-                )
+        self._burst_clear_pending_if_strictly_over(burst_at)
 
         prog_every = int(getattr(_cfg, "SEMI_JD_FINALIZE_PROGRESS_EVERY", 8) or 0)
         n_tab = len(self._tab_sessions)
@@ -397,6 +408,7 @@ class _MultiTabListener:
                     flush=True,
                 )
         self._tab_sessions = surviving
+        self._burst_clear_pending_if_strictly_over(burst_at)
 
 
 # ---------------------------------------------------------------------------
