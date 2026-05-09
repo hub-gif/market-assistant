@@ -22,14 +22,22 @@ SEMI_JD_POST_ACTIVATE_SLEEP_SEC: float = 3.0
 SEMI_JD_FINALIZE_OVERALL_TIMEOUT_SEC: float = 10.0   # 整体上限
 SEMI_JD_FINALIZE_PER_SEND_TIMEOUT_SEC: float = 3.0   # 单次 getResponseBody 上限
 
-# 存活标签 pending 条目合计 **严格大于** 该值时清空（设为 17 即 pending≥18 时清空，
-# 若为 16 即 pending≥17）。每轮 finalize 开始与结束前各检查一次，避免逐 tab finalize 中途再次堆满。
+# 存活标签 pending 合计 **严格大于** 该值则先删非保留 URL，仍超限再全清（见 SEMI_JD_PENDING_BURST_PROTECT_URL_SUBSTR）。
 # ≤0 关闭。
-SEMI_JD_PENDING_BURST_CLEAR_AT: int = 17
+SEMI_JD_PENDING_BURST_CLEAR_AT: int = 16
 
-# 监听轮询间隔（秒）；新标签扫描间隔（秒）；状态打印间隔（秒）；最大捕获条数
+# pending 暴增时先删「非核心」条目；URL（小写匹配）中含以下任一子串的 **延后删除**，
+# 减少商详 wareBusiness 等主包在未拉正文前被误清（仍可在第二轮全清兜底）。
+SEMI_JD_PENDING_BURST_PROTECT_URL_SUBSTR: tuple[str, ...] = (
+    "pc_detailpage_warebusiness",
+    "detailpage_getwarebusiness",
+    "getitemdetail",
+)
+
+# 监听轮询间隔（秒）；新标签 HTTP 兜底扫表间隔（秒）；状态打印间隔（秒）；最大捕获条数
 SEMI_JD_LISTEN_POLL_SEC: float = 0.85
-SEMI_JD_NEW_TAB_SCAN_SEC: float = 0.85   # 多标签：每隔多少秒检查一次新开标签
+SEMI_JD_NEW_TAB_SCAN_SEC: float = 0.85   # 多标签：/json/list 补挂监听；可与 LISTEN_POLL 同频
+SEMI_JD_NEW_TAB_HTTP_SCAN_MIN_SEC: float = 0.35  # flows 下限，勿固定 1.0 以免拖慢新标签挂载
 SEMI_JD_LISTEN_STATUS_EVERY_SEC: float = 5.0
 SEMI_JD_MAX_CAPTURES: int = 1200
 

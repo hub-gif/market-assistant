@@ -321,18 +321,38 @@ class _MultiTabListener:
         )
 
     def _burst_clear_pending_if_strictly_over(self, burst_at: int) -> None:
-        """存活 pending 总和若 **大于** burst_at 则清空；burst_at≤0 不启用。"""
+        """存活 pending 总和若 **大于** burst_at 则先删非保留 URL，必要时再整表清空。burst_at≤0 不启用。"""
         if burst_at <= 0:
             return
         n_before = self._total_pending_alive()
         if n_before <= burst_at:
             return
+        raw_keep = getattr(_cfg, "SEMI_JD_PENDING_BURST_PROTECT_URL_SUBSTR", ()) or ()
+        keep_subs = tuple(str(s).strip().lower() for s in raw_keep if str(s).strip())
+
         for _tid, _conn, sess in self._alive_tab_sessions():
             pend = getattr(sess, "pending_by_request", None)
-            if pend:
-                pend.clear()
+            if not pend:
+                continue
+            for rid in list(pend.keys()):
+                meta = pend.get(rid) or {}
+                url = ((meta.get("url") or "") if isinstance(meta, dict) else "").lower()
+                if keep_subs and any(sub in url for sub in keep_subs):
+                    continue
+                pend.pop(rid, None)
+
+        if self._total_pending_alive() > burst_at:
+            for _tid, _conn, sess in self._alive_tab_sessions():
+                pend = getattr(sess, "pending_by_request", None)
+                if pend:
+                    pend.clear()
+            self._note_error(
+                f"pending 积压 {n_before}>{burst_at}，已全量清空（含商详保护后仍超限；本轮未入库正文丢弃）"
+            )
+            return
+
         self._note_error(
-            f"pending 积压 {n_before}>{burst_at}，已清空以保持监听流畅（本轮未入库的正文丢弃）"
+            f"pending 积压 {n_before}>{burst_at}，已删减非保留请求（商详核心 URL 已尽量保留）"
         )
 
     def prune_stale_tab_sessions(self) -> int:
@@ -562,7 +582,11 @@ def listen_until_stopped(
     status_every_sec = float(getattr(_cfg, "SEMI_JD_LISTEN_STATUS_EVERY_SEC", 15.0))
     tout = max(3.0, float(getattr(_cfg, "SEMI_JD_FINALIZE_OVERALL_TIMEOUT_SEC", 10.0)))
     per_send = max(1.0, min(float(getattr(_cfg, "SEMI_JD_FINALIZE_PER_SEND_TIMEOUT_SEC", 3.0)), 30.0))
-    scan_interval = max(1.0, float(getattr(_cfg, "SEMI_JD_NEW_TAB_SCAN_SEC", 3.0)))
+    scan_floor = float(getattr(_cfg, "SEMI_JD_NEW_TAB_HTTP_SCAN_MIN_SEC", 0.35))
+    scan_interval = max(
+        max(0.1, scan_floor),
+        float(getattr(_cfg, "SEMI_JD_NEW_TAB_SCAN_SEC", 3.0)),
+    )
 
     sink("[jd_semiauto] 开始监听 api.m.jd.com；在浏览器内正常操作即可采集，Ctrl+C 停止落盘。")
     last_status = 0.0
