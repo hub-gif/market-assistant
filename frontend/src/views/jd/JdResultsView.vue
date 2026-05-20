@@ -1,6 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { api, refreshJobs, useJobs, jobConfigHint, jobCancelUrl } from '../../composables/useJobs'
+import {
+  api,
+  refreshJobs,
+  useJobs,
+  jobConfigHint,
+  jobConfigTableCell,
+  jobCancelUrl,
+} from '../../composables/useJobs'
 import { useJobStore } from '../../stores/jobs'
 
 const { jobs } = useJobs()
@@ -63,14 +70,12 @@ onMounted(load)
 
 <template>
   <div>
-    <section class="ma-card">
-      <h2>任务列表</h2>
-      <p class="lead">
-        仅展示任务状态与运行目录。执行中或待执行的任务可点<strong>终止</strong>，系统会在可停点结束并尽量保留已采集文件（非瞬间强制结束）。
-        入库表浏览、批次 CSV 预览与下载请使用顶部菜单<strong>「库内数据浏览」</strong>；竞品 Markdown
-        报告请使用<strong>「报告查看」</strong>（阅读/下载）或<strong>「报告生成」</strong>（改规则并重写）。
-      </p>
-      <button type="button" class="ma-btn ma-btn-secondary" @click="load">刷新列表</button>
+    <section class="ma-card ma-card-elevated">
+      <div class="ma-card-head">
+        <h2>任务</h2>
+        <el-button plain @click="load">刷新</el-button>
+      </div>
+      <p class="ma-one-liner">进行中可终止；数据与报告请用顶部其他入口。</p>
       <p v-if="loadError" class="ma-err">{{ loadError }}</p>
       <p v-if="cancelErr" class="ma-err">{{ cancelErr }}</p>
 
@@ -78,12 +83,11 @@ onMounted(load)
         <table class="ma-table results-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th class="th-narrow">#</th>
               <th>关键词</th>
               <th>状态</th>
-              <th>配置</th>
-              <th>运行目录</th>
-              <th>操作</th>
+              <th>范围</th>
+              <th class="th-op">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -99,47 +103,58 @@ onMounted(load)
                   · 终止处理中
                 </span>
               </td>
-              <td class="ma-hint" :title="jobConfigHint(j)">{{ jobConfigHint(j) }}</td>
-              <td class="ma-mono" :title="j.error_message || undefined">
-                {{ j.run_dir || (j.status === 'failed' ? '见错误信息' : '—') }}
-              </td>
+              <td
+                class="ma-hint"
+                :title="jobConfigHint(j)"
+              >{{ jobConfigTableCell(j) }}</td>
               <td class="op-cell">
-                <button
+                <el-button
                   v-if="canCancel(j)"
-                  type="button"
-                  class="ma-btn ma-btn-secondary btn-cancel"
                   :disabled="cancellingId === j.id"
                   @click="requestCancel(j.id)"
                 >
                   {{ cancellingId === j.id ? '提交中…' : '终止' }}
-                </button>
+                </el-button>
                 <span v-else class="ma-muted">—</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-else class="ma-muted" style="margin-top: 1rem">暂无任务，请先在「搜索采集」提交。</p>
+      <p v-else class="ma-muted" style="margin-top: 1rem">暂无任务，请先在「采集」提交。</p>
     </section>
   </div>
 </template>
 
 <style scoped>
-.lead {
+.ma-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.ma-card-head h2 {
+  margin: 0;
+}
+.ma-one-liner {
   margin: 0 0 1rem;
-  font-size: 0.88rem;
-  color: #4b5563;
-  line-height: 1.5;
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+.th-narrow {
+  width: 3rem;
+}
+.th-op {
+  width: 4.5rem;
+  text-align: right;
 }
 .results-table {
   font-size: 0.8rem;
 }
 .op-cell {
   white-space: nowrap;
-}
-.btn-cancel {
-  font-size: 0.78rem;
-  padding: 0.25rem 0.55rem;
 }
 .cancel-pending {
   font-size: 0.72rem;

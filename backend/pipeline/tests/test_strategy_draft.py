@@ -101,6 +101,26 @@ class StrategyDraftTests(SimpleTestCase):
         self.assertIn("### 1.3 本品聚焦\n", md)
         self.assertIn("### 5.1 差异化方向\n", md)
 
+    def test_our_product_profile_embedded_in_section_1_3(self) -> None:
+        brief = {
+            "schema_version": 1,
+            "keyword": "K",
+            "batch_label": "b1",
+            "scope": {},
+        }
+        md = build_strategy_draft_markdown(
+            job_id=1,
+            keyword="K",
+            brief=brief,
+            our_product_profile="蓝铜肽：修护向\n核心：成分A",
+            for_llm_input=True,
+        )
+        self.assertIn("### 1.3 本品聚焦\n", md)
+        self.assertIn("业务侧本品依据", md)
+        self.assertIn("蓝铜肽：修护向", md)
+        self.assertIn("核心：成分A", md)
+        self.assertNotIn("### 本品说明", md)
+
     def test_build_contains_sections_and_notes(self) -> None:
         brief = {
             "schema_version": 1,

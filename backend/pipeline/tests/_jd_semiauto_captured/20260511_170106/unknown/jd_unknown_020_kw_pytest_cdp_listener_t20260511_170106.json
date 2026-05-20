@@ -1,0 +1,45 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://www.jd.com/manifest.json",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "name": "京东",
+    "short_name": "京东",
+    "description": "京东",
+    "start_url": "https://www.jd.com",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "icons": [
+      {
+        "src": "https://img14.360buyimg.com/img/jfs/t1/396961/30/19687/14018/69aab4a3Ffa93afc1/02760800801782a9.png",
+        "sizes": "128x128",
+        "type": "image/png"
+      },
+      {
+        "src": "https://img12.360buyimg.com/img/jfs/t1/401590/21/4038/26890/69aab4aeFa478e02e/02760c00c0a358ab.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "https://img30.360buyimg.com/img/jfs/t1/399592/30/11314/40198/69a940bbF9a8c59e9/0276100100ae597d.png",
+        "sizes": "256x256",
+        "type": "image/png"
+      },
+      {
+        "src": "https://img10.360buyimg.com/img/jfs/t1/398926/23/12735/83715/69a94089F78edc460/0276180180232667.png",
+        "sizes": "384x384",
+        "type": "image/png"
+      },
+      {
+        "src": "https://img10.360buyimg.com/img/jfs/t1/398559/16/12350/94005/69a94075F0174c9d4/027620020021ca3c.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+}

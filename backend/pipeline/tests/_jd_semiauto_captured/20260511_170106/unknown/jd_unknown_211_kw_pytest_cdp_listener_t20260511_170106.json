@@ -1,0 +1,365 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://h5speed.m.jd.com/event/getRule?version=1.2.3&aid=e29c409517502ccd3dd8cc8df26d56ee",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": "0",
+    "msg": "ok",
+    "data": {
+      "aid": "e29c409517502ccd3dd8cc8df26d56ee",
+      "er": {
+        "enable": false,
+        "mode": "session",
+        "rate": 1,
+        "rules": [
+          {
+            "enable": true,
+            "type": "pv",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance_timing",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance_longtask",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "action",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "resource",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "resource_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "api",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "api_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "js_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "blank",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "custom",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "custom_log",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": false,
+            "type": "fps_stuck",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_amountreturn_call-plugin_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_amountreturn_add-cart_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_amountreturn_get-list_error",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_businessEnquiryPrice_get-header-info_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_businessEnquiryPrice_check-opportunity-threshold_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_businessEnquiryPrice_submit-opportunity_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_sdk_call-plugin_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_businessEnquiryPrice_get-product-info_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_businessEnquiryPrice_call-plugin_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_bplusReferralPc_call-plugin_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_bplusReferralPc_get-savings-detail-param_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_bplusReferralPc_show-no-permission-modal_log",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_bplusReferralPc_parse-savings-detail-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_bplusReferralPc_pay-callback-init-param_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_get-tab-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_pwd-init-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_pwd-login-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_phone-init-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_phone-send-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_phone-validate-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_phone-get-list-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_phone-login-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_login_filter-list-api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_aishoparound_get-change_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_aishoparound_add-cart_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_aishoparound_add-purchaselist_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_aishoparound_get-list_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "smb_common_aishoparound_call-plugin_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          }
+        ],
+        "whitelist": []
+      },
+      "pr": [
+        {
+          "name": "js_error",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "blank",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "api",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "pv",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "resource_error",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "console",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "resource",
+          "enable": false,
+          "options": {}
+        },
+        {
+          "name": "performance",
+          "enable": false,
+          "options": {}
+        }
+      ],
+      "cr": {
+        "delay": 3000
+      }
+    },
+    "id": "743020491106df1af4925106f18325f7",
+    "ts": 1778490367246
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "code": 0,
+  "data": {
+    "abBuriedTag": [],
+    "abBuriedTagMap": {
+      "kjgbAbTest": "tsabtest|base64|UENUZXN0XzEwNDI5MnxzaGFuZ2th|tsabtest",
+      "shopSearch": "tsabtest|base64|UENUZXN0XzY0MzcxfHRlc3RzaG9w|tsabtest"
+    },
+    "abExpLabelMap": {
+      "brandSquareAbTest": {
+        "keyParamMap": {
+          "Brand_Shopping_Guide": 0
+        }
+      },
+      "shopSearch": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzY0MzcxfHRlc3RzaG9w|tsabtest",
+        "keyParamMap": {
+          "hit": 1,
+          "Mainsearch": 1,
+          "Shopsearch": 1
+        },
+        "label": "testshop"
+      },
+      "secondFloorAbTest": {
+        "abBuriedTag": "",
+        "keyParamMap": {
+          "gate_pos": 0
+        },
+        "label": ""
+      },
+      "widgetAbTest": {
+        "abBuriedTag": "",
+        "keyParamMap": {
+          "mult_function": 0
+        },
+        "label": ""
+      },
+      "kjgbAbTest": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwNDI5MnxzaGFuZ2th|tsabtest",
+        "keyParamMap": {
+          "shangka": 1,
+          "kuangjia": 1,
+          "biaoti": 0
+        },
+        "label": "shangka"
+      }
+    },
+    "addCartShow": true,
+    "advertModalShow": false,
+    "advertModalShowTime": 5,
+    "beanShow": true,
+    "brandEntryShow": false,
+    "brandHotTextShow": false,
+    "cPinPotential": false,
+    "enjoyTopBenefitShow": false,
+    "feedAdvertCardShow": false,
+    "feedEnjoyInfoShow": false,
+    "feedGuideShow": false,
+    "feedProductLabelShow": true,
+    "firstScreenGb": 1,
+    "guobuShow": true,
+    "hitSimpleVersion": false,
+    "inputGbGov": true,
+    "kuangjia": true,
+    "loginCardBenefitsShow": false,
+    "loginGuideShow": true,
+    "loginGuideTitle": 1,
+    "lowPriceTagShow": true,
+    "modalLogin": true,
+    "noLoginBrandEntryShow": true,
+    "priceLabelShow": true,
+    "shangkaBiaoTi": 0,
+    "showHandPrice": true,
+    "topbarRefactor": true,
+    "wlEnhance": true,
+    "wxLoginOpen": true
+  },
+  "msg": "Success"
+}

@@ -1,6 +1,8 @@
 """任务入库后的数据集浏览、筛选与导出。"""
 from __future__ import annotations
 
+import logging
+
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.response import Response
@@ -30,6 +32,7 @@ from ..dataset_nonempty import (
     search_columns_for_api,
 )
 from ..export_job import build_csv_bytes, build_json_bytes, build_xlsx_bytes
+from ..pc_search_llm_excel import build_job_search_llm_xlsx_bytes
 from ..models import (
     JdJobCommentRow,
     JdJobDetailRow,
@@ -49,6 +52,8 @@ from .common import (
     report_group_options_for_job,
     shop_options_for_job,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class JobDatasetSummaryView(APIView):
@@ -245,5 +250,50 @@ class JobDatasetExportView(APIView):
                 )
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp
+
+
+class JobDatasetSearchLlmXlsxView(APIView):
+    """
+    搜索结果全量经大模型补充品牌、规格等，下载单文件 xlsx（源数据 + 品牌/规格统计表）。
+
+    大批量时默认 **多批并行** 请求模型以缩短耗时；若遇限流可把 ``max_workers`` 调小。
+    可选查询参数：``batch_size``（默认 40，上限 120），``max_workers``（默认读环境变量
+    ``PC_SEARCH_LLM_MAX_WORKERS``，未设则为 8；请求中可覆盖，范围 1～32）。
+    正式环境请为网关/进程留足总超时时间。
+    """
+
+    def get(self, request, pk: int):
+        job = dataset_job(pk)
+        raw_bs = (request.query_params.get("batch_size") or "").strip()
+        try:
+            bs = int(raw_bs) if raw_bs else 40
+        except ValueError:
+            bs = 40
+        bs = max(1, min(bs, 120))
+        raw_mw = (request.query_params.get("max_workers") or "").strip()
+        mw: int | None = None
+        if raw_mw:
+            try:
+                mw = max(1, min(int(raw_mw), 32))
+            except ValueError:
+                mw = None
+        try:
+            data, filename = build_job_search_llm_xlsx_bytes(
+                job, batch_size=bs, max_workers=mw
+            )
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("job=%s 搜索整理表 LLM 导出失败", pk)
+            return Response(
+                {"detail": "整理表生成失败：大模型或网络异常，请稍后重试或查看服务端日志"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        resp = HttpResponse(
+            data,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
         resp["Content-Disposition"] = f'attachment; filename="{filename}"'
         return resp

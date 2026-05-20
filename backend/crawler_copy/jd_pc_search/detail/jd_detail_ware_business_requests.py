@@ -12,7 +12,7 @@
 结构化字段（品牌、编号、类目等）仍以本脚本拦截的 ``pc_detailpage_wareBusiness`` 为主；若要对齐 DevTools，设 ``LOG_API_M_JD_TRACE=True`` 看各阶段 ``functionId`` 与 URL。
 
 未命中接口、HTTP 非 200、正文空、无法解析 JSON 或解析后业务字段全空时，按 ``FETCH_MAX_ATTEMPTS`` /
-``FETCH_RETRY_DELAY_SEC`` 自动重试（``fetch_ware_business`` 的 ``max_attempts`` / ``retry_delay_sec``）。
+``FETCH_RETRY_DELAY_RANGE`` 自动重试（``fetch_ware_business`` 的 ``max_attempts`` / ``retry_delay_range``）。
 
 落盘 / 单 SKU 标准输出时，可对 JSON **缩进 + 递归键排序**（``NORMALIZE_WARE_JSON`` / ``SORT_JSON_KEYS``），便于阅读与 diff。
 
@@ -87,8 +87,8 @@ TIMEOUT_SEC = 45.0
 GOTO_WAIT_UNTIL = "domcontentloaded"
 # FETCH_MAX_ATTEMPTS：未捕获接口、非 200、正文空或解析后无有效字段时最多重试次数
 FETCH_MAX_ATTEMPTS = 3
-# FETCH_RETRY_DELAY_SEC：相邻两次尝试之间的休眠（秒）
-FETCH_RETRY_DELAY_SEC = 2.0
+# FETCH_RETRY_DELAY_RANGE：相邻两次尝试之间的随机休眠（秒），区间内均匀抽样
+FETCH_RETRY_DELAY_RANGE = (3.0, 8.0)
 # CLICK_PRODUCT_DETAIL_TAB：True 时在进入商品页后点击「商品详情」tab（#SPXQ-tab-column），便于滚到详情区并触发与 tab 相关的请求
 CLICK_PRODUCT_DETAIL_TAB = True
 # LOG_API_M_JD_TRACE：True 时在 stderr 列出本次打开商品页过程中每条 api.m.jd.com 响应（阶段+functionId+URL），用于对照 DevTools 找 tab 对应接口
@@ -185,7 +185,7 @@ def fetch_ware_business(
     timeout_ms: int = 30_000,
     cookie_override: str = "",
     max_attempts: int = 1,
-    retry_delay_sec: float = 2.0,
+    retry_delay_range: tuple[float, float] = (3.0, 8.0),
     cancel_check: Callable[[], bool] | None = None,
 ) -> tuple[int, str, dict[str, Any]]:
     '''打开商品页并拦截 pc_detailpage_wareBusiness（与流水线兼容的薄封装）。'''
@@ -197,7 +197,7 @@ def fetch_ware_business(
         timeout_ms=timeout_ms,
         cookie_override=cookie_override,
         max_attempts=max_attempts,
-        retry_delay_sec=retry_delay_sec,
+        retry_delay_range=retry_delay_range,
         cancel_check=cancel_check,
         output_sku_and_body_images_only=bool(OUTPUT_SKU_AND_BODY_IMAGES_ONLY),
         runtime=_WARE_FETCH_RUNTIME,
@@ -562,7 +562,6 @@ def main() -> None:
             )
 
     max_att = max(1, int(FETCH_MAX_ATTEMPTS))
-    retry_sec = max(0.0, float(FETCH_RETRY_DELAY_SEC))
 
     def run_one(page: Any, s: str) -> None:
         code, text, meta = fetch_ware_business(
@@ -573,7 +572,7 @@ def main() -> None:
             timeout_ms=timeout_ms,
             cookie_override=cookie_override,
             max_attempts=max_att,
-            retry_delay_sec=retry_sec,
+            retry_delay_range=FETCH_RETRY_DELAY_RANGE,
         )
         if verbose_http:
             _print_http_verbose(meta, body_max=max(500, verbose_body_lim))

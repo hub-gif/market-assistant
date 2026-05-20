@@ -1,0 +1,20 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://storage.360buyimg.com/miniprogram-platform/configure-lowcode-platform-node/prod/json/prod/RrxLdmiU.json",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "data": [
+      {
+        "link": "https://jd-helper-browser-plugin-download-pro.pf.jd.com",
+        "ppms_itemName": "购物插件入口",
+        "ppmsItemId": "Igt8f3H4",
+        "title": "同款搜低价",
+        "url": "https://jd-helper-browser-plugin-download-pro.pf.jd.com"
+      }
+    ]
+  }
+}

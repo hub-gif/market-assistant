@@ -1,0 +1,12 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://sgm-w.jd.com/h5",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 200
+  }
+}

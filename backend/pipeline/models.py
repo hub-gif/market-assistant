@@ -49,6 +49,19 @@ class PipelineJob(models.Model):
     resume_from_checkpoint = models.BooleanField(default=False, db_index=True)
     run_dir = models.TextField(blank=True, default="")
     error_message = models.TextField(blank=True, default="")
+    # 半自动模式字段
+    source_type = models.CharField(
+        max_length=16,
+        default="auto",
+        db_index=True,
+        help_text="auto=全自动流水线；semiauto=半自动 CDP 监听",
+    )
+    semiauto_phase = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="半自动任务阶段：browser_open / waiting_login / listening / stopping",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

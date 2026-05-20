@@ -96,30 +96,25 @@ const parseWarning = computed(() => {
       <div class="modal" role="dialog" aria-modal="true" @click.stop>
         <header class="head">
           <h3>{{ title }}</h3>
-          <button type="button" class="close" aria-label="关闭" @click="emit('close')">×</button>
+          <el-button type="info" text class="head-close-ep" aria-label="关闭" @click="emit('close')">×</el-button>
         </header>
 
         <div v-if="loading" class="state">加载中…</div>
         <p v-else-if="error" class="state err">{{ error }}</p>
         <template v-else>
           <!-- Markdown：渲染 / 原文 -->
-          <div v-if="isMarkdown" class="tabs">
-            <button type="button" :class="{ on: viewMode === 'render' }" @click="viewMode = 'render'">
-              预览
-            </button>
-            <button type="button" :class="{ on: viewMode === 'raw' }" @click="viewMode = 'raw'">
-              原文
-            </button>
+          <div v-if="isMarkdown" class="modal-view-toggle">
+            <el-radio-group v-model="viewMode">
+              <el-radio-button value="render">预览</el-radio-button>
+              <el-radio-button value="raw">原文</el-radio-button>
+            </el-radio-group>
           </div>
 
-          <!-- CSV：表格 / 原文 -->
-          <div v-else-if="isCsv" class="tabs">
-            <button type="button" :class="{ on: viewMode === 'table' }" @click="viewMode = 'table'">
-              表格
-            </button>
-            <button type="button" :class="{ on: viewMode === 'raw' }" @click="viewMode = 'raw'">
-              原文
-            </button>
+          <div v-else-if="isCsv" class="modal-view-toggle">
+            <el-radio-group v-model="viewMode">
+              <el-radio-button value="table">表格</el-radio-button>
+              <el-radio-button value="raw">原文</el-radio-button>
+            </el-radio-group>
           </div>
 
           <div class="body-scroll">
@@ -219,25 +214,13 @@ const parseWarning = computed(() => {
   color: #b91c1c;
   white-space: pre-wrap;
 }
-.tabs {
+.modal-view-toggle {
   display: flex;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem 0;
   flex-shrink: 0;
-}
-.tabs button {
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 0.35rem 0.85rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: #4b5563;
-}
-.tabs button.on {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
 }
 .body-scroll {
   flex: 1;

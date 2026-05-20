@@ -297,8 +297,56 @@ def filter_brief_for_strategy_matrix_group(
     return b
 
 
+def trim_matrix_group_skus_for_llm(brief: dict[str, Any], n: int) -> dict[str, Any]:
+    """
+    在 ``matrix_by_group`` **仅一组**（策略收窄后）时，把该组 ``skus`` 裁至至多 ``n`` 条，
+    并重算价盘、集中度、类目混排等依赖 SKU 列表的字段（与 ``filter_brief_for_strategy_matrix_group`` 内逻辑一致）。
+
+    ``n <= 0`` 时得到空 ``skus``（极端压窗用，一般勿对 LLM 用 0）。
+    """
+    b = copy.deepcopy(brief)
+    n = int(n)
+    mg = b.get("matrix_by_group")
+    if not isinstance(mg, list) or len(mg) != 1:
+        return b
+    g0 = mg[0]
+    if not isinstance(g0, dict):
+        return b
+    skus_all = g0.get("skus")
+    if not isinstance(skus_all, list):
+        return b
+    skus = skus_all[: max(0, n)]
+    g0["skus"] = skus
+    g0["sku_count"] = len(skus)
+    n_skus = len(skus)
+    sku_dicts = [s for s in skus if isinstance(s, dict)]
+    rows_for_price = _sku_rows_for_prices(sku_dicts)
+    prices = _collect_prices(rows_for_price)
+    pst_merged = _price_stats_extended(prices)
+    b["price_stats_merged_sample"] = pst_merged
+    b["price_stats"] = dict(pst_merged) if pst_merged else {}
+    b["price_stats_source"] = "strategy_scope_matrix_group_skus"
+    b["category_mix_top"] = _category_mix_from_skus(sku_dicts)
+    b["list_brand_mix_top"] = _mix_top_rows(sku_dicts, "brand")
+    b["list_shop_mix_top"] = _mix_top_rows(sku_dicts, "shop")
+    b["concentration"] = _concentration_brand_shop_from_skus(sku_dicts)
+    b["price_promotion_signals"] = _analyze_price_promotions(rows_for_price)
+    sc = b.get("scope")
+    if isinstance(sc, dict):
+        sc2 = dict(sc)
+        sc2["merged_sku_count"] = n_skus
+        b["scope"] = sc2
+    b["list_visibility_proxy"] = {
+        "total_rows": n_skus,
+        "unique_skus": n_skus,
+        "_strategy_scope_note": "矩阵所选分组内 SKU 数（子样本），非全关键词列表导出口径。",
+    }
+    return b
+
+
 __all__ = [
     "filter_brief_for_strategy_matrix_group",
     "list_matrix_groups_for_api",
     "resolve_strategy_matrix_group_index",
+    "trim_matrix_group_skus_for_llm",
 ]

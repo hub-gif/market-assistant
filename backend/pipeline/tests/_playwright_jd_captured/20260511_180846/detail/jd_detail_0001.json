@@ -1,0 +1,1389 @@
+{
+  "capture_kind": "detail",
+  "function_id": "pc_detailpage_wareBusiness",
+  "url": "https://api.m.jd.com/?functionId=pc_detailpage_wareBusiness&body=%7B%22skuId%22:%2210151690432869%22,%22area%22:%2216_1315_3486_59642%22,%22num%22:%221%22,%22sfTime%22:%221,0,0%22%7D&h5st=20260511180954659%3B22bjj2bje17p2j24%3Bfb5df%3Btk03w96711c6318nuHYIndPpRu20T4TeDGEWsT3JNuvr4_8q1ylc3_8Bt2213cYQ58fYwXlz-uTlCwMK8xeqwqURxheh%3Bea304363965ef7aa49b1ef2210cddb8a%3B5.3%3B1778494189659%3Bq3EpJLIg6zpfJrJdJnYOJipjLDrgJbIfBioP0nYSBiFfBCFT5jIjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jJXCuXWfS1fcK1f3ipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJbWR131RKCGV4LVZ82HjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh7Jf5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrgzfojxj5f2iFjLrpjLDrgJHIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3B1fcedc564d5de61b18c624590d87466b%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&uuid=17784941276801826302864&loginType=3&appid=pc-item-soa&clientVersion=1.0.0&client=pc&t=1778494189585&x-api-eid-token=jdd03DZQYMZBJBN3L45HIAJ2LNYOJLJZGDHBLR6UNMIQERBYODI2BTOZ3FFENYHQQQYHEURQ7LWPSZAESUKDELM6JQ2RORAAAAAM6C2BMC4AAAAAADYUNUVZN3WTVTEX",
+  "status": 200,
+  "method": "GET",
+  "parsed": {
+    "userInfo": {
+      "newPeople": true
+    },
+    "productAttributeVO": {
+      "attributes": [
+        {
+          "jumpUrl": "//list.jd.com/list.html?cat=37462,37562,37623&ev=exbrand_1528772",
+          "labelName": "品牌",
+          "labelValue": "贯名"
+        },
+        {
+          "labelName": "商品编号",
+          "labelValue": "10151690432869"
+        },
+        {
+          "jumpUrl": "//mall.jd.com/index-140876.html?from=pc",
+          "labelName": "店铺",
+          "labelValue": "华宋办公专营店"
+        },
+        {
+          "labelName": "存储功能",
+          "labelValue": "不支持"
+        },
+        {
+          "labelName": "编程功能",
+          "labelValue": "不支持"
+        },
+        {
+          "labelName": "电源类型",
+          "labelValue": "普通电池"
+        },
+        {
+          "labelName": "语音功能",
+          "labelValue": "不支持"
+        },
+        {
+          "labelName": "适用场景",
+          "labelValue": "财务 学习"
+        }
+      ]
+    },
+    "laXinInfo": [
+      {
+        "laXinIconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/261718/22/6550/560/67769350Fdeefaae3/4bdb3c60cbde63ae.png",
+        "laXinJumpUrl": "https://pro.jd.com/mall/active/wPxBWVuiHctmS4MX9ywq5n57kiF/index.html?babelChannel=ttt21&hdid=bUTiORFpTb4&returnurl=https%3A%2F%2Fitem.jd.com%2F10151690432869.html",
+        "laXinText": "企业会员4000元补贴，办公设备/易耗品一站式采购！",
+        "laXinType": "5",
+        "statContent": {
+          "userCrowd": "0",
+          "userType": "C"
+        }
+      }
+    ],
+    "commentNoticeVO": {
+      "commentShow": true,
+      "noticeShow": true
+    },
+    "promiseFxgInfo": {},
+    "beltBanner": "//img30.360buyimg.com/jdg/jfs/t1/263547/24/18280/20997/67a96901F1bef1e77/fcce6b07199642ff.png",
+    "bestPromotion": {
+      "canGetCoupon": [
+        {
+          "encryptedKey": "g9ufi2d5e52700204cf854c1de9e716a",
+          "resultType": "1",
+          "ruleId": "2515467001"
+        }
+      ],
+      "purchasePrice": "68"
+    },
+    "csfhText": "厂商发货",
+    "isInstallNow": false,
+    "preferenceVO": {
+      "againSharedLabel": [
+        {
+          "labelName": "最高返6京豆",
+          "type": "9"
+        }
+      ],
+      "preferencePopUp": {
+        "againSharedPreference": [
+          {
+            "bigPromotion": false,
+            "buriedPoint": {
+              "beanNum": 6,
+              "sceneType": "1"
+            },
+            "crossStoreFullCut": false,
+            "formal": false,
+            "originType": "9",
+            "preferenceType": "9",
+            "shortText": "最高返6京豆",
+            "text": "返京豆",
+            "value": "京东购物返京豆，订单完成后最高可返6京豆。特殊渠道订单不参与购物返豆，以订单实际返豆为准"
+          }
+        ],
+        "expression": {
+          "basePrice": "88",
+          "couponAmount": "20",
+          "discountAmount": "20.00",
+          "discountDesc": "购买立减",
+          "govAmount": "",
+          "promotionAmount": "0",
+          "redAmount": "0",
+          "subtrahends": [
+            {
+              "preferenceAmount": "20",
+              "preferenceDesc": "满80减20",
+              "preferenceType": "2",
+              "topDesc": "优惠券"
+            }
+          ]
+        },
+        "sharedPreference": [
+          {
+            "bigPromotion": false,
+            "brandCoupon": false,
+            "claimCouponType": "1",
+            "couponStyle": 0,
+            "couponType": 1,
+            "crossStoreFullCut": false,
+            "discount": "20",
+            "discountBg": 20,
+            "encryptedKey": "g9ufi2d5e52700204cf854c1de9e716a",
+            "endTime": "2026-07-03 23:59:59",
+            "formal": false,
+            "joinFlag": true,
+            "originType": "1",
+            "preferenceId": "1461973534",
+            "preferenceType": "3",
+            "quota": "80",
+            "roleId": "2515467001",
+            "toUrl": "//search.jd.com/Search?coupon_batch=1461973534",
+            "value": "满80减20"
+          }
+        ]
+      },
+      "sharedLabel": [
+        {
+          "labelName": "满80减20",
+          "type": "3"
+        }
+      ]
+    },
+    "price": {
+      "ab": true,
+      "finalPrice": {
+        "price": "68",
+        "priceContent": "到手价",
+        "up": "1"
+      },
+      "hagglePromotion": false,
+      "id": "10151690432869",
+      "m": "0.00",
+      "op": "88.00",
+      "p": "88.00",
+      "sfPrice": {
+        "price": "68"
+      }
+    },
+    "ipCityCode": "1315",
+    "pageConfigVO": {
+      "easyBuyUrl": "//easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action",
+      "commentUgcDisjunctor": true,
+      "commonButtonSwitch": true,
+      "homeMatchTeacherSwitch": false,
+      "isCfy": false,
+      "specialAttrs": [
+        "thwa-1",
+        "sfkc-0",
+        "vender_bizid-,popsop,",
+        "SoldOversea-6",
+        "nationallySetWare-3",
+        "is7ToReturn-1",
+        "product_features-SoldOversea:6;descModel:1;fply:shop-pc;fylx:3;introductionUseFlag:0;is7ToReturn:1;isPayFirst:1;isSopJdDy:0;isUDSAttr:1;mobileDescUseFlag:0;model:CP-01A;nameBrandType:brandtitlecn_name;nameWithoutBrand:Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式;nationallySetWare:3;popsfkc:0;salemodel:POP_MODEL;scsj:1745985723112;wlzyc:29|26|31|30|11|28;zyyfmb:1"
+      ],
+      "growing": false,
+      "showShopNode": false,
+      "catName": [
+        "文教文化用品",
+        "绘图计算用品",
+        "实物计算器",
+        "函数计算器"
+      ],
+      "showAnswers": true,
+      "isLOC3": false,
+      "pType": 2,
+      "addressKsSwitch": true,
+      "shopId": "140876",
+      "isClosePCShow": false,
+      "brand": "1528772",
+      "isQualityLifeShow": true,
+      "isSelfBook": false,
+      "floatLayerSwitch": true,
+      "skuMarkJson": {
+        "isSopWareService": false,
+        "isSds": false,
+        "isTimeMark": false,
+        "isxg": false,
+        "NosendWMS": false,
+        "presale": false,
+        "isSopUseSelfStock": false,
+        "isSopJSOLTag": false,
+        "isPOPDistribution": false,
+        "isJDexpress": true,
+        "pg": false,
+        "isGlobalPurchase": false,
+        "unused": false,
+        "isrecyclebag": false,
+        "isyy": false,
+        "isOripack": false,
+        "ispt": false
+      },
+      "cms_app_id": "448954",
+      "toInstall": false,
+      "colorSizeBrushless": 0,
+      "magnifierSwitch": true,
+      "recBtnSwitch": true,
+      "enPlanOptSwitch": true,
+      "isZx": false,
+      "isOver": false,
+      "isPop": true,
+      "isSelfMvd": false,
+      "isYuShou": false,
+      "memberShopFlag": false,
+      "isSelf": false,
+      "isTuanGou": false,
+      "hideSearchShopBtn": true,
+      "bybtShieldSwitch": true,
+      "venderId": 145707,
+      "recommendForYouSwitch": true,
+      "noSaleReasonSwitch": true,
+      "isYuYue": false,
+      "shopSwitch": true,
+      "isCallRecommendFlag": false,
+      "shangjiazizhi": false,
+      "noSale": false,
+      "cat": [
+        37462,
+        37562,
+        37623
+      ],
+      "fcs": false,
+      "jumpChannel": "2",
+      "footerType": "gb_common",
+      "extraService": false,
+      "lazyLoadSwitch": true,
+      "stockSkuNum": 100,
+      "src": "jfs/t1/320545/8/21586/86523/68917079F0f768baf/ffe5dd317d929335.jpg",
+      "productLabels": {
+        "category_id": "37623"
+      },
+      "showComment": true,
+      "tradeInSwitch": false,
+      "isFeeType": false,
+      "umcPopUpNum": "3",
+      "hideAllRecs": false,
+      "isEBook": false,
+      "showPk": false,
+      "ctCloth": true,
+      "isPNew": true,
+      "skuid": 10151690432869,
+      "bundleSale": false
+    },
+    "isSfkd": false,
+    "ext": {
+      "commonRecommend": true,
+      "sf_opt": true,
+      "bjdSdk": false,
+      "jinCaiInterfaceSwitch": true,
+      "imageSearchBtn": true,
+      "mini_trade": true,
+      "auctionSwitch": true,
+      "isNotFsAndCustom": false,
+      "noRefreshSwitch": true,
+      "xundanGuide": true,
+      "govAb": true,
+      "spmSwitchForBottomBtn": true,
+      "jxLicenceDegrade": true,
+      "multiAddCart": true,
+      "paramUpDegrade": true,
+      "continue_shop": false,
+      "jcStrongSwitch": false,
+      "bjkPrice": true,
+      "govActivityPopUpSwitch": true,
+      "myAppointSwitch": true,
+      "spuInfoDegrade": true,
+      "appleLimit": true,
+      "entMemberAcqSwitch": true,
+      "half_day_arrive": true,
+      "govUnGetPopUpSwitch": true,
+      "seoTitleSwitch": true,
+      "entExc": true,
+      "defaultUmc": true,
+      "taxOn": true,
+      "hxSubsidy": true
+    },
+    "isServiceJdkd": false,
+    "contentTabSwitchVO": {
+      "tabSwitchList": [
+        {
+          "code": "DJP",
+          "name": "大家评"
+        },
+        {
+          "code": "DP",
+          "name": "店铺"
+        },
+        {
+          "code": "SPXQ",
+          "name": "商品详情"
+        },
+        {
+          "code": "SHBZ",
+          "name": "售后保障"
+        },
+        {
+          "code": "TJ",
+          "name": "推荐"
+        }
+      ]
+    },
+    "qualityLifeVO": {
+      "isQualityLife": true,
+      "qualificationParameterVO": {
+        "catId1": "37462",
+        "catId2": "37562",
+        "catId3": "37623",
+        "pid": "10029186956930",
+        "skuId": "10151690432869",
+        "venderId": "145707"
+      },
+      "qualityLifeImg": "jfs/t2077/314/2192172483/11044/f861504a/56ca6792N64e5eafc.png",
+      "qualityLifeList": [
+        {
+          "dataType": "1",
+          "name": "质量承诺",
+          "type": "J-ql-iframe ql-ico-1"
+        },
+        {
+          "dataType": "5",
+          "name": "耐久性标签",
+          "type": "ql-ico-5"
+        },
+        {
+          "dataType": "3",
+          "name": "吊牌",
+          "type": "ql-ico-3"
+        },
+        {
+          "dataType": "4",
+          "name": "质检报告",
+          "type": "ql-ico-4"
+        },
+        {
+          "dataType": "2",
+          "name": "CCC证书",
+          "type": "ql-ico-2"
+        },
+        {
+          "dataType": "v1",
+          "name": "实时温控",
+          "type": "fresh-ico-1"
+        },
+        {
+          "dataType": "v2",
+          "name": "检验报告",
+          "type": "fresh-ico-2"
+        }
+      ]
+    },
+    "itemShopInfo": {
+      "followCount": 1895,
+      "hideDisplay": false,
+      "isYearFiveStarTab": false,
+      "shopExtMap": {
+        "venderBusinessIdentity": ",popsop,"
+      },
+      "shopGrade": {
+        "afterSaleGrade": "中",
+        "afterSaleGradeLevel": "2",
+        "afterSaleScore": "8.8",
+        "customServiceGrade": "高",
+        "customServiceGradeLevel": "3",
+        "customServiceScore": "9.0",
+        "evaluateGrade": "中",
+        "evaluateGradeLevel": "2",
+        "evaluateScore": "8.9",
+        "logisticsGrade": "高",
+        "logisticsGradeLevel": "3",
+        "logisticsScore": "9.8",
+        "scoreRankRateGrade": "4.6"
+      },
+      "shopId": 140876,
+      "shopLongLogo": "https://img30.360buyimg.com/popshop/jfs/t925/4/974386973/5495/cd5177ee/556e559eN0dbeecf9.jpg",
+      "shopName": "华宋办公专营店",
+      "shopSquareLogo": "https://img30.360buyimg.com/popshop/jfs/t1/130780/37/30351/22241/63f77b47Faa69e5b7/ed3646c2e0e598d3.png",
+      "shopTabList": [
+        {
+          "tabClassType": 1,
+          "tabCode": "tab_var_702_dp",
+          "tabData": "10年老店",
+          "tabDisplayType": 2,
+          "tabImg": "http://m.360buyimg.com/cc/jfs/t1/157957/4/30960/453/63365fc4E1344bd4d/975c6f95c22fed20.png",
+          "tabKey": "N_OLD_SHOP"
+        }
+      ],
+      "shopUrl": "//mall.jd.com/index-140876.html?from=pc",
+      "venderType": "0"
+    },
+    "bottomBtnVO": {
+      "bottomBtnItems": [
+        {
+          "buttonEvent": {
+            "id": 2,
+            "link": "",
+            "miniTrade": true,
+            "qrcodeText": "",
+            "source": "common"
+          },
+          "buttonStyle": {
+            "containerFormat": {
+              "backgroundColor": "#FF0F23"
+            },
+            "state": 1,
+            "subBottomLeftTextFormat": {},
+            "subBottomRightTextFormat": {},
+            "subBottomTextFormat": {},
+            "subLeftTextFormat": {},
+            "subRightTextFormat": {},
+            "textFormat": {
+              "text": "新人到手价<span>¥68</span> 立即购买"
+            },
+            "type": 1
+          },
+          "buttonType": 15,
+          "scene": "12",
+          "tracking": {}
+        },
+        {
+          "buttonEvent": {
+            "id": 1,
+            "link": "",
+            "miniTrade": false,
+            "qrcodeText": "",
+            "source": "common"
+          },
+          "buttonStyle": {
+            "containerFormat": {
+              "flex": "0 1 58.24px",
+              "height": "52px",
+              "padding": "0",
+              "width": "58.24px"
+            },
+            "state": 1,
+            "subBottomLeftTextFormat": {},
+            "subBottomRightTextFormat": {},
+            "subBottomTextFormat": {},
+            "subLeftTextFormat": {},
+            "subRightTextFormat": {},
+            "textFormat": {
+              "text": "<img src=\"//img14.360buyimg.com/imagetools/jfs/t1/335962/23/10998/2521/68c77514Fb4477ae0/5677589fde4b2108.png\" style=\"width:100%;height:100%\" />"
+            },
+            "type": 2
+          },
+          "buttonType": 14,
+          "scene": "12",
+          "tracking": {}
+        }
+      ]
+    },
+    "isSamMember": false,
+    "skuHeadVO": {
+      "seoTitle": "贯名Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式 大号CP-01A【行情 报价 价格 评测】-京东",
+      "skuIconImageList": [],
+      "skuTitle": "贯名Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式 大号CP-01A"
+    },
+    "carButlerVO": {
+      "suingCarButlerNodes": false
+    },
+    "brandVipInfo": {
+      "vip": false
+    },
+    "isFsAndCustom": false,
+    "urlRedirectVO": {
+      "key": "pc_detail",
+      "redirectParamFlag": true,
+      "url": "//item.jd.com/10151690432869.html"
+    },
+    "colorSizeVO": {
+      "canAddCartMap": {
+        "10151690432869": 0,
+        "10218307718578": 0,
+        "10218307718579": 0
+      },
+      "colorSizeList": [
+        {
+          "buttons": [
+            {
+              "fullImageUrl": "jfs/t1/421693/5/9290/51808/69e5a6b7F4fdb1174/00832b92b9f3d5dc.jpg",
+              "imageType": 2,
+              "no": "1",
+              "skuId": "10151690432869",
+              "skuList": [
+                "10151690432869"
+              ],
+              "stock": "1",
+              "text": "大号CP-01A"
+            },
+            {
+              "fullImageUrl": "jfs/t1/421148/14/12277/72730/69e5a6bfF908df90c/0083320320c3b469.jpg",
+              "imageType": 2,
+              "no": "2",
+              "skuId": "10218307718578",
+              "skuList": [
+                "10218307718578"
+              ],
+              "stock": "1",
+              "text": "中号CP-01Apro"
+            },
+            {
+              "fullImageUrl": "jfs/t1/423649/14/1842/71775/69e5a6f7F6f198416/00833163165af4fc.jpg",
+              "imageType": 2,
+              "no": "3",
+              "skuId": "10218307718579",
+              "skuList": [
+                "10218307718579"
+              ],
+              "stock": "1",
+              "text": "尺寸提示"
+            }
+          ],
+          "supportCustom": false,
+          "title": "颜色"
+        }
+      ],
+      "limitInfo": {
+        "10151690432869": {
+          "limitMax": 200,
+          "limitMin": 1
+        },
+        "10218307718578": {
+          "limitMax": 200,
+          "limitMin": 1
+        },
+        "10218307718579": {
+          "limitMax": 200,
+          "limitMin": 1
+        }
+      },
+      "spiderMap": {
+        "10151690432869": "u0_EgG_cHIzHuk5fe0LEDnkLR8TtlIJ_uqAqf2x5wQZq6s6iF6r4KeUOlF-pKafm.rQ4a.tlbT",
+        "10218307718578": "u0_EgG_cHIzHuk5fe0LEDsgqlR46CMZqlOokny4QFkPS6EOJ_uDImta2Uu7rWq2r.rQ4a.tlbT",
+        "10218307718579": "u0_EgG_cHIzHuk5fe0LEDsgqlR46CMZqlOokny4QFkOeIrsli5WSCJObJGvbvyu2.rQ4a.tlbT"
+      },
+      "stockInfo": {
+        "10151690432869": {
+          "dc": "-1",
+          "stockState": "33"
+        },
+        "10218307718578": {
+          "dc": "-1",
+          "stockState": "33"
+        },
+        "10218307718579": {
+          "dc": "-1",
+          "stockState": "33"
+        }
+      }
+    },
+    "isLogin": true,
+    "commonLimitInfo": {
+      "limitMinNum": "1",
+      "mergeMaxBuyNum": "400",
+      "resultExtMap": {
+        "noSaleFlag": "0",
+        "limitNum": "0",
+        "strategyFlag": "0",
+        "isPlusLimit": "0",
+        "limitUserFlag": "1",
+        "limitAreaFlag": "1",
+        "limitPeopleFlag": "1",
+        "canBuy": "1"
+      }
+    },
+    "govSupportInfo": {
+      "ab": true,
+      "beltBanner": "//img30.360buyimg.com/jdg/jfs/t1/263547/24/18280/20997/67a96901F1bef1e77/fcce6b07199642ff.png",
+      "cloudPay": false,
+      "govSubsidy": false,
+      "govSupport": false,
+      "rightText": "",
+      "subsidyScene": "0",
+      "subsidyType": "",
+      "subsidyUserStatus": "",
+      "yellowBar": false
+    },
+    "corpHighInfo": {
+      "img": "",
+      "link": "https://pro.jd.com/mall/active/wPxBWVuiHctmS4MX9ywq5n57kiF/index.html?babelChannel=ttt21&hdid=bUTiORFpTb4&returnurl=https%3A%2F%2Fitem.jd.com%2F10151690432869.html",
+      "statContent": "",
+      "tip": "企业会员4000元补贴，办公设备/易耗品一站式采购！"
+    },
+    "wareInfoReadMap": {
+      "fare": "334231",
+      "thwa": "1",
+      "cn_brand": "贯名",
+      "vender_name": "上海华宋贸易有限公司",
+      "timeliness_id": "28574571",
+      "unLimit_cid": "37626",
+      "shop_id": "140876",
+      "buyer_post": "",
+      "size": "",
+      "sale_attributes": "[{\"dim\":1,\"saleName\":\"颜色\",\"saleValue\":\"大号CP-01A\",\"sequenceNo\":1}]",
+      "img_dfs_url": "jfs/t1/422403/36/6698/94231/69e5e586F33e63e87/0083320320b30275.jpg",
+      "category_id": "37623",
+      "nationallySetWareJdcom": "3",
+      "template_ids": "",
+      "shop_name": "华宋办公专营店",
+      "wlzyc": "29|26|31|30|11|28",
+      "spec_sequence": "",
+      "companyType": "0",
+      "length": "200",
+      "nationallySetWare": "3",
+      "warranty": "",
+      "model": "CP-01A",
+      "color_sequence": "1",
+      "vender_bizid": ",popsop,",
+      "features2": "bcdsjsp:1;isJDexpress:1;scznff:1",
+      "maxCartCat": "400",
+      "isDnsmDept": "1",
+      "isSopJdDy": "0",
+      "is7ToReturn": "1",
+      "product_id": "10029186956930",
+      "height": "37",
+      "zero_buyer_post": "1420",
+      "product_features": "SoldOversea:6;descModel:1;fply:shop-pc;fylx:3;introductionUseFlag:0;is7ToReturn:1;isPayFirst:1;isSopJdDy:0;isUDSAttr:1;mobileDescUseFlag:0;model:CP-01A;nameBrandType:brandtitlecn_name;nameWithoutBrand:Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式;nationallySetWare:3;popsfkc:0;salemodel:POP_MODEL;scsj:1745985723112;wlzyc:29|26|31|30|11|28;zyyfmb:1",
+      "jc_saler": "",
+      "day_limited_sales": "0",
+      "item_num": "",
+      "vender_attribute": "",
+      "features": "consumptionVAT:0,inputVAT:13,outputVAT:13",
+      "pay_first": "1",
+      "weight": "0.281",
+      "brand_id": "1528772",
+      "size_sequence": "0",
+      "color": "大号CP-01A",
+      "shelf_life": "0",
+      "vender_id": "145707",
+      "isQdh": "0",
+      "category_id1": "37462",
+      "category_id2": "37562",
+      "sfkc": "0",
+      "delivery": "deliveryPlace:2826;",
+      "sku_status": "1",
+      "spec_name": "",
+      "main_sku_id": "10151690432869",
+      "yn": "1",
+      "sku_name": "贯名Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式 大号CP-01A",
+      "supply_unit": "",
+      "col_type": "0",
+      "vender_col_type": "0",
+      "width": "141",
+      "isJDFCat": "0",
+      "spec": "",
+      "ggt": "jfs/t1/421693/5/9290/51808/69e5a6b7F4fdb1174/00832b92b9f3d5dc.jpg",
+      "SoldOversea": "6",
+      "product_name": "贯名Passnaming贯名CPA注会考试cp-01a财管会计多功能科学函数计算器台式",
+      "platform": "1",
+      "sku_mark": "32",
+      "item_id": "-1"
+    },
+    "buttonInfo": {
+      "list": [
+        {
+          "id": "add-to-cart",
+          "imgUrl": "//img14.360buyimg.com/imagetools/jfs/t1/335962/23/10998/2521/68c77514Fb4477ae0/5677589fde4b2108.png",
+          "style": "{\"width\":\"58.24px\",\"height\":\"52px\",\"flex\":\"0 1 58.24px\",\"background\":\"#FFE7CC\",\"marginRight\":\"8px\"}",
+          "subType": "2",
+          "type": "1"
+        },
+        {
+          "id": "li-gou",
+          "style": "{\"background\":\"#FF0F23\"}",
+          "subType": "1",
+          "type": "2"
+        }
+      ],
+      "sceneType": "1"
+    },
+    "serviceTagsVO": {
+      "basicNewIcons": [
+        {
+          "code": "commonpd_distribution_global",
+          "text": "可配送全球",
+          "tip": "支持港澳台及海外收货地址下单，由于各地区政策不同，具体请以结算页详情为准"
+        },
+        {
+          "code": "p59",
+          "helpLink": "https://help.jd.com/user/issue/962-4181.html",
+          "text": "30天价保险",
+          "tip": "在下单后30天内，商品出现降价可享受价保险服务，部分特殊场景不支持价保，可点击“＞”了解详细规则"
+        },
+        {
+          "code": "p96",
+          "text": "免费上门退换",
+          "tip": "售后时效内申请退换货，选择上门取件优先安排京东物流服务，无需支付退换货运费；选择自寄，售后完成后补首重运费。"
+        },
+        {
+          "code": "p1",
+          "text": "闪电退款",
+          "tip": "京东优质用户提交售后申请退货时，满足相关条件快速退款的服务"
+        },
+        {
+          "code": "p8",
+          "helpLink": "//help.jd.com/user/issue/list-114-470.html",
+          "text": "极速审核",
+          "tip": "京东优质用户提交售后申请退货时，满足相关条件最快0秒审核通过的服务"
+        },
+        {
+          "code": "p93",
+          "helpLink": "https://bao.tjjt360.com/insurance/serviceDetail/labelConfigDetail?skuId=10151690432869&labelCode=p93",
+          "text": "破损包退换",
+          "tip": "商品出库后30天内发生正向运输破损，未收到货或意外损坏问题，保险公司按照保险责任的合作约定提供退货退款、换新/损失补偿。"
+        },
+        {
+          "code": "deliveryAndAfterSales",
+          "text": "京东发货&售后服务",
+          "tip": "京东发货&售后服务"
+        },
+        {
+          "text": "支持7天无理由退货"
+        }
+      ]
+    },
+    "isCsfh": false,
+    "warePriceGatherVO": {
+      "ext": {},
+      "priceItemList": [
+        {
+          "hitLine": false,
+          "price": "68",
+          "priceLabelList": [
+            {
+              "labelShowType": "tag",
+              "labelTxt": "到手价",
+              "labelType": "finalPrice"
+            }
+          ],
+          "priceType": "finalPrice",
+          "priceUp": "1"
+        },
+        {
+          "hitLine": true,
+          "price": "88",
+          "priceLabelList": [],
+          "priceStyle": {
+            "color": "#888b94",
+            "fontSize": "14px"
+          },
+          "priceType": "jdPrice"
+        }
+      ],
+      "priceScene": {
+        "priceScene": "common"
+      }
+    },
+    "stepperVO": {
+      "disabled": false,
+      "hide": false,
+      "limitMinNum": "1",
+      "mergeMaxBuyNum": "400"
+    },
+    "abData": {
+      "multi_price": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzgxNjQ4fGJlc3Q|tsabtest",
+        "business": "multi_price",
+        "keyParamMap": {
+          "hit": 1
+        },
+        "label": "best",
+        "success": true
+      },
+      "new_people": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk5ODE2fHhpbnJlbg|tsabtest",
+        "keyParamMap": {
+          "new_user": 1
+        },
+        "label": "xinren",
+        "success": true,
+        "type": "16"
+      },
+      "item_pk": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzcyNjUyfGJhc2U|tsabtest",
+        "business": "item_pk",
+        "keyParamMap": {},
+        "label": "base",
+        "success": true
+      },
+      "main_image": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzgzNTg3fHByZTI|tsabtest",
+        "business": "main_image",
+        "keyParamMap": {
+          "first_show": 2
+        },
+        "label": "pre2",
+        "success": true
+      },
+      "ent_plus_user_acquisition": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzEyMjY3N3xU|tsabtest",
+        "keyParamMap": {},
+        "label": "T",
+        "success": true,
+        "type": "30"
+      },
+      "abTags": [
+        "tsabtest|base64|UGNUZXN0TmV3XzEyMjY3N3xU|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk4Mzg3fHNoaXlhbnp1X2JhbmdkYW4|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwMTA1M3xzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk4OTk3fHNoaXlhbnp1|tsabtest",
+        "tsabtest|base64|UGNUZXN0TmV3XzE1NTY0N3xU|tsabtest",
+        "tsabtest|base64|UGNBQlRlc3RfNzg3NTh8cHJl|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk5ODk1fGJhc2U|tsabtest",
+        "tsabtest|base64|UENUZXN0XzgyOTkzfGJlc3Q|tsabtest",
+        "tsabtest|base64|UGNUZXN0TmV3XzE2MDA1M3xS|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwMjYwMHxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk1ODAxfHNoaXlhbnp1X3Br|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzc5MDE3fGJlc3Q|tsabtest",
+        "tsabtest|base64|UENUZXN0XzcxNzM4fGJhc2U|tsabtest",
+        "tsabtest|base64|UGNUZXN0TmV3XzE0OTg0MnxS|tsabtest",
+        "tsabtest|base64|UENUZXN0XzgxNjQ4fGJlc3Q|tsabtest",
+        "tsabtest|base64|UENUZXN0XzcyNjUyfGJhc2U|tsabtest",
+        "tsabtest|base64|UENUZXN0XzExODE0NHxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzcxMzY2fGJhc2U|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwODU0OHxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzgzNTg3fHByZTI|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwOTc4MXxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwMjY2MXxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UGNUZXN0TmV3XzEyMjgxNnxS|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk2NTg0fGJhc2U|tsabtest",
+        "tsabtest|base64|UGNUZXN0TmV3XzEyMTgwOXxU|tsabtest",
+        "tsabtest|base64|U01CQUJUZXN0Xzg0MTY1fHByZQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwNTYzOXxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzEwMjY1NHxzaGl5YW56dQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzExNzU0N3xkdWl6aGFvenU|tsabtest",
+        "tsabtest|base64|UENUZXN0XzExNjU0MXxiYXNl|tsabtest",
+        "tsabtest|base64|UENUZXN0Xzk5ODE2fHhpbnJlbg|tsabtest"
+      ],
+      "jd_fashion": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwMjYwMHxzaGl5YW56dQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "19"
+      },
+      "promotion_optimize": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzc5MDE3fGJlc3Q|tsabtest",
+        "business": "promotion_optimize",
+        "keyParamMap": {
+          "hit": 1
+        },
+        "label": "best",
+        "success": true
+      },
+      "brand_cart_animation": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNjU0MXxiYXNl|tsabtest",
+        "keyParamMap": {},
+        "label": "base",
+        "success": true,
+        "type": "25"
+      },
+      "xundan_guide": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk4OTk3fHNoaXlhbnp1|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "15"
+      },
+      "core_param": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzEyMTgwOXxU|tsabtest",
+        "keyParamMap": {},
+        "label": "T",
+        "success": true,
+        "type": "34"
+      },
+      "preference_split_pile": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwNTYzOXxzaGl5YW56dQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "22"
+      },
+      "enPlus_price": {
+        "abBuriedTag": "tsabtest|base64|UGNBQlRlc3RfNzg3NTh8cHJl|tsabtest",
+        "business": "enPlus_price",
+        "keyParamMap": {},
+        "label": "pre",
+        "success": true
+      },
+      "mini_recommend_pid": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzE0OTg0MnxS|tsabtest",
+        "business": "mini_recommend_pid",
+        "keyParamMap": {},
+        "label": "R",
+        "success": true
+      },
+      "mini_shop": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwOTc4MXxzaGl5YW56dQ|tsabtest",
+        "business": "mini_shop",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true
+      },
+      "enterprise_plus_guide": {
+        "abBuriedTag": "tsabtest|base64|U01CQUJUZXN0Xzg0MTY1fHByZQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "pre",
+        "success": true,
+        "type": "14"
+      },
+      "continue_shop": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzE2MDA1M3xS|tsabtest",
+        "keyParamMap": {},
+        "label": "R",
+        "success": true,
+        "type": "31"
+      },
+      "jd_plugin": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNzU0N3xkdWl6aGFvenU|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 0
+        },
+        "label": "duizhaozu",
+        "success": true,
+        "type": "26"
+      },
+      "bottom_recommend": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwMTA1M3xzaGl5YW56dQ|tsabtest",
+        "business": "bottom_recommend",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true
+      },
+      "pc_rank": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk4Mzg3fHNoaXlhbnp1X2JhbmdkYW4|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu_bangdan",
+        "success": true,
+        "type": "13"
+      },
+      "spu_info": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzExODE0NHxzaGl5YW56dQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "27"
+      },
+      "no_refresh": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzE1NTY0N3xU|tsabtest",
+        "business": "no_refresh",
+        "keyParamMap": {},
+        "label": "T",
+        "success": true
+      },
+      "image_roll": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk5ODk1fGJhc2U|tsabtest",
+        "business": "image_roll",
+        "keyParamMap": {
+          "duizhaozu": 0
+        },
+        "label": "base",
+        "success": true
+      },
+      "img_search": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwODU0OHxzaGl5YW56dQ|tsabtest",
+        "business": "img_search",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true
+      },
+      "image_adjust": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk2NTg0fGJhc2U|tsabtest",
+        "business": "image_adjust",
+        "keyParamMap": {},
+        "label": "base",
+        "success": true
+      },
+      "ai_checklist_entrance": {
+        "abBuriedTag": "tsabtest|base64|UGNUZXN0TmV3XzEyMjgxNnxS|tsabtest",
+        "business": "ai_checklist_entrance",
+        "keyParamMap": {},
+        "label": "R",
+        "success": true
+      },
+      "ware_recommendation": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwMjY1NHxzaGl5YW56dQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "18"
+      },
+      "item_gov_price": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzcxMzY2fGJhc2U|tsabtest",
+        "business": "item_gov_price",
+        "keyParamMap": {},
+        "label": "base",
+        "success": true
+      },
+      "jing_dou": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzgyOTkzfGJlc3Q|tsabtest",
+        "keyParamMap": {},
+        "label": "best",
+        "success": true,
+        "type": "8"
+      },
+      "main_imager_attr": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwMjY2MXxzaGl5YW56dQ|tsabtest",
+        "keyParamMap": {
+          "duizhaozu": 1
+        },
+        "label": "shiyanzu",
+        "success": true,
+        "type": "20"
+      },
+      "shiyanzu_pk": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0Xzk1ODAxfHNoaXlhbnp1X3Br|tsabtest",
+        "business": "shiyanzu_pk",
+        "keyParamMap": {
+          "pklevelup_test": 1
+        },
+        "label": "shiyanzu_pk",
+        "success": true
+      },
+      "item_gb_fastTest": {
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzcxNzM4fGJhc2U|tsabtest",
+        "business": "item_gb_fastTest",
+        "keyParamMap": {},
+        "label": "base",
+        "success": true
+      }
+    },
+    "rankInfoList": [
+      {
+        "rankName": "40-120元实物计算器热卖榜·第16名",
+        "rankTypeInt": 10,
+        "rankUrl": "https://pro.jd.com/mall/active/4JRfHorUDXgL77E9YdNxSCNMKwkJ/index.html?pageNum=1&bbtf=1&queryType=1&rankId=3540004&rankType=10&fromName=ProductdetailPC&preSrc=null&currSku=10151690432869"
+      }
+    ],
+    "stockVO": {
+      "freeShippinVO": {
+        "content": "包邮",
+        "deliveryDescLink": "//help.jd.com/user/issue/109-4012.html",
+        "originalText": "请以提交订单时为准",
+        "title": "了解配送费收取标准"
+      },
+      "logisticsLogoList": [
+        {
+          "logoText": "京东物流",
+          "logoType": "wl"
+        }
+      ],
+      "noGoods": false,
+      "promiseIconList": [
+        {
+          "code": "pop_sssm",
+          "helpLink": "https://help.jd.com/user/issue/254-4130.html",
+          "iconServiceType": 6,
+          "text": "送货上门",
+          "tip": "京东快递为您提供送货上门服务"
+        },
+        {
+          "code": "popservice_yysh",
+          "helpLink": "https://help.jd.com/user/issue/103-983.html",
+          "iconServiceType": 6,
+          "text": "预约送货",
+          "tip": "京东物流为该商品提供预约送货服务"
+        },
+        {
+          "code": "popservice_bfsh",
+          "helpLink": "https://help.jd.com/user/issue/103-983.html",
+          "iconServiceType": 6,
+          "text": "部分收货",
+          "tip": "如果收件人收货时发现部分货物存在缺少配件、物流损等情形，京东物流提供订单半收服务"
+        },
+        {
+          "code": "pop_Selfpick",
+          "helpLink": "//help.jd.com/user/issue/103-983.html",
+          "iconServiceType": 5,
+          "text": "自提",
+          "tip": "我们提供多种自提服务，包括京东自提点、自助提货柜、京东校园派、京东星配站、京东便民站等服务"
+        }
+      ],
+      "promiseInfoText": "明天18:00前付款，预计<b>05月13日(周三)</b>送达"
+    },
+    "wareInfo": {
+      "extend": {},
+      "wareInfoMap": {
+        "sku_status": "1"
+      }
+    },
+    "addCartVO": {
+      "canAddCart": true
+    },
+    "govTextSwitch": true,
+    "mainImageVO": {
+      "carouselArea": [
+        {
+          "imageUrl": "jfs/t1/320545/8/21586/86523/68917079F0f768baf/ffe5dd317d929335.jpg",
+          "siteType": "2",
+          "videos": [
+            {
+              "cover": "https://jvod.300hu.com/img/2025/936599032/1/img2.jpg",
+              "playUrl": "https://jvod.300hu.com/vod/product/2010428964/21852/960062e6c27846a38c1ffd11eb7c1bcc.mp4?source=1&h265=1088_781_1_96ac553d6_f.mp4"
+            }
+          ]
+        },
+        {
+          "imageUrl": "jfs/t1/320545/8/21586/86523/68917079F0f768baf/ffe5dd317d929335.jpg",
+          "siteType": "1"
+        },
+        {
+          "imageUrl": "jfs/t1/320831/28/12402/59222/68634464Fab0df95e/094b9a3226234fa8.jpg",
+          "siteType": "1"
+        },
+        {
+          "imageUrl": "jfs/t1/317045/35/12829/171632/68634465Fd3eeb90e/4f9362b6d52498d9.jpg",
+          "siteType": "1"
+        },
+        {
+          "siteType": "3"
+        }
+      ],
+      "mainImageArea": {
+        "imageUrl": "jfs/t1/320545/8/21586/86523/68917079F0f768baf/ffe5dd317d929335.jpg",
+        "specsImage": "jfs/t1/421693/5/9290/51808/69e5a6b7F4fdb1174/00832b92b9f3d5dc.jpg"
+      }
+    },
+    "stockInfo": {
+      "deliveryInfo": {
+        "state": "SUPPORT",
+        "support": true
+      },
+      "isPlus": false,
+      "code": 1,
+      "promiseInfoText": "明天18:00前付款，预计<b>05月13日(周三)</b>送达",
+      "realStockState": "33",
+      "promiseResult": "明天18:00前付款，预计<b>05月13日(周三)</b>送达",
+      "serviceInfo": "由<a href='http://hsbgzyd.jd.com' target='_blank' clstag='shangpin|keycount|product|bbtn' class='hl_red'>华宋办公专营店</a>从 上海 发货, 并提供售后服务. ",
+      "stockDesc": "<strong>有货</strong>，仅剩473件",
+      "dcashDesc": "包邮（请以提交订单时为准） <a title=\"了解配送费收取标准\" href=//help.jd.com/user/issue/109-4012.html target=\"_blank\"><i class=\"sprite-question\"></i></a>",
+      "fxgCode": "0",
+      "is7ToReturn": "支持7天无理由退货",
+      "stockState": 33,
+      "stockInfo": {
+        "ae": 0,
+        "ag": "-1",
+        "ah": -1,
+        "at": "-1",
+        "availableNum": 473,
+        "businessType": 0,
+        "ca": -1,
+        "da": "-1",
+        "date": "",
+        "dc": "-1",
+        "dcId": 10,
+        "dcIdDely": 10,
+        "ef": 0,
+        "eh": -1,
+        "ej": "-1",
+        "ek": -1,
+        "freshEdi": 0,
+        "popPatType": -1,
+        "preStore": -1,
+        "railModel": 0,
+        "reservationType": "OTHER",
+        "rid": 110009538,
+        "sidDely": 130,
+        "siteId4Dada": -1,
+        "stDely": 0,
+        "stockM": 0,
+        "stockState": "AVAILABLE",
+        "stockV": 0,
+        "storeId": 130,
+        "storeId4Dada": -1,
+        "storeState4Dada": -1,
+        "storeType": 0,
+        "useStockNum": 99
+      },
+      "supportHKMOShip": true,
+      "serverIcon": {
+        "basicNewIcons": [
+          {
+            "code": "commonpd_distribution_global",
+            "text": "可配送全球",
+            "tip": "支持港澳台及海外收货地址下单，由于各地区政策不同，具体请以结算页详情为准"
+          },
+          {
+            "code": "p59",
+            "helpLink": "https://help.jd.com/user/issue/962-4181.html",
+            "text": "30天价保险",
+            "tip": "在下单后30天内，商品出现降价可享受价保险服务，部分特殊场景不支持价保，可点击“＞”了解详细规则"
+          },
+          {
+            "code": "p96",
+            "text": "免费上门退换",
+            "tip": "售后时效内申请退换货，选择上门取件优先安排京东物流服务，无需支付退换货运费；选择自寄，售后完成后补首重运费。"
+          },
+          {
+            "code": "p1",
+            "text": "闪电退款",
+            "tip": "京东优质用户提交售后申请退货时，满足相关条件快速退款的服务"
+          },
+          {
+            "code": "p8",
+            "helpLink": "//help.jd.com/user/issue/list-114-470.html",
+            "text": "极速审核",
+            "tip": "京东优质用户提交售后申请退货时，满足相关条件最快0秒审核通过的服务"
+          },
+          {
+            "code": "p93",
+            "helpLink": "https://bao.tjjt360.com/insurance/serviceDetail/labelConfigDetail?skuId=10151690432869&labelCode=p93",
+            "text": "破损包退换",
+            "tip": "商品出库后30天内发生正向运输破损，未收到货或意外损坏问题，保险公司按照保险责任的合作约定提供退货退款、换新/损失补偿。"
+          },
+          {
+            "code": "deliveryAndAfterSales",
+            "text": "店铺发货&售后服务",
+            "tip": "店铺发货&售后服务"
+          },
+          {
+            "text": "支持7天无理由退货"
+          }
+        ],
+        "wlfwIcons": [
+          {
+            "code": "pop_sssm",
+            "helpLink": "https://help.jd.com/user/issue/254-4130.html",
+            "iconServiceType": 6,
+            "text": "送货上门",
+            "tip": "京东快递为您提供送货上门服务"
+          },
+          {
+            "code": "popservice_yysh",
+            "helpLink": "https://help.jd.com/user/issue/103-983.html",
+            "iconServiceType": 6,
+            "text": "预约送货",
+            "tip": "京东物流为该商品提供预约送货服务"
+          },
+          {
+            "code": "popservice_bfsh",
+            "helpLink": "https://help.jd.com/user/issue/103-983.html",
+            "iconServiceType": 6,
+            "text": "部分收货",
+            "tip": "如果收件人收货时发现部分货物存在缺少配件、物流损等情形，京东物流提供订单半收服务"
+          },
+          {
+            "code": "pop_Selfpick",
+            "helpLink": "//help.jd.com/user/issue/103-983.html",
+            "iconServiceType": 5,
+            "text": "自提",
+            "tip": "我们提供多种自提服务，包括京东自提点、自助提货柜、京东校园派、京东星配站、京东便民站等服务"
+          }
+        ],
+        "basicIcons": [
+          {
+            "code": "commonpd_distribution_global",
+            "text": "可配送全球",
+            "tip": "支持港澳台及海外收货地址下单，由于各地区政策不同，具体请以结算页详情为准"
+          },
+          {
+            "code": "p59",
+            "helpLink": "https://help.jd.com/user/issue/962-4181.html",
+            "text": "30天价保险",
+            "tip": "在下单后30天内，商品出现降价可享受价保险服务，部分特殊场景不支持价保，可点击“＞”了解详细规则"
+          },
+          {
+            "code": "p96",
+            "text": "免费上门退换",
+            "tip": "售后时效内申请退换货，选择上门取件优先安排京东物流服务，无需支付退换货运费；选择自寄，售后完成后补首重运费。"
+          },
+          {
+            "code": "p1",
+            "text": "闪电退款",
+            "tip": "京东优质用户提交售后申请退货时，满足相关条件快速退款的服务"
+          },
+          {
+            "code": "p8",
+            "helpLink": "//help.jd.com/user/issue/list-114-470.html",
+            "text": "极速审核",
+            "tip": "京东优质用户提交售后申请退货时，满足相关条件最快0秒审核通过的服务"
+          },
+          {
+            "code": "p93",
+            "helpLink": "https://bao.tjjt360.com/insurance/serviceDetail/labelConfigDetail?skuId=10151690432869&labelCode=p93",
+            "text": "破损包退换",
+            "tip": "商品出库后30天内发生正向运输破损，未收到货或意外损坏问题，保险公司按照保险责任的合作约定提供退货退款、换新/损失补偿。"
+          }
+        ]
+      },
+      "dcashDescDegrade": false,
+      "support": [],
+      "dcashDescNew": "包邮<a title=\"了解配送费收取标准\" href=\"//help.jd.com/user/issue/109-4012.html\" target=\"_blank\"><i class=\"sprite-question\"></i><span>请以提交订单时为准</span></a>",
+      "isStock": true
+    },
+    "commonConfig": {
+      "bjdSdk": "//storage.360buyimg.com/bjd-utils-sdk/bjdcommon/sdk/1.0.6/index.js",
+      "auctionJS": "//storage.360buyimg.com/h5source/auctionDetailPc/prod/20260324203853/main.7990b4f5.js",
+      "mini_trade": "//storage.360buyimg.com/retail-mall/pc_settlement_lite/pro/0.0.2/createSettlementLite.js",
+      "aiCheckList": "//ai-list.jd.com/home",
+      "commentJs": "//storage.360buyimg.com/reputation/PCList/prod/0.1.6/index.66c8b5c9.js",
+      "bPkJs": "//storage.360buyimg.com/bjd-utils-sdk/bjdcommon/aishoparound/1.0.0.js",
+      "auctionCss": "//storage.360buyimg.com/h5source/auctionDetailPc/prod/20260324203853/main.c0c54df0.css"
+    },
+    "isPlusMember": "5",
+    "isJdkd": false,
+    "crumbInfoVO": {
+      "crumbs": [
+        {
+          "text": "文教文化用品",
+          "url": "https://list.jd.com/list.html?cat=37462"
+        },
+        {
+          "text": "绘图计算用品",
+          "url": "https://list.jd.com/list.html?cat=37462,37562"
+        },
+        {
+          "text": "实物计算器",
+          "url": "https://list.jd.com/list.html?cat=37462,37562,37623"
+        },
+        {
+          "text": "函数计算器",
+          "url": "https://list.jd.com/list.html?cat=37462,37562,37623,37626"
+        },
+        {
+          "text": "贯名",
+          "url": "https://list.jd.com/list.html?cat=37462,37562,37623,37626&ev=exbrand_1528772"
+        }
+      ]
+    },
+    "isJdwl": true,
+    "promotion": {
+      "canReturnHaggleInfo": false,
+      "isBargain": false,
+      "isTwoLine": false,
+      "limitBuyInfo": {
+        "limitNum": "0",
+        "noSaleFlag": "0",
+        "resultExt": {
+          "noSaleFlag": "0",
+          "limitNum": "0",
+          "strategyFlag": "0",
+          "isPlusLimit": "0",
+          "limitUserFlag": "1",
+          "limitAreaFlag": "1",
+          "limitPeopleFlag": "1",
+          "canBuy": "1"
+        }
+      },
+      "prompt": ""
+    },
+    "tracerId": "10104697954-163251-1778494190169"
+  }
+}

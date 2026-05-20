@@ -1,17 +1,25 @@
 /* 全局表单与卡片（各视图复用 class 名） */
 .ma-card {
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 1.25rem 1.5rem;
+  border: 1px solid rgb(0 0 0 / 0.06);
+  border-radius: 12px;
+  padding: 1.35rem 1.5rem;
   margin-bottom: 1rem;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 4px 16px -4px rgb(15 23 42 / 0.08);
+}
+.ma-card.ma-card-elevated {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.05),
+    0 8px 24px -6px rgb(15 23 42 / 0.1);
 }
 .ma-card h2 {
   margin: 0 0 1rem;
   font-size: 1.05rem;
   font-weight: 600;
   color: #111827;
+  letter-spacing: -0.02em;
 }
 .ma-row {
   display: flex;
@@ -36,14 +44,26 @@
 .ma-row input,
 .ma-row select,
 .ma-row textarea {
-  padding: 0.5rem 0.6rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
+  font-size: 0.85rem;
+  min-height: 2rem;
+  box-sizing: border-box;
+}
+.ma-row input:focus,
+.ma-row select:focus,
+.ma-row textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
 }
 .ma-row textarea {
   resize: vertical;
-  min-height: 4rem;
+  min-height: 3.25rem;
+  padding: 0.4rem 0.5rem;
+  line-height: 1.45;
 }
 .ma-adv {
   margin: 0.75rem 0 1rem;
@@ -80,6 +100,15 @@
 .ma-btn-secondary {
   background: #64748b;
   color: #fff;
+}
+.ma-btn-ghost {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+.ma-btn-ghost:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 .ma-err {
   color: #b91c1c;
@@ -161,3 +190,41 @@
   background: #ede9fe;
   color: #5b21b6;
 }
+
+/* ========== 京东等页：任务行、select、与卡片内 fieldset 输入（密度与主推类目一致：约 0.85rem、min-height 2rem）========== */
+.sel-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  flex-shrink: 0;
+}
+/* 仅卡片顶部的直接子级工具行，避免嵌套组件（如嵌入的数据表弹层）里的 .toolbar 被误套 margin/gap */
+section.ma-card > .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+/* 策略生成页：主推类目等竖排块；特异性需压过上一行，避免 align-items:center 把列打横 */
+section.ma-card > .toolbar.toolbar-stack {
+  flex-direction: column;
+  align-items: stretch;
+  align-content: flex-start;
+}
+/* 策略预览页：营销内容区按钮行（非 section 直接子级） */
+section.ma-card .marketing-pack-out .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0;
+}
+section.ma-card .picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+/* 表单控件由 Element Plus 与 src/styles/element-plus-app.css 统一承托，此处不再写原生 select/fieldset 皮肤 */

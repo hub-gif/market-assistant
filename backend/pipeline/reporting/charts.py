@@ -650,13 +650,27 @@ def generate_report_charts(
                     continue
                 title = str(s.get("title") or "").strip()
                 sku = str(s.get("sku_id") or "").strip()
-                # 与 §5 矩阵「产品」列一致：纵轴优先品名，无标题时再退化为 SKU
+                spec = str(s.get("spec_attributes") or "").strip()
+                # 与 §5 矩阵「产品」列一致：纵轴优先品名，无标题时再退化为 SKU；附带规格属性便于同价不同规对照
                 if title:
                     label = title if len(title) <= 48 else title[:46] + "…"
                 elif sku:
                     label = sku if len(sku) <= 22 else sku[:20] + "…"
                 else:
                     label = "?"
+                if spec:
+                    one_line = " ".join(spec.split())
+                    sp = (
+                        one_line
+                        if len(one_line) <= 28
+                        else one_line[:26] + "…"
+                    )
+                    if label != "?":
+                        label = f"{label} · {sp}"
+                    else:
+                        label = sp
+                    if len(label) > 58:
+                        label = label[:56] + "…"
                 p: float | None = None
                 for k in (
                     "detail_price_final",

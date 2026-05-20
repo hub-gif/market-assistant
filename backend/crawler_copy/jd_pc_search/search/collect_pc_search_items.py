@@ -37,6 +37,7 @@ from jd_h5_search_requests import (
     pc_search_ware_list_slot_count_from_body,
     sleep_pc_search_request_gap,
 )
+from common.jd_delay_utils import parse_fetch_retry_delay_arg, sleep_pc_search_fetch_retry_gap
 
 
 def _pc_request_record_from_url(url: str) -> dict[str, object]:
@@ -204,7 +205,9 @@ def collect_pc_search_export_rows(
         return u, r.text(), seq_n
 
     max_fetch_tries = max(1, int(args.fetch_retries) + 1)
-    retry_pause = max(0.0, float(args.fetch_retry_delay))
+    fetch_retry_range = parse_fetch_retry_delay_arg(
+        getattr(args, "fetch_retry_delay", None)
+    )
     last_s_step = JD_PC_SEARCH_FALLBACK_S_STEP
 
     for _skip_screen in range(max(0, page_start - 1)):
@@ -220,8 +223,7 @@ def collect_pc_search_export_rows(
             for rt in range(max_fetch_tries):
                 sl = sl_base if rt == 0 else f"{sl_base}_retry{rt}"
                 if rt > 0:
-                    if retry_pause > 0:
-                        time.sleep(retry_pause)
+                    sleep_pc_search_fetch_retry_gap(fetch_retry_range)
                     print(
                         f"[京东] 跳过前序屏 重试 {rt}/{max_fetch_tries - 1} "
                         f"body.page={api_page} body.s={api_s}",
@@ -321,8 +323,7 @@ def collect_pc_search_export_rows(
                 for rt in range(max_fetch_tries):
                     sl = sl_base if rt == 0 else f"{sl_base}_retry{rt}"
                     if rt > 0:
-                        if retry_pause > 0:
-                            time.sleep(retry_pause)
+                        sleep_pc_search_fetch_retry_gap(fetch_retry_range)
                         print(
                             f"[京东] 逻辑第{user_p}页 第{_attempt + 1}包 "
                             f"重试 {rt}/{max_fetch_tries - 1} "

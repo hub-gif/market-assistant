@@ -74,8 +74,8 @@ PRETTY_RAW_JSON = True
 RECORD_REQUESTS_DIR = str(_PROJECT_DATA / "pc_requests_p1_10_2")
 # FETCH_RETRIES：同一 body.page/s 遇空包或零解析时，除首次外最多再试次数
 FETCH_RETRIES = 3
-# FETCH_RETRY_DELAY_SEC：上述重试间隔（秒），不走 REQUEST_DELAY
-FETCH_RETRY_DELAY_SEC = 3.0
+# FETCH_RETRY_DELAY_SEC：空包重试间隔，``"MIN-MAX"`` 随机秒数（默认 3–8）；单数字为固定秒；不走 REQUEST_DELAY
+FETCH_RETRY_DELAY_SEC = "3-8"
 # ---------------------------------------------------------------------------
 
 
@@ -108,7 +108,7 @@ def main() -> None:
         pretty_raw_json=bool(PRETTY_RAW_JSON),
         record_requests=(RECORD_REQUESTS_DIR or "").strip() or None,
         fetch_retries=int(FETCH_RETRIES),
-        fetch_retry_delay=float(FETCH_RETRY_DELAY_SEC),
+        fetch_retry_delay=FETCH_RETRY_DELAY_SEC,
     )
 
     if args.page_to is not None and args.page_to < args.page:

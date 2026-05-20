@@ -1,0 +1,23 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://cactus.jd.com/request_algo",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "status": 200,
+    "message": "",
+    "data": {
+      "version": "5.3",
+      "result": {
+        "tk": "tk03w81261ba918n8l7w5plCaDAfANahSyaCC0D1Jka9hWQD2ye6PJ2jafGxMO1mRBPI2OvpRHKUWeIDw05lnYczfqyD",
+        "fp": "2npp1v7ejp2j22p7",
+        "algo": "function test(tk,fp,ts,ai,algo){var rd='Wvmu2cA47xHd';var str=\"\".concat(tk).concat(fp).concat(ts).concat(ai).concat(rd);return algo.SHA256(str);}"
+      },
+      "rConfig": {},
+      "ts": 1778490367077
+    }
+  }
+}

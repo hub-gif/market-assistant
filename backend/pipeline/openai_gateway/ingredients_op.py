@@ -337,9 +337,32 @@ def _looks_like_packaged_ingredient_enumeration(text: str) -> bool:
     return False
 
 
+def _looks_like_cosmetic_ingredient_enumeration(text: str) -> bool:
+    """
+    化妆品/护肤品宣发长图中的成分列举（常无「配料表」标题，仅 2～5 个原料名并列）。
+    """
+    t = (text or "").strip()
+    if not t:
+        return False
+    parts = [p.strip() for p in re.split(r"[,，、;；]", t) if p.strip()]
+    if len(parts) < 2:
+        return False
+    cosmetic = re.compile(
+        r"提取物|透明质酸|玻尿酸|蛋白酶|肽|酸钠|甘油|烟酰胺|氨基酸|酵母|层孔菌|积雪草|"
+        r"神经酰胺|视黄醇|水杨酸|苯甲酸|硅油|矿脂|生育酚|泛醇|角鲨烷|尿囊素|"
+        r"甜菜碱|葡聚糖|卡波姆|黄原胶|香精|精油|植物甾醇|β-葡聚糖"
+    )
+    n_cos = sum(1 for p in parts if cosmetic.search(p))
+    if len(parts) >= 2 and n_cos >= 2:
+        return True
+    if len(parts) >= 3 and n_cos >= 1 and all(len(p) <= 32 for p in parts):
+        return True
+    return False
+
+
 def _has_packaged_ingredient_table_signals(text: str) -> bool:
     """
-    正向判断：是否像**包装配料表**——标题+含量、行内含量、或（多段工业化原料枚举）。
+    正向判断：是否像**包装配料表**或**化妆品/日用品成分列举**。
 
     仅 OCR 出一段家常食材名、无上述结构时，返回 False。
     """
@@ -360,6 +383,13 @@ def _has_packaged_ingredient_table_signals(text: str) -> bool:
         or re.search(r"原\s*料\s*[:：]", t)
         or re.search(r"食品添加剂", t)
         or re.search(r"产品\s*配\s*料", t)
+        or re.search(r"全\s*成\s*分", t)
+        or re.search(r"功效\s*成分", t)
+        or re.search(r"核心\s*成分", t)
+        or re.search(r"主要\s*成分", t)
+        or re.search(r"关键\s*成分", t)
+        or re.search(r"成分\s*表", t)
+        or re.search(r"成\s*分\s*[:：]", t)
     )
 
     # 「含量」相关信息：百分比、不等式、法规用语、添加量表述等（不含单独「50克」类菜谱用量）
@@ -378,14 +408,17 @@ def _has_packaged_ingredient_table_signals(text: str) -> bool:
     if _looks_like_packaged_ingredient_enumeration(t):
         return True
 
+    if _looks_like_cosmetic_ingredient_enumeration(t):
+        return True
+
     return False
 
 
 def _ingredient_extraction_acceptable(text: str) -> bool:
-    """粗判模型输出是否像有效配料信息（过滤拒识句、伪列表、过短碎片、菜谱备料）。
+    """粗判模型输出是否像有效配料/成分信息（过滤拒识句、伪列表、过短碎片、菜谱备料）。
 
-    通过条件之一：配料表标题+含量类信号；行内「××（含量≥x%）」；或多段工业化原料枚举（见
-    ``_looks_like_packaged_ingredient_enumeration``，用于模型只输出逗号分隔原料、丢掉标题时）。
+    通过条件之一：食品配料表标题+含量；行内「××（含量≥x%）」；食品工业化原料枚举；
+    或化妆品/护肤品成分列举（``_looks_like_cosmetic_ingredient_enumeration``）。
     """
     t = (text or "").strip()
     if len(t) < 6:
@@ -394,8 +427,11 @@ def _ingredient_extraction_acceptable(text: str) -> bool:
     if re.match(r"^\s*\[.*\]\s*$", t):
         return False
     refuse = (
+        "无法识别图片中的配料或成分",
+        "无法识别图片中的配料表",
         "无法识别",
         "没有配料",
+        "没有成分",
         "看不清",
         "不存在配料",
         "未在图中",

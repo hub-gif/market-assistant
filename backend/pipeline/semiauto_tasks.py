@@ -1,5 +1,11 @@
 """
-半自动 JD 监听任务：后台线程管理子进程生命周期，链式执行 JSON 落盘 → CSV 解析 → 数据入库。
+半自动 JD 监听任务：后台线程管理子进程生命周期。
+
+**同一任务内链路与顺序（产品约定 · 不含候选详情图 URL 抽取）**
+
+1. 子进程 ``run_listen_playwright``（Playwright）监听期间 **JSON 落盘**（list/detail/comment/graphic）；**不在此阶段做去重或配料识别**。
+2. 子进程正常退出后：模块 ``postprocess.run_parse_semiauto_to_csv``（函数 ``run``）内先 ``postprocess_semiauto_capture_json_dirs``（回填去重键、同键只留主目录首份、商详首部补配料），再将 ``<run_dir>`` 下 JSON 转为与全自动兼容的 CSV。
+3. ``try_ingest_job_full``：按 CSV **入库**。
 
 用法（由 semiauto_views.py 启动）::
 
@@ -139,16 +145,14 @@ def start_semiauto_job(job_id: int) -> None:
     后台线程主函数。执行完整半自动生命周期：
 
     1. 创建 run_dir，更新 job.run_dir
-    2. 启动 ``run_listen_demo.py`` 子进程
-    3. 等待 ``.status_waiting_login``（过程可因任务列表「终止」而中止）
-    4. 等待 ``.status_listening``（同上）
-    5. 等待子进程退出（半自动页写 ``.stop_requested`` 或任务列表置 ``cancellation_requested`` 后
-       会 ``terminate`` 子进程；正常退出后进入后处理）
-    6. 若用户终止：``status=cancelled``，不跑 CSV/入库
-    7. 否则：JSON→CSV、``try_ingest_job_full``、``status=success``
-
-    卡在「执行中 + 终止处理中」且后台线程已失联时，可用
-    ``manage.py semiauto_settle_stuck`` 收敛数据库状态。
+    2. 启动 Playwright 监听子进程（``python -m ...playwright_listen.run_listen_playwright``，cwd=crawler_copy）
+    3. 等待 .status_waiting_login → 更新 phase=waiting_login
+    4. 等待 .status_listening → 更新 phase=listening
+    5. 等待子进程退出
+    6. 监听子进程结束时 run_dir 下为原始 JSON（可含重复包）；盘后 ``postprocess_semiauto_capture_json_dirs`` 再去重归档与商详配料。
+    7. 运行 ``jd_semiauto.postprocess.run_parse_semiauto_to_csv.run``（内部先 ``postprocess_semiauto_capture_json_dirs`` 再写 CSV）
+    8. 调用 try_ingest_job_full
+    9. 更新 status=success
     """
     job = PipelineJob.objects.filter(pk=job_id).first()
     if not job:
@@ -173,11 +177,12 @@ def start_semiauto_job(job_id: int) -> None:
 
     # ── 启动子进程 ─────────────────────────────────────────────────────────────
     crawler_copy = Path(settings.BASE_DIR) / "crawler_copy"
-    script = crawler_copy / "sb_browser" / "platforms" / "jd_semiauto" / "run_listen_demo.py"
+    pw_listen = "sb_browser.platforms.jd_semiauto.playwright_listen.run_listen_playwright"
 
     cmd = [
         sys.executable,
-        str(script),
+        "-m",
+        pw_listen,
         "--run-dir", str(run_dir),
         "--keyword", keyword,
         "--login-file", str(login_file),
@@ -323,42 +328,6 @@ def start_semiauto_job(job_id: int) -> None:
     logger.info("semiauto_tasks: job=%s 完成", job_id)
 
 
-def settle_semiauto_stuck_cancel_flags(
-    *,
-    job_id: int | None = None,
-    dry_run: bool = False,
-) -> tuple[int, list[int]]:
-    """
-    将仍为 **执行中** 且 **已请求终止** 的半自动任务批量改为 **已终止**（只改数据库）。
-
-    适用于后台守护线程已退出、无法自动清 ``cancellation_requested`` 的残留行。
-    使用前请确认已无对应 ``run_listen_demo`` 进程，避免与真实在跑任务打架。
-    """
-    qs = PipelineJob.objects.filter(
-        source_type="semiauto",
-        status=JobStatus.RUNNING,
-        cancellation_requested=True,
-    )
-    if job_id is not None:
-        qs = qs.filter(pk=job_id)
-    ids = list(qs.values_list("pk", flat=True))
-    if dry_run or not ids:
-        return (len(ids), ids)
-    qs.update(
-        status=JobStatus.CANCELLED,
-        cancellation_requested=False,
-        semiauto_phase="done",
-        error_message=(
-            "已终止：由 manage.py semiauto_settle_stuck 同步数据库"
-            "（此前「终止」未由后台线程自动收尾）。"
-        ),
-        updated_at=timezone.now(),
-    )
-    for pk in ids:
-        logger.info("semiauto_tasks: settle_semiauto_stuck_cancel_flags 已收敛 job_id=%s", pk)
-    return (len(ids), ids)
-
-
 def finish_semiauto_after_browser(
     job_id: int,
     *,
@@ -366,7 +335,7 @@ def finish_semiauto_after_browser(
 ) -> bool:
     """
     在半自动子进程已结束但后台线程未跑完后处理时（例如进程被强杀、线程卡住），
-    补跑：JSON 目录→``run_parse_semiauto_to_csv``→``try_ingest_job_full``→状态成功。
+    补跑：JSON 目录→``postprocess.run_parse_semiauto_to_csv.run``→``try_ingest_job_full``→状态成功。
 
     要求：任务已写入有效 ``run_dir``，且该目录下已有半自动落盘的 JSON。
 
@@ -433,12 +402,12 @@ def finish_semiauto_after_browser(
 
 
 def _run_parse_csv(run_dir: Path, crawler_copy: Path) -> None:
-    """在 crawler_copy 环境中调用 run_parse_semiauto_to_csv.run()。"""
+    """在 crawler_copy 环境中加载 ``jd_semiauto/postprocess/run_parse_semiauto_to_csv.py`` 并调用 ``run()``。"""
     if str(crawler_copy) not in sys.path:
         sys.path.insert(0, str(crawler_copy))
 
     import importlib.util
-    src = crawler_copy / "sb_browser" / "platforms" / "jd_semiauto" / "run_parse_semiauto_to_csv.py"
+    src = crawler_copy / "sb_browser" / "platforms" / "jd_semiauto" / "postprocess" / "run_parse_semiauto_to_csv.py"
     spec = importlib.util.spec_from_file_location("run_parse_semiauto_to_csv", src)
     if spec is None or spec.loader is None:
         raise ImportError(f"无法加载模块: {src}")

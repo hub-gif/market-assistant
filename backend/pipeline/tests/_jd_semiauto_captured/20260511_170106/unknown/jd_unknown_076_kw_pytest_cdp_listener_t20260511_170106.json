@@ -1,0 +1,26 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://passport.jd.com/ssoDomain/getList?ReturnUrl=https%3A%2F%2Fsearch.jd.com%2FSearch%3Fkeyword%3D%25E6%2589%2593%25E5%258D%25B0%25E7%25BA%25B8%26enc%3Dutf-8%26pvid%3Df8ed9c1372f14cbdabb3f08694260850%26themeColor%3D%26from%3Dhome%26spmTag%3DYTAyMTkuYjAwMjM1Ni5jMDAwMDcyMTAuc2VhcmNoX2J1dHRvbiU0MDE3Nzg0OTAyOTU5MDclMjMxNzc4NDkwMDY5MzQ4MTk0OTQ4NjExMCUyMzEwMTAzNDQzMDI&czLogin=1&r=0.4442382975699447",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": [
+    "sso.jd.hk",
+    "sso.jkcsjd.com",
+    "sso.jingxi.com",
+    "sso.healthjd.com",
+    "sso.jdh.com",
+    "sso.jingdong.com",
+    "ssa.7fresh.com",
+    "sso.jingdonghealth.cn",
+    "sso.jdpay.com",
+    "sso.vipmro.com",
+    "sso.jdcloud.com",
+    "sso.yiyaojd.com",
+    "sso.jddj.com",
+    "sso.jdl.com",
+    "sso.jhscm.com"
+  ]
+}

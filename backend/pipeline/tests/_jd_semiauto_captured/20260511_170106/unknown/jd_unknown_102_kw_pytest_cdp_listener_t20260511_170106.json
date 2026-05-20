@@ -1,0 +1,471 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pchome_horizontalnav",
+  "url": "https://api.m.jd.com/?appid=www-jd-com&client=pc&clientVersion=1.0.0&t=1778490306050&uuid=76161171.17784900693481949486110.1778490069.1778490069.1778490069.1&functionId=pchome_horizontalnav&body=%7B%22useCorpPin%22:%22%22,%22source%22:%22pc-home%22%7D&h5st=20260511170511053%3Bi2ynziy15van2iz4%3Bb5216%3Btk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL%3B3c050edb10d003087fd845db396f8ebf%3B5.3%3B1778490306053%3BpjbMhjpexGFf9mFO2nYNCCEQyiYRJrJdJrESJrpjh7pf5rJdJz1TIipjLDrgJr4fGe4f5rYfGm4f0TFTKWIfzbYTHWVTFmoS5bFe4bFSJrJdJrEa-OFTGOEjLrJp-j5fIeVeHGYSFeoeFKYSGWoSyfYf1T1e6nITHWISGa1eIipjxj5PKSEQKeFjLrJp-jZf_jpjxjpe2iFjLrJp-j5f9fIg2T0UG6VRFuWeDipjxjJOJrpjh7Jj3DGRculO471YTyHjLDIj_ulS9mFPJrpjh7Jj5fIQCOGjLDIjFqEjLrJp-3kjLDLj2SHjLDIj4nYOJipjLrpjh75fLDIj6nYOJipjLrpjh7pe6rJdJrYf2iFjLrpjLDrgz3pjxjJf6XETJrpjLrJp-jJPiuWYG25PCeof1vFeJrJdJ31QHyVT5ipjLrpjh7pfLDIjzXETJrpjLrJp-rojxj5e2iFjLrpjLDrg2jojxjJe2iFjLrpjLDrg7rJdJXYOJipjLrpjh7pfLDIj3XETJrpjLrJp-f4fLDIj4XETJrpjLrJp-jpe9nIg7jpjxjZf2iFjLrpjLDrg7rJdJ-1OJrpjLrJp-Xojxj5P-ipjLrpjh7pfLDIj-ipjLrpjh7pfLDIjHOEjLrpjLD7NLDIjHyVS3KUSJrpjh7ZMwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3B79d588e3470e13ac2187bf9b11919cc4%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&loginType=3",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": [
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t1/393032/9/16100/7887/698ef58cFf0b389ab/00ae0c80c89402e4.png",
+        "name": "国家补贴",
+        "link": "https://pro.jd.com/mall/active/4Shss3oaLuW1RMisVg4JgpsUsRzN/index.html?babelChannel=ttt1",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/311216/4/12218/52773/685a75feF5900edab/96cc24403cf5b1e5.png",
+        "name": "司法拍卖",
+        "link": "https://auction.jd.com/sifa.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/318439/8/11500/12943/6858e5aaF2d7f3499/36e067da0ed3d2da.png",
+        "name": "企业购",
+        "link": "https://b.jd.com/?&bjdSourceChannel=cjdhengdaohang",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/312198/39/11899/8471/6858e5edFd4c7c57b/7b9c84d195a315e5.png",
+        "name": "奢品馆",
+        "link": "https://pro.jd.com/mall/active/2bkTvuyAtEZS8bq8i3AKzYq54EqT/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/316586/19/11330/7530/6858ed6dF677debea/fbcdeba8bcfdb92a.png",
+        "name": "京东图书",
+        "link": "https://pro.jd.com/mall/active/3sAaxodHF7kfo3s95cjxo2UZUxu2/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/320178/18/11595/17924/685a4e8cF8c688d75/d354d0a7cf11bbd8.png",
+        "name": "家电馆",
+        "link": "https://pro.jd.com/mall/active/48v7Xzb3FfKt6mKgMaS9EoHrvieE/index.html?babelChannel=ttt53",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/291251/6/16319/13676/685a400eF4592b6a4/223936a4996cac40.png",
+        "name": "美妆馆",
+        "link": "https://pro.jd.com/mall/active/2kmaPNrGDNYo1LKwYtRoaSmsgbj6/index.html?babelChannel=ttt176",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/313849/8/11781/4331/6858f847F2d38a84e/518b00e7b7848b47.png",
+        "name": "电脑馆",
+        "link": "https://pro.jd.com/mall/active/4Xs847qJzeqf6ASxnEMWwe4Pz3kC/index.html?babelChannel=ttt5",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/310074/19/12258/8880/685a6da3Fb8bf8b0f/15e65f5683fb815b.png",
+        "name": "元器件",
+        "link": "https://ic.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280630/318752/39/12617/3183/68635156F940430d8/c2c506471b0c308e.png",
+        "name": "企业计划购",
+        "link": "https://pro.jd.com/mall/active/4U9MaPSeTJc6nbKVZtxvqDm6yroL/index.html?babelChannel=ttt17",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280625/313095/2/12548/9703/685cacafFe9ac06db/9ebfa5f63bb1bd26.png",
+        "name": "运动馆",
+        "link": "https://pro.jd.com/mall/active/oKAAQpTfmbKWmL338JdgxNDeWK2/index.html?babelChannel=ttt151",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/292638/38/16357/12031/685a7665Fd67ad1a3/5ff83344b998988e.png",
+        "name": "服饰美妆",
+        "link": "https://pro.jd.com/mall/active/BeDtXXVHSmYJns77dUQFW6W9XTS/index.html?babelChannel=ttt6",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/316447/26/11577/4120/6858f99bFcdc17705/47b701368e16c534.png",
+        "name": "装机大师",
+        "link": "https://pro.jd.com/mall/active/ecRJEpGqgdMX1hUYCyBCRTB6yZn/index.html?babelChannel=ttt2",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/304202/29/13225/4814/685a05deF7f7de481/026272930244a20d.png",
+        "name": "全球购",
+        "link": "https://www.jd.hk/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/303119/10/15980/11623/685a6d21Fb97bca06/c4de9cc700e9c4c0.png",
+        "name": "家电家居",
+        "link": "https://pro.jd.com/mall/active/2H8G6a7JecjqHH3t1ZWSoJjPtziP/index.html?babelChannel=ttt250",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/292024/6/16377/8116/685a772fF14a73a3e/907ab1a4b49a4ba6.png",
+        "name": "夺宝岛",
+        "link": "https://1paipai.jd.com/auction-list/?spmTag=YTAyMTkuYjAwMjM1Ni5jMDAwMDYzOTYuNF85",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/314814/38/11720/8849/6858e147F67eeb23e/66793652d5a7de43.png",
+        "name": "公共采购",
+        "link": "https://g.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/306853/15/11818/10773/6858fa4fF21d6b9d9/ef257d4775808b7c.png",
+        "name": "天天领好礼",
+        "link": "https://interact.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280624/297961/10/18450/19359/685b63c2F01e2a155/cad0c046efd5a1e9.png",
+        "name": "五金城",
+        "link": "https://mro.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/296418/34/5990/9462/685a507eF6de2a8a8/bfdfe4c428bad589.png",
+        "name": "宠物馆",
+        "link": "https://pro.jd.com/mall/active/2TY2j1yJ9T2QKiQekTpHgvv68HiD/index.html?babelChannel=ttt47",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280626/299492/22/18950/25131/685e676aF8ff17dac/e2c0ebc65a951cfc.png",
+        "name": "配件馆",
+        "link": "https://pro.jd.com/mall/active/2GxAwsimbvmrjpZyjp3XfP3huqKA/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280714/292861/20/20373/39679/6876128cF2a1b8dbf/5114bf28ade01171.png",
+        "name": "京喜自营",
+        "link": "https://pro.jd.com/mall/active/2iqSwv1JiDHxAkHAikfU6XAECFmo/index.html?babelChannel=ttt4",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/295566/8/12801/11553/685a761eF7a42faa8/a6a37359fdad0ce7.png",
+        "name": "早十好价",
+        "link": "https://pro.jd.com/mall/active/2Ju6KX27EyzyzLKZMHcNKNwomHh1/index.html?babelChannel=ttt4",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280724/307942/4/19611/8481/6882db29F0e0d5362/479823308ad6b4e0.png",
+        "name": "家庭常备药",
+        "link": "https://pro.jd.com/mall/active/sSFiqWRdzGTU9ByynawT1k5mix4/index.html?babelChannel=ttt34",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280714/320445/21/16376/6999/68762323F49aa9bcc/dd4e98c66314e2ee.png",
+        "name": "清洁馆",
+        "link": "https://pro.jd.com/mall/active/2Tjm6ay1ZbZ3v7UbriTj6kHy9dn6/index.html?babelChannel=ttt111",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t1/392914/1/263/14969/6972ec4bF2025ef9e/00ae0c80c89618db.png",
+        "name": "京东特价",
+        "link": "https://pro.jd.com/mall/active/49pNiBvgfNMAAELMNNA1Krxyu6TA/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280624/316056/16/12172/4333/685b4a64F14c2b10d/025fe9a66818b1bc.png",
+        "name": "拍拍二手",
+        "link": "https://pro.jd.com/mall/active/2tjFokgS3wE4pJdz1pYsWnHJveeP/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/320994/18/11184/25855/6858e370F6abbc6e2/a328c281a498d697.png",
+        "name": "游戏电竞",
+        "link": "https://pro.jd.com/mall/active/bvNYnFjp84WgX5sufkKehdv84zq/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281009/337215/31/18595/7997/68e8d5d0F81b0c921/a4ab8db30f6114ee.png",
+        "name": "看病买药",
+        "link": "https://pro.jd.com/mall/active/2Yb48bep8F2N7TR7YFm514J7tsgd/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t1/399054/3/1540/12627/699d4c67F2025f6f5/01530c80c8cb6af0.png",
+        "name": "排行榜",
+        "link": "https://pro.jd.com/mall/active/3J13cRc4KPMNqXPVuVFY9aDKsBJy/index.html?babelChannel=ttt2",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/302641/21/16471/4960/6858e898F975bc806/637491921edd7991.png",
+        "name": "手机数码",
+        "link": "https://pro.jd.com/mall/active/8tHNdJLcqwqhkLNA8hqwNRaNu5f/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/307661/19/12345/16607/685a57a7F193d4ca2/9cc19e41e7bf3f74.png",
+        "name": "服装城",
+        "link": "https://pro.jd.com/mall/active/32EphPL81Mb6FD4qLCTtYmd31YXr/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/320717/9/11573/11977/685a394eF4b373d6a/0228849a19e3bad5.png",
+        "name": "玩具乐器馆",
+        "link": "https://pro.jd.com/mall/active/4N6RzwtBZdtdcgodvdsK7ZEzkUbZ/index.html?babelChannel=ttt18",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/319004/5/11287/18660/685a898eF2bd0f3a5/765b685e77df0f86.png",
+        "name": "母婴馆",
+        "link": "https://pro.jd.com/mall/active/3BbAVGQPDd6vTyHYjmAutXrKAos6/index.html?babelChannel=ttt267",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/307684/4/11823/14777/6858e6e8Ffc5fbb3f/4182ee3dec6e8613.png",
+        "name": "大牌奥莱",
+        "link": "https://pro.jd.com/mall/active/2aRK8YxJGhgc1gEnXLJPhT6KodXd/index.html?babelChannel=ttt150",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280812/323807/17/4054/7164/689c416aF226512db/40b13174bac3e234.png",
+        "name": "电子教育",
+        "link": "https://pro.jd.com/mall/active/rEi74fjn9hRQztAujuoLzeiBLGw/index.html?babelChannel=ttt2",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/320945/2/11431/8726/685a6abdFeaf2dadf/6f9d70312fbc3512.png",
+        "name": "政府消费券",
+        "link": "https://pro.jd.com/mall/active/6hBuBXvFLoDtEhGupKesBKqvWh9/index.html?babelChannel=ttt14",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281215/382412/20/282/8171/6941372fF8d9ed20e/00ae0c80c84105b2.png",
+        "name": "医疗器械馆",
+        "link": "https://pro.jd.com/mall/active/gTZQx9VStunoXz1WTiBKhWGQeZ6/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/295025/23/16699/10674/685a6a1cFadbc88aa/86f98427852e3bde.png",
+        "name": "家电国补",
+        "link": "https://pro.jd.com/mall/active/4FVSN9SJqfudsbrKN2cvXEEDmYGy/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/307490/39/12179/11822/685aa519F1b9b6ccd/d4ad55143b0dff79.png",
+        "name": "京东生鲜",
+        "link": "https://pro.jd.com/mall/active/4P9a2T9osR9JvtzHVaYTPvsecRtg/index.html?babelChannel=ttt180",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "beckon": "https://m.360buyimg.com/babel/jfs/t1/330418/8/12197/207414/004f7701F2508f03d/836b6ae0d51b7340.gif",
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/269809/6/16942/18929/685a52fcF6195ceed/312351e949d58c4a.png",
+        "name": "京东超市",
+        "link": "https://pro.jd.com/mall/active/36yPbWm4JqFrmTgABydz6GkWNkca/index.html?babelChannel=ttt3",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280629/311932/40/13457/9162/6862891bFf8bac966/6b33eb2f5fb62a5b.png",
+        "name": "黑色星期五",
+        "link": "https://pro.jd.com/mall/active/JAjtcpqK8RDvB8A4k1ZBgViBKAL/index.html?babelChannel=ttt106",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280703/316409/26/14414/7222/68679843Fa428f533/7e976dee35d07710.png",
+        "name": "家装馆",
+        "link": "https://pro.jd.com/mall/active/41BQuviAya92UJVSJQ1TGb1LA7wv/index.html?babelChannel=ttt44",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281124/370388/25/4595/6956/6925727aFd45e8e16/0ceef82b78e3971d.png",
+        "name": "京东家居馆",
+        "link": "https://pro.jd.com/mall/active/FxaS5JGmuJH65DB4HxF7rCRRewb/index.html?babelChannel=ttt474",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280817/327947/1/6346/13773/68a28eccF77537f16/60064e8b8c66bdfb.png",
+        "name": "家具馆",
+        "link": "https://pro.jd.com/mall/active/UfTGu5CiZAwA1WsxApZK8bf4w3U/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280923/324721/14/23048/7947/68d39359F3c57f67f/25dd42f5c8a77ec5.png",
+        "name": "领券中心",
+        "link": "https://pro.jd.com/mall/active/VAjs3vpayA513UwxL5XC4eGBXqY/index.html?babelChannel=ttt117",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281207/351893/36/16154/15115/693673c5Feb0f7ba3/2056dcb873816c7c.png",
+        "name": "潮流穿搭",
+        "link": "https://pro.jd.com/mall/active/4AHAZ5hWwwCRoXnmDoHh1pESRDZc/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t1/390344/27/5860/6568/6973128dF1f4d0036/00ae0c80c88f9ea8.png",
+        "name": "二手手机",
+        "link": "https://pro.jd.com/mall/active/2MHSvQCUwbwetiNivpw6QVuKnypb/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/318895/16/11602/17071/685a083bF80414613/1206780a710b810e.png",
+        "name": "充值中心",
+        "link": "https://chongzhi.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280813/288500/10/26285/8874/689d512eFedb24dd9/22b3f7f53014f0f9.png",
+        "name": "珠宝馆",
+        "link": "https://pro.jd.com/mall/active/22DpAdd48C4fU3cBRkeYSM87WhWV/index.html?babelChannel=ttt348",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281130/354939/22/20365/6618/692d4067F2ce55317/89a100ace11a715c.png",
+        "name": "京东京造",
+        "link": "https://pro.jd.com/mall/active/WFJKWrVftPmGdDENfVqJU8BCB5c/index.html?babelChannel=ttt97",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/315746/28/11941/25614/685a6eddF5e1bcee4/1a93321a6c245165.png",
+        "name": "礼品卡",
+        "link": "https://o.jd.com",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280626/318565/18/12242/6839/685e38acF7a5f395f/98bca322581d0798.png",
+        "name": "京东快递",
+        "link": "https://www.jdl.com/send/sendSingleEntry/?isCnet=1&source=PCsgg",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/297240/27/17234/15783/68591307F3f82e8b4/ec025c3834d1f736.png",
+        "name": "爱回收",
+        "link": "https://huishou.jd.com/?entryid=p004PCshouyeicon",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/309085/33/11851/7223/68590a0dFbf08113f/e2bef1211ee8cbfb.png",
+        "name": "京东互医",
+        "link": "https://cont.jd.com/?hy_entry=SEO_HypOtherHome&seoRedirectFlag=true&amp;isFromSeo=true",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/319397/28/11290/14419/685a0a07F8e0e8868/166bc0591f18780c.png",
+        "name": "云建站",
+        "link": "https://www.jdcloud.com/cn/products/jdcloud-site-short",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/309812/17/12177/10541/685a05d3F8f751f61/74fcb66e5f7314a9.png",
+        "name": "游戏",
+        "link": "https://ylc.m.jd.com?ext=2066",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/306741/28/12067/8752/685a09aeF4f31129d/6c9e4c4078e4c407.png",
+        "name": "加油卡",
+        "link": "https://jiayouka.jd.com/",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280707/314563/6/15331/5518/686d06e8Ff1f6536a/0f615146c09b3f5b.png",
+        "name": "护士到家",
+        "link": "https://pro.jd.com/mall/active/5RHCkauZkojcxkmpWiwY1BJ83Ew/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/304326/34/12989/27999/685a4d11F412da1e1/2d66d240702c5d30.png",
+        "name": "京东联名卡",
+        "link": "https://pro.jd.com/mall/active/4U4aC6LY2b3wMJKEFfwqqZktpBYH/index.html",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20290112/388559/27/630/19738/6965a268Fb2d7f113/00ae0c80c8794d2c.png",
+        "name": "超级18",
+        "link": "https://pro.jd.com/mall/active/43pcTL84xvQseMQ7CvVD9bEfk9Vs/index.html?babelChannel=ttt10",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20290115/381918/8/21832/8921/69699345F0694c3f6/00ae0c80c8a397a5.png",
+        "name": "京东拍卖",
+        "link": "https://pro.jd.com/mall/active/kv2t7uxJPuFvTHpy17ZKDrLuW51/index.html?babelChannel=ttt9",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280623/299311/35/15241/24919/685a429cF419ffbf0/8dd1a3fe2a59f69a.png",
+        "name": "京东新品",
+        "link": "https://pro.jd.com/mall/active/3ejBfFZtaQMQ4RYpBxHekmm9vyrs/index.html?is_pc=1&topOfHomePullDown=1",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20281126/370992/40/1218/6162/6927a9d5F8ad6072d/ee41241f199b57db.png",
+        "name": "新店特惠",
+        "link": "https://pro.jd.com/mall/active/MdfUo5eixn3idv3q5vGztn26q8D/index.html?babelChannel=ttt43",
+        "caCode": "",
+        "desc": ""
+      },
+      {
+        "pictureUrl": "https://m.360buyimg.com/babel/jfs/t20280622/302274/15/17281/6171/6858f0eaF5322e752/5870a3d0c9aa83d5.png",
+        "name": "手机馆",
+        "link": "https://pro.jd.com/mall/active/4AP3tAH2TrGite1X6eBDXEFBvox6/index.html?babelChannel=ttt2",
+        "caCode": "",
+        "desc": ""
+      }
+    ]
+  }
+}

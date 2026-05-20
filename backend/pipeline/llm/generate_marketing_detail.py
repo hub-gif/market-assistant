@@ -66,6 +66,35 @@ DETAIL_PACK_SYSTEM = """你是京东场景营销内容写手。输入为已定�
 - text_to_video_prompt：字符串，文生视频提示词（建议 **100～260** 字），竖屏 9:16、**5～15 秒**。**须**含 **1 个能体现质地或卖点的镜头**（如慢镜撕开吐司见柔软内里、刀切截面特写、轻捏回弹），与信息卡卖点一致；另写开场与转场（推近/平移）。**禁止**疗效字幕、未授权标识；可「无对白」或「一句中性口播」。
 """
 
+# 第一步核心信息卡：必填字符串键（与 ``CORE_CARD_SYSTEM`` 一致）；漏键时补空串。
+_CORE_INFO_CARD_STRING_KEYS: tuple[str, ...] = (
+    "what_we_sell",
+    "one_liner_value",
+    "buyer_job_to_be_done",
+    "key_pain_or_desire",
+    "why_this_product",
+    "proof_or_trust_angle",
+    "differentiation_vs_alternatives",
+    "price_value_framing",
+    "compliance_taboos",
+    "open_points_for_business",
+)
+
+
+def normalize_core_info_card(data: dict[str, Any]) -> dict[str, Any]:
+    """保证 ``core_info_card`` 含全部约定键（字符串）；避免模型或少字段旧 JSON 缺一漏万。"""
+    out: dict[str, Any] = dict(data)
+    for key in _CORE_INFO_CARD_STRING_KEYS:
+        v = out.get(key)
+        if v is None:
+            out[key] = ""
+        elif isinstance(v, str):
+            continue
+        else:
+            out[key] = str(v)
+    return out
+
+
 # 第二步 JSON 完整键表；模型漏键或旧落盘缺字段时由 ``normalize_detail_page_pack`` 补齐。
 _DETAIL_PAGE_PACK_DEFAULTS: dict[str, Any] = {
     "listing_titles": [],
@@ -102,11 +131,31 @@ _DETAIL_PAGE_PACK_LIST_KEYS: frozenset[str] = frozenset(
 )
 
 
+def _normalize_faq_items(v: Any) -> list[dict[str, str]]:
+    """统一为 ``[{question, answer}, ...]``；模型偶发混用键名或漏字段时尽量可消费。"""
+    if not isinstance(v, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in v:
+        if not isinstance(item, dict):
+            continue
+        q = item.get("question", item.get("q"))
+        a = item.get("answer", item.get("a"))
+        qs = (q if isinstance(q, str) else str(q)) if q is not None else ""
+        as_ = (a if isinstance(a, str) else str(a)) if a is not None else ""
+        if qs.strip() or as_.strip():
+            out.append({"question": qs, "answer": as_})
+    return out
+
+
 def normalize_detail_page_pack(data: dict[str, Any]) -> dict[str, Any]:
     """保证 ``detail_page_pack`` 含全部约定键，避免模型漏输出或旧 JSON 缺字段。"""
     out: dict[str, Any] = dict(data)
     for key in _DETAIL_PAGE_PACK_DEFAULTS:
         v = out.get(key)
+        if key == "faq":
+            out["faq"] = _normalize_faq_items(v)
+            continue
         if key in _DETAIL_PAGE_PACK_LIST_KEYS:
             if isinstance(v, list):
                 continue
@@ -164,7 +213,7 @@ def generate_core_info_card(
         + json.dumps(payload, ensure_ascii=False)
     )
     raw = call_llm(CORE_CARD_SYSTEM, user)
-    return _parse_llm_json(raw)
+    return normalize_core_info_card(_parse_llm_json(raw))
 
 
 def generate_detail_page_pack(
@@ -172,13 +221,20 @@ def generate_detail_page_pack(
     keyword: str,
     core_info_card: dict[str, Any],
 ) -> dict[str, Any]:
+    core = normalize_core_info_card(core_info_card)
+    anchor = (core.get("what_we_sell") or "").strip()
     payload = {
         "keyword": keyword,
-        "core_info_card": core_info_card,
+        "core_info_card": core,
     }
     user = (
         "请根据以下 JSON 输出营销内容多触点文案（**仅**一段 JSON 对象）。\n"
-        "**必填键名（缺一不可，勿省略）**：listing_titles, listing_subtitle, detail_headline, "
+        + (
+            f"**品类锚点（各触点须一致、勿偷换类目）**：{anchor}\n\n"
+            if anchor
+            else "**品类锚点**：以信息卡 what_we_sell 为准，各触点勿偷换类目。\n\n"
+        )
+        + "**必填键名（缺一不可，勿省略）**：listing_titles, listing_subtitle, detail_headline, "
         "selling_bullets, spec_sidebar_lines, faq, detail_mid_story_paragraphs, usage_and_pairing_tips, "
         "short_graphic_post_variants, live_script_bullets, traceability_note, main_image_three_points, "
         "live_or_short_hook, customer_service_opening, text_to_image_prompt_main, "

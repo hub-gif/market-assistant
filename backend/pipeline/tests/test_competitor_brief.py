@@ -6,6 +6,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
+from pipeline.competitor_report.matrix_group import UNCATEGORIZED_MATRIX_GROUP_LABEL
 from pipeline.competitor_report import jd_report as jcr
 from pipeline.competitor_report.comment_sentiment import (
     _comment_sentiment_lexicon,
@@ -13,6 +14,7 @@ from pipeline.competitor_report.comment_sentiment import (
 )
 from pipeline.csv.schema import infer_total_sales_from_sales_floor
 from pipeline.reporting.charts import _cn_volume_int
+from pipeline.competitor_report.csv_io import _price_context_spec_merged
 
 
 class BuildCompetitorBriefTests(SimpleTestCase):
@@ -95,7 +97,8 @@ class BuildCompetitorBriefTests(SimpleTestCase):
 
         self.assertEqual(out["comment_focus_keywords"], [])
 
-    def test_matrix_groups_require_detail_category_path(self) -> None:
+    def test_uncategorized_bucket_when_detail_category_missing(self) -> None:
+        """无类目路径但有 SKU：归入「未分类」，评价与矩阵载荷仍对齐。"""
         sku_h = "SKU(skuId)"
         merged = [
             {
@@ -106,22 +109,26 @@ class BuildCompetitorBriefTests(SimpleTestCase):
             {sku_h: "222", "标题(wareName)": "B"},
         ]
         groups = jcr._merged_rows_grouped_for_matrix(merged)
-        self.assertEqual(len(groups), 1)
-        self.assertEqual(len(groups[0][1]), 1)
-        self.assertEqual(groups[0][1][0][sku_h], "111")
+        self.assertEqual(len(groups), 2)
+        by_name = {name: rows for name, rows in groups}
+        self.assertEqual(len(by_name["饼干"]), 1)
+        self.assertEqual(len(by_name[UNCATEGORIZED_MATRIX_GROUP_LABEL]), 1)
+        self.assertEqual(by_name["饼干"][0][sku_h], "111")
+        self.assertEqual(by_name[UNCATEGORIZED_MATRIX_GROUP_LABEL][0][sku_h], "222")
         smap = jcr._sku_to_matrix_group_map(merged, sku_h)
         self.assertEqual(smap.get("111"), "饼干")
-        self.assertNotIn("222", smap)
+        self.assertEqual(smap.get("222"), UNCATEGORIZED_MATRIX_GROUP_LABEL)
         fb = jcr._consumer_feedback_by_matrix_group(
             merged_rows=merged,
             comment_rows=[
-                {"sku": "222", "tagCommentContent": "缺路径仍不应计入按细类统计"},
+                {"sku": "222", "tagCommentContent": "详情失败仍应进入未分类归纳"},
                 {"sku": "111", "tagCommentContent": "有路径进细类"},
             ],
             sku_header=sku_h,
         )
         counts = {g: len(cr) for g, cr, _ in fb}
         self.assertEqual(counts.get("饼干"), 1)
+        self.assertEqual(counts.get(UNCATEGORIZED_MATRIX_GROUP_LABEL), 1)
 
     def test_comment_lines_with_product_context_prefix(self) -> None:
         """评价抽样须带细类/SKU/品名前缀，便于归因。"""
@@ -172,3 +179,36 @@ class BuildCompetitorBriefTests(SimpleTestCase):
             "已售50万+",
         )
         self.assertEqual(infer_total_sales_from_sales_floor(""), "")
+
+    def test_price_context_spec_merged_from_title_when_attr_empty(self) -> None:
+        """规格属性列为空时，应从标题抽取 ml 等片段，供价盘可比性对照。"""
+        row = {"标题": "某品牌精华液修护紧致20ml小样旅行装", "规格属性": ""}
+        self.assertIn("20ml", _price_context_spec_merged(row))
+
+    def test_price_context_spec_merged_subsumes_title_hints_in_attr(self) -> None:
+        """标题与规格列重复时，不重复堆叠「；标题片段」。"""
+        row = {"标题": "精华液20ml", "规格属性": "容量：20ml｜功效：保湿"}
+        m = _price_context_spec_merged(row)
+        self.assertNotIn("；20ml", m)
+        self.assertIn("容量", m)
+
+    def test_price_context_spec_merged_reads_legacy_title_header(self) -> None:
+        row = {"标题(wareName)": "紧致精华30ml", "规格属性": ""}
+        self.assertIn("30ml", _price_context_spec_merged(row))
+
+    def test_price_context_spec_merged_title_volume_and_bottle_count(self) -> None:
+        row = {"标题": "某精华修护30ml 三瓶 小样", "规格属性": ""}
+        m = _price_context_spec_merged(row)
+        self.assertIn("30ml", m)
+        self.assertIn("三瓶", m)
+
+    def test_price_context_spec_merged_title_arabic_bottles(self) -> None:
+        row = {"标题": "补水精华3瓶30ml组合", "规格属性": ""}
+        m = _price_context_spec_merged(row)
+        self.assertIn("3瓶", m)
+        self.assertIn("30ml", m)
+
+    def test_price_context_spec_merged_prefers_ml_times_count(self) -> None:
+        row = {"标题": "同款30ml×3礼盒", "规格属性": ""}
+        m = _price_context_spec_merged(row)
+        self.assertRegex(m, r"30\s*ml\s*[×xXＸ]\s*3")

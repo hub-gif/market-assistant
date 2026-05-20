@@ -1,0 +1,17 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://passport.jd.com/uc/graphic/sessionId/refresh?appId=1000802",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 1,
+    "msg": "success",
+    "appId": 1000802,
+    "status": 1,
+    "sessionId": "O8mNfwABAAAHppfGJPYAMMQfy6fB5LMt0C12DzV4B4QJ9WCtC1zbC_yByJtLOKAasNpvcwFVzI90X3OL_ULJBAAAAAA",
+    "jwtToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJncmFwaGljLWNhcHRjaGEiLCJzZXNzaW9uSWQiOiJPOG1OZndBQkFBQUhwcGZHSlBZQU1NUWZ5NmZCNUxNdDBDMTJEelY0QjRRSjlXQ3RDMXpiQ195QnlKdExPS0Fhc05wdmN3RlZ6STkwWDNPTF9VTEpCQUFBQUFBIiwiZXhwIjoxNzc4NDkwOTQwLCJncmFwaGljQ2FwdGNoYVN0YXR1cyI6MSwiYXBwSWQiOjEwMDA4MDJ9.jbQxCjR74jXfv6Us2m3aQNbvIFw8VQH56itjRgwS9ck"
+  }
+}

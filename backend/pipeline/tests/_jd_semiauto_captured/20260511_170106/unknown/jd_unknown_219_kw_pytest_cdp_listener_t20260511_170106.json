@@ -1,0 +1,162 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://api.m.jd.com/client.action?fid=pc_address_cmpnt_getCascadeAddress",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "body": {
+      "cascadeTextMap": {
+        "cascade": {
+          "all": "全部"
+        }
+      },
+      "resultFlag": true,
+      "searchMaxLength": 20,
+      "searchWord": "请用英文输入地区名～",
+      "unKnowId": 0,
+      "wordCodeResult": [
+        {
+          "key": "D",
+          "value": [
+            {
+              "addrId": 59642,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "殿前街道",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "D"
+            }
+          ]
+        },
+        {
+          "key": "H",
+          "value": [
+            {
+              "addrId": 59652,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "火炬高技术开发区",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "H"
+            },
+            {
+              "addrId": 59660,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "湖里街道",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "H"
+            },
+            {
+              "addrId": 59707,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "禾山街道",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "H"
+            }
+          ]
+        },
+        {
+          "key": "J",
+          "value": [
+            {
+              "addrId": 59641,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "金山街道",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "J"
+            },
+            {
+              "addrId": 59648,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "江头街道",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "J"
+            }
+          ]
+        },
+        {
+          "key": "X",
+          "value": [
+            {
+              "addrId": 59653,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "象屿保税区",
+              "parentId": 3486,
+              "showNext": false,
+              "sortCode": "X"
+            }
+          ]
+        },
+        {
+          "key": "Z",
+          "value": [
+            {
+              "addrId": 999999,
+              "diaoYuDao": false,
+              "foreignOverSea": false,
+              "gangAoNewUISwitch": false,
+              "gangAoTai": false,
+              "hidePostCode": false,
+              "isSupCOD": false,
+              "name": "暂不选择",
+              "showNext": true,
+              "sortCode": "Z"
+            }
+          ]
+        }
+      ],
+      "wordList": [
+        "D",
+        "H",
+        "J",
+        "X",
+        "Z"
+      ]
+    },
+    "code": "0",
+    "message": "success",
+    "timestamp": 1778490367617
+  }
+}

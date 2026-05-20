@@ -64,7 +64,12 @@ if str(_JD_PKG_ROOT) not in sys.path:
 _BACKEND_ROOT = Path(__file__).resolve().parents[3]
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
-from common.jd_delay_utils import parse_request_delay_range, sleep_pc_search_request_gap
+from common.jd_delay_utils import (
+    parse_fetch_retry_delay_arg,
+    parse_request_delay_range,
+    sleep_pc_search_fetch_retry_gap,
+    sleep_pc_search_request_gap,
+)
 from pipeline.csv.schema import JD_SEARCH_CSV_HEADERS as JD_EXPORT_COLUMN_HEADERS  # noqa: E402
 
 _JD_PC_SEARCH_DIR = Path(__file__).resolve().parent
@@ -485,9 +490,9 @@ def main() -> None:
     )
     p.add_argument(
         "--fetch-retry-delay",
-        type=float,
-        default=2.0,
-        help="上述重试之间的间隔秒数（不走 --request-delay 长间隔）",
+        default="3-8",
+        metavar="MIN-MAX|SEC",
+        help="同一 body.page/s 重试前等待：MIN-MAX 为均匀随机秒数；单 SEC 为固定秒；0-0 关闭（不走 --request-delay）",
     )
     p.add_argument(
         "--pvid",
@@ -562,6 +567,13 @@ def main() -> None:
             sys.exit(2)
     if getattr(args, "fetch_retries", 0) < 0:
         print("[京东] --fetch-retries 不能为负", file=sys.stderr)
+        sys.exit(2)
+    try:
+        fetch_retry_range = parse_fetch_retry_delay_arg(
+            getattr(args, "fetch_retry_delay", None)
+        )
+    except ValueError as e:
+        print(f"[京东] --fetch-retry-delay 无效: {e}", file=sys.stderr)
         sys.exit(2)
 
     cookie = load_cookie(args)
@@ -660,7 +672,6 @@ def main() -> None:
             return u, b
 
         max_fetch_tries = max(1, int(args.fetch_retries) + 1)
-        retry_pause = max(0.0, float(args.fetch_retry_delay))
         last_s_step = JD_PC_SEARCH_FALLBACK_S_STEP
 
         for _skip_screen in range(max(0, page_start - 1)):
@@ -673,8 +684,7 @@ def main() -> None:
                     if rt == 0:
                         url, body = _fetch_pc_body_spaced(api_page, api_s)
                     else:
-                        if retry_pause > 0:
-                            time.sleep(retry_pause)
+                        sleep_pc_search_fetch_retry_gap(fetch_retry_range)
                         print(
                             f"[京东] 跳过前序屏 重试 {rt}/{max_fetch_tries - 1} "
                             f"body.page={api_page} body.s={api_s}",
@@ -755,8 +765,7 @@ def main() -> None:
                         if rt == 0:
                             url, body = _fetch_pc_body_spaced(api_page, api_s)
                         else:
-                            if retry_pause > 0:
-                                time.sleep(retry_pause)
+                            sleep_pc_search_fetch_retry_gap(fetch_retry_range)
                             print(
                                 f"[京东] 逻辑第{user_p}页 第{_attempt + 1}包 "
                                 f"重试 {rt}/{max_fetch_tries - 1} "

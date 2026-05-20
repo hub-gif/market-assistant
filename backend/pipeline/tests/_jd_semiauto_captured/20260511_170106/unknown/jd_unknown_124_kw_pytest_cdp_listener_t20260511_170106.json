@@ -1,0 +1,13 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://h5speed.m.jd.com/v4/speed/activity",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "ok"
+  }
+}

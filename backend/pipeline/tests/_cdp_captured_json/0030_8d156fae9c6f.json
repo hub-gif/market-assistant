@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "Success",
+  "data": {
+    "isLogin": false,
+    "bPinPlusSwitch": true,
+    "plusInfo": {
+      "isPlus": false,
+      "plusStatus": ""
+    }
+  }
+}

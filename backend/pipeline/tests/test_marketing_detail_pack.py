@@ -10,6 +10,7 @@ from django.test import SimpleTestCase
 from pipeline.llm.generate_marketing_detail import (
     _parse_llm_json,
     generate_marketing_detail_pack,
+    normalize_core_info_card,
     normalize_detail_page_pack,
 )
 from pipeline.reporting.marketing_pack_persist import persist_marketing_detail_pack_v1
@@ -32,6 +33,22 @@ class MarketingDetailPackTests(SimpleTestCase):
         self.assertEqual(n["detail_mid_story_paragraphs"], [])
         self.assertEqual(n["live_script_bullets"], [])
         self.assertEqual(n["traceability_note"], "x")
+
+    def test_normalize_core_fills_missing_string_keys(self) -> None:
+        partial = {"what_we_sell": "饼干", "one_liner_value": "x"}
+        n = normalize_core_info_card(partial)
+        self.assertEqual(n["buyer_job_to_be_done"], "")
+        self.assertEqual(n["open_points_for_business"], "")
+
+    def test_normalize_faq_accepts_q_a_alias(self) -> None:
+        raw = {
+            "faq": [{"q": "怎么吃？", "a": "开袋即食"}, {"question": "适合谁", "answer": "成人"}],
+            "traceability_note": "z",
+        }
+        n = normalize_detail_page_pack(raw)
+        self.assertEqual(len(n["faq"]), 2)
+        self.assertEqual(n["faq"][0]["question"], "怎么吃？")
+        self.assertEqual(n["faq"][0]["answer"], "开袋即食")
 
     def test_parse_llm_json_strips_wrapped(self) -> None:
         raw = '前缀 {"a": 1, "b": "x"} 后缀'

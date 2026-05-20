@@ -1,0 +1,19 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://storage.360buyimg.com/miniprogram-platform/configure-lowcode-platform-node/prod/json/prod/6uDG4Vix.json",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "data": [
+      {
+        "percent": "100",
+        "ppms_itemName": "线上配置",
+        "ppmsItemId": "8U8ZQTIf",
+        "whiteList": "jd_7d7942a441a92,lm_onlone,webchatTest_1889,wxspre11,yuzhecheng008,jd_583c1cba12082,jd_yHoJmeRTExPT,15084985458_p,jd_stXlvwGOanzs,jd_6005c672f8596,18600885258_p,webchatTest_1962,歪bbbs,jd_w2042aw2tec2vs,jd_JjJpTCyFMiTg"
+      }
+    ]
+  }
+}

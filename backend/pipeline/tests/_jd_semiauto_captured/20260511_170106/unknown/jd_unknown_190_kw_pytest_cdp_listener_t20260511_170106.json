@@ -1,0 +1,23 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_msg_push_config",
+  "url": "https://api.m.jd.com/api?functionId=jsfbox_msg_push_config&uuid=&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170605330;i2ynziy15van2iz4;b5216;tk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL;6bb8d701d7b691061c85b25910082083;5.3;1778490360330;q3EpJbINCiIQKSUe6HURxyVN5HFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jpZCKGZJS1feeVVhipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJfGZ8CGW0iFR4HYdceEjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75e5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg4bojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;da7b20124402b6b1e70fbc9897546f52;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490360329&client=pc&clientVersion=1.0.0&body=%7B%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "firstVisitDuration": 120,
+      "fetchInterval": 3600,
+      "dailyPushLimitPerUser": 3,
+      "pushEnabled": true,
+      "pushPriority": [
+        "logisticsMsgPushService",
+        "govEnterprisePushService"
+      ]
+    }
+  }
+}

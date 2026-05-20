@@ -65,7 +65,7 @@ PVID = ""
 REQUEST_DELAY = "30-60"
 PAGE_DELAY_SEC = 1.2
 FETCH_RETRIES = 3
-FETCH_RETRY_DELAY_SEC = 3.0
+FETCH_RETRY_DELAY_SEC = "3-8"
 # PIPELINE_RUN_DIR：本次运行输出根目录。空则自动创建
 # ``data/JD/pipeline_runs/<YYYYMMDD_HHMMSS>_<关键词>/``；非空则用该路径（相对路径相对 data/JD）
 PIPELINE_RUN_DIR = ""
@@ -98,7 +98,8 @@ COMMENT_LIST_DELAY = ""
 SKU_STEP_DELAY = "4-10"
 # 详情：与 jd_detail_ware_business_requests 一致，结果为空或无效时重试
 DETAIL_FETCH_MAX_ATTEMPTS = 3
-DETAIL_FETCH_RETRY_DELAY_SEC = 2.0
+# 详情 wareBusiness 失败后重试前随机等待（秒）
+DETAIL_FETCH_RETRY_DELAY_RANGE = (3.0, 8.0)
 # USE_CHROME：True 使用本机 Chrome
 USE_CHROME = True
 HEADED = False
@@ -299,7 +300,7 @@ def main(keyword: str | None = None) -> Path:
         q=kw,
         page_delay=float(PAGE_DELAY_SEC),
         fetch_retries=int(FETCH_RETRIES),
-        fetch_retry_delay=float(FETCH_RETRY_DELAY_SEC),
+        fetch_retry_delay=FETCH_RETRY_DELAY_SEC,
         pretty_raw_json=True,
         csv=True,
         out="",
@@ -477,7 +478,7 @@ def main(keyword: str | None = None) -> Path:
                 timeout_ms=45_000,
                 cookie_override=_cookie_override,
                 max_attempts=int(DETAIL_FETCH_MAX_ATTEMPTS),
-                retry_delay_sec=float(DETAIL_FETCH_RETRY_DELAY_SEC),
+                retry_delay_range=DETAIL_FETCH_RETRY_DELAY_RANGE,
                 cancel_check=_pipeline_cancel_requested,
             )
             body_for_parse = d_text if d_code == 200 else ""

@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "Success",
+  "data": {
+    "abBuriedTagMap": {
+      "qyPlus": "tsabtest|base64|UENUZXN0Xzc3ODYwfHRlc3Qy|tsabtest",
+      "modalLogin": "tsabtest|base64|UENUZXN0XzY1OTIyfGJhc2U|tsabtest"
+    },
+    "loginConfig": {
+      "exitLoginImgUrl": "//img14.360buyimg.com/imagetools/jfs/t1/258113/38/17765/79646/67a708d5F692b1ae2/8047ecc989f54728.png"
+    },
+    "bPinPlusSwitch": true,
+    "isPlus": false,
+    "iscPinPotential": true,
+    "userRights": [],
+    "isModalLogin": true
+  }
+}

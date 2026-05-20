@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "dompurify": "^3.2.2",
+    "element-plus": "^2.13.7",
     "github-markdown-css": "^5.8.1",
     "marked": "^15.0.7",
     "papaparse": "^5.5.2",

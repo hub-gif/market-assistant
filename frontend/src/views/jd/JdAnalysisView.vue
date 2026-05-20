@@ -251,8 +251,7 @@ async function loadReport() {
         err.value = t
         if (r.status === 404) {
           err.value =
-            (t && t.length < 400 ? t : '报告文件不存在。') +
-            ' 若数据已在批次目录中，可到「报告生成」页点击「重新生成报告」（不重新爬取）。'
+            (t && t.length < 400 ? t : '报告文件不存在。') + ' 可在「报告生成」重算（不重新抓数）。'
         }
         return
       }
@@ -392,108 +391,102 @@ watch(
 <template>
   <div>
     <section class="ma-card">
-      <h2>分析报告查看</h2>
+      <h2>报告预览</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，在线阅读报告或下载。
-        若开启大模型，系统会在后台根据评价正文补充<strong>关注词</strong>与<strong>使用场景</strong>标签，并生成报告中的统计图（与报告插图章节对应）。
-        <strong>一键下载简报包</strong>内含：报告正文、插图文件夹、机器整理的<strong>数据摘要</strong>、以及便于扫读的<strong>要点摘录</strong>。
-        需要改分析规则或重新出稿，请至
+        选成功任务即可阅读、导出或打包。改规则或重出稿见
         <RouterLink to="/jd/analysis-build">报告生成</RouterLink>。
       </p>
 
       <div class="toolbar">
         <label class="sel-label">任务</label>
-        <select v-model="selectedId" class="job-select">
-          <option value="" disabled>请选择任务</option>
-          <option v-for="j in successJobs" :key="j.id" :value="String(j.id)">
-            #{{ j.id }} · {{ j.keyword }} · {{ j.run_dir?.split(/[/\\]/).pop() || '' }}
-          </option>
-        </select>
-        <button type="button" class="ma-btn ma-btn-secondary" :disabled="!selectedId || loading" @click="loadReport">
+        <div class="toolbar-task-select-wrap">
+          <el-select
+            v-model="selectedId"
+            class="jd-toolbar-el-select"
+            placeholder="请选择任务"
+            filterable
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="j in successJobs"
+              :key="j.id"
+              :label="`${j.id} · ${j.keyword}`"
+              :value="String(j.id)"
+            />
+          </el-select>
+        </div>
+        <el-button :disabled="!selectedId || loading" @click="loadReport">
           {{ loading ? '加载中…' : '重新加载报告' }}
-        </button>
-        <a
-          class="ma-btn ma-btn-secondary dl-link"
-          :class="{ disabled: !selectedId }"
-          :href="selectedId ? downloadUrl(selectedId, 'report') : '#'"
-          target="_blank"
+        </el-button>
+        <el-button
+          tag="a"
           rel="noreferrer"
+          target="_blank"
+          :href="selectedId ? downloadUrl(selectedId, 'report') : '#'"
+          :disabled="!selectedId"
           @click="(e) => { if (!selectedId) e.preventDefault() }"
         >
           下载报告
-        </a>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        </el-button>
+        <el-button
           :disabled="!selectedId || isExporting('docx') || isExporting('pdf') || loading"
           @click="exportReportFmt('docx')"
         >
           {{ isExporting('docx') ? '导出中…' : '导出 Word' }}
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        </el-button>
+        <el-button
           :disabled="!selectedId || isExporting('docx') || isExporting('pdf') || loading"
           @click="exportReportFmt('pdf')"
         >
           {{ isExporting('pdf') ? '导出中…' : '导出 PDF' }}
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        </el-button>
+        <el-button
           :disabled="!selectedId || briefLoading || loading"
-          title="加载与报告数字一致的数据摘要（可先读易读版，再展开原始格式）"
+          title="加载与报告一致的数据摘要"
           @click="loadCompetitorBrief"
         >
           {{ briefLoading ? '摘要加载中…' : '加载数据摘要' }}
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-primary"
+        </el-button>
+        <el-button
+          type="primary"
           :disabled="!selectedId || packLoading || loading || briefLoading"
-          title="下载压缩包：报告、配图、数据与说明"
+          title="报告、配图与数据打包下载"
           @click="downloadBriefPack"
         >
           {{ packLoading ? '打包中…' : '一键下载简报包' }}
-        </button>
+        </el-button>
       </div>
       <p v-if="viewInFlightOtherJobId" class="ma-warn-banner">
-        任务 #{{ viewInFlightOtherJobId }} 仍有请求进行中；当前页切换任务后若按钮已恢复，请等待该任务完成或返回对应任务查看。
-      </p>
-
-      <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        本任务在本机上的结果文件夹（表格明细可在「库内数据浏览」查看）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
+        任务 {{ viewInFlightOtherJobId }} 仍在处理中，请稍候或切回该任务。
       </p>
 
       <p v-if="briefErr" class="ma-err">{{ briefErr }}</p>
       <p v-if="packErr" class="ma-err">{{ packErr }}</p>
       <p v-if="exportDocErr" class="ma-err">{{ exportDocErr }}</p>
       <p v-if="err" class="ma-err">{{ err }}</p>
-      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
+      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先完成一次采集。</p>
     </section>
 
     <section v-if="briefData" class="ma-card preview-card">
       <div class="preview-head">
         <h2>竞品数据摘要（机器整理）</h2>
-        <div class="tabs">
-          <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="copyBriefJson">
+        <div class="brief-tool-row">
+          <el-button @click="copyBriefJson">
             {{ briefCopyOk ? '已复制' : '复制原始数据' }}
-          </button>
-          <button type="button" class="ma-btn ma-btn-secondary brief-tool" @click="downloadBriefJson">下载数据文件</button>
+          </el-button>
+          <el-button @click="downloadBriefJson">下载数据文件</el-button>
         </div>
       </div>
-      <p class="hint-top brief-hint">
-        以下数字与上方报告一致，用日常用语列出；需要交给其它系统或技术人员时，可展开下方「原始数据」或复制/下载。
-      </p>
+      <p class="hint-top brief-hint">与上文报告同源；可展开 JSON 或复制。</p>
       <dl v-if="briefHumanRows.length" class="brief-dl">
         <template v-for="(row, idx) in briefHumanRows" :key="idx">
           <dt>{{ row.label }}</dt>
           <dd>{{ row.value }}</dd>
         </template>
       </dl>
-      <p v-else class="ma-muted brief-hint">暂无摘要条目（可能缺少列表或品牌字段）。</p>
+      <p v-else class="ma-muted brief-hint">暂无摘要（数据可能不全）。</p>
       <details class="brief-raw-wrap">
-        <summary>展开原始数据（机器可读格式）</summary>
+        <summary>原始数据</summary>
         <pre class="raw-md brief-json">{{ briefJson }}</pre>
       </details>
     </section>
@@ -501,10 +494,10 @@ watch(
     <section v-if="reportMd" class="ma-card preview-card">
       <div class="preview-head">
         <h2>预览</h2>
-        <div class="tabs">
-          <button type="button" :class="{ on: viewMode === 'render' }" @click="viewMode = 'render'">渲染</button>
-          <button type="button" :class="{ on: viewMode === 'raw' }" @click="viewMode = 'raw'">原文</button>
-        </div>
+        <el-radio-group v-model="viewMode" class="ep-view-rg ep-view-rg--end">
+          <el-radio-button value="render">渲染</el-radio-button>
+          <el-radio-button value="raw">原文</el-radio-button>
+        </el-radio-group>
       </div>
       <div v-if="viewMode === 'render'" class="md-box">
         <MarkdownPreview :source="reportMdForPreview" />
@@ -526,35 +519,10 @@ watch(
   color: #2563eb;
   font-weight: 500;
 }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-.sel-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-}
-.job-select {
-  flex: 1;
-  min-width: 220px;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font: inherit;
-}
-.dl-link {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
-}
-.dl-link.disabled {
-  pointer-events: none;
-  opacity: 0.5;
+.toolbar-task-select-wrap {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 .preview-card {
   margin-top: 1rem;
@@ -570,23 +538,17 @@ watch(
 .preview-head h2 {
   margin: 0;
 }
-.tabs {
+.brief-tool-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
+  align-items: center;
 }
-.tabs button {
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 0.35rem 0.85rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: #4b5563;
+.ep-view-rg {
+  flex-shrink: 0;
 }
-.tabs button.on {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+.ep-view-rg--end {
+  margin-left: auto;
 }
 .md-box {
   border: 1px solid #e5e7eb;
@@ -608,18 +570,6 @@ watch(
   border-radius: 8px;
   border: 1px solid #e5e7eb;
 }
-.run-dir-note {
-  margin: 0.85rem 0 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.run-dir-path {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  word-break: break-all;
-  color: #475569;
-}
 .ma-muted {
   color: #64748b;
 }
@@ -632,10 +582,6 @@ watch(
   background: #fffbeb;
   border: 1px solid #fcd34d;
   border-radius: 6px;
-}
-.brief-tool {
-  font-size: 0.85rem;
-  padding: 0.35rem 0.75rem;
 }
 .brief-hint {
   margin-top: -0.25rem;

@@ -1,0 +1,88 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_pre_gb",
+  "url": "https://api.m.jd.com/?appid=www-jd-com&client=pc&clientVersion=1.0.0&t=1778490305924&uuid=76161171.17784900693481949486110.1778490069.1778490069.1778490069.1&functionId=jsfbox_pre_gb&body=%7B%22source%22:%22pc_home%22%7D&h5st=20260511170510928%3Bi2ynziy15van2iz4%3Bb5216%3Btk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL%3Bcb47ece5074a64a6e0a1113ee43c8240%3B5.3%3B1778490305928%3BpjbMhjpexGFf9mFO2nYNCCEQyiYRJrJdJrESJrpjh7pf5rJdJz1TIipjLDrgJr4fGe4f5rYfGm4f0TFTKWIfzbYTHWVTFmoS5bFe4bFSJrJdJrEa-OFTGOEjLrJp-j5fIeVeHGYSFeoeFKYSGWoSyfYf1T1e6nITHWISGa1eIipjxj5PKSEQKeFjLrJp-jZf_jpjxjpe2iFjLrJp-j5f9fIg2T0UG6VRFuWeDipjxjJOJrpjh7Jj4CFPUeWO4rISCCHjLDIj_ulS9mFPJrpjh7Jj5fIQCOGjLDIjFqEjLrJp-3kjLDLj2SHjLDIj4nYOJipjLrpjh75fLDIj6nYOJipjLrpjh7pe6rJdJrYf2iFjLrpjLDrgz3pjxjJf6XETJrpjLrJp-jZR5n4Oja1T7foRUGWPJrJdJ31QHyVT5ipjLrpjh7pfLDIjzXETJrpjLrJp-rojxj5e2iFjLrpjLDrg4jojxjJe2iFjLrpjLDrg7rJdJXYOJipjLrpjh7pfLDIj3XETJrpjLrJp-j4fLDIj4XETJrpjLrJp-jpe9nIg7jpjxjZf2iFjLrpjLDrg7rJdJ-1OJrpjLrJp-Xojxj5P-ipjLrpjh7pfLDIj-ipjLrpjh7pfLDIjHOEjLrpjLD7NLDIjHyVS3KUSJrpjh7ZMwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3Bf30c6e3dc8c508f17223ad150e3ace5c%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&loginType=3",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "data": {
+      "abBuriedTag": [],
+      "abBuriedTagMap": {
+        "kjgbAbTest": "tsabtest|base64|UENUZXN0XzEwNDI5MnxzaGFuZ2th|tsabtest",
+        "shopSearch": "tsabtest|base64|UENUZXN0XzY0MzcxfHRlc3RzaG9w|tsabtest"
+      },
+      "abExpLabelMap": {
+        "brandSquareAbTest": {
+          "keyParamMap": {
+            "Brand_Shopping_Guide": 0
+          }
+        },
+        "shopSearch": {
+          "abBuriedTag": "tsabtest|base64|UENUZXN0XzY0MzcxfHRlc3RzaG9w|tsabtest",
+          "keyParamMap": {
+            "hit": 1,
+            "Mainsearch": 1,
+            "Shopsearch": 1
+          },
+          "label": "testshop"
+        },
+        "secondFloorAbTest": {
+          "abBuriedTag": "",
+          "keyParamMap": {
+            "gate_pos": 0
+          },
+          "label": ""
+        },
+        "widgetAbTest": {
+          "abBuriedTag": "",
+          "keyParamMap": {
+            "mult_function": 0
+          },
+          "label": ""
+        },
+        "kjgbAbTest": {
+          "abBuriedTag": "tsabtest|base64|UENUZXN0XzEwNDI5MnxzaGFuZ2th|tsabtest",
+          "keyParamMap": {
+            "shangka": 1,
+            "kuangjia": 1,
+            "biaoti": 0
+          },
+          "label": "shangka"
+        }
+      },
+      "addCartShow": true,
+      "advertModalShow": false,
+      "advertModalShowTime": 5,
+      "beanShow": true,
+      "brandEntryShow": false,
+      "brandHotTextShow": false,
+      "cPinPotential": false,
+      "enjoyTopBenefitShow": false,
+      "feedAdvertCardShow": false,
+      "feedEnjoyInfoShow": false,
+      "feedGuideShow": false,
+      "feedProductLabelShow": true,
+      "firstScreenGb": 1,
+      "guobuShow": true,
+      "hitSimpleVersion": false,
+      "inputGbGov": true,
+      "kuangjia": true,
+      "loginCardBenefitsShow": false,
+      "loginGuideShow": true,
+      "loginGuideTitle": 1,
+      "lowPriceTagShow": true,
+      "modalLogin": true,
+      "noLoginBrandEntryShow": true,
+      "priceLabelShow": true,
+      "shangkaBiaoTi": 0,
+      "showHandPrice": true,
+      "topbarRefactor": true,
+      "wlEnhance": true,
+      "wxLoginOpen": true
+    },
+    "msg": "Success"
+  }
+}

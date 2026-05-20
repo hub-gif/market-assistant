@@ -1,13 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '../layouts/AppShell.vue'
 import JdSearchView from '../views/jd/JdSearchView.vue'
+import JdSemiAutoView from '../views/jd/JdSemiAutoView.vue'
 import JdResultsView from '../views/jd/JdResultsView.vue'
 import JdDatasetBrowseView from '../views/jd/JdDatasetBrowseView.vue'
 import JdAnalysisView from '../views/jd/JdAnalysisView.vue'
 import JdAnalysisBuildView from '../views/jd/JdAnalysisBuildView.vue'
 import JdStrategyView from '../views/jd/JdStrategyView.vue'
 import JdStrategyBuildView from '../views/jd/JdStrategyBuildView.vue'
-import TbPlaceholderView from '../views/TbPlaceholderView.vue'
+import TbPlaceholderView from '../views/tb/TbPlaceholderView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,16 +19,22 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/jd/search' },
         {
+          path: 'jd/semiauto',
+          name: 'jd-semiauto',
+          component: JdSemiAutoView,
+          meta: { platform: 'jd', tab: 'semiauto', title: '半自动采集' },
+        },
+        {
           path: 'jd/search',
           name: 'jd-search',
           component: JdSearchView,
-          meta: { platform: 'jd', tab: 'search', title: '搜索采集' },
+          meta: { platform: 'jd', tab: 'search', title: '采集' },
         },
         {
           path: 'jd/results',
           name: 'jd-results',
           component: JdResultsView,
-          meta: { platform: 'jd', tab: 'results', title: '任务列表' },
+          meta: { platform: 'jd', tab: 'results', title: '任务' },
         },
         {
           path: 'jd/dataset',
@@ -36,7 +43,7 @@ const router = createRouter({
           meta: {
             platform: 'jd',
             tab: 'dataset',
-            title: '库内数据浏览',
+            title: '数据',
           },
         },
         {
@@ -53,7 +60,7 @@ const router = createRouter({
           path: 'jd/analysis-view',
           name: 'jd-analysis-view',
           component: JdAnalysisView,
-          meta: { platform: 'jd', tab: 'analysis-view', title: '报告查看' },
+          meta: { platform: 'jd', tab: 'analysis-view', title: '报告预览' },
         },
         {
           path: 'jd/strategy',
@@ -69,7 +76,7 @@ const router = createRouter({
           path: 'jd/strategy-view',
           name: 'jd-strategy-view',
           component: JdStrategyView,
-          meta: { platform: 'jd', tab: 'strategy-view', title: '策略稿预览' },
+          meta: { platform: 'jd', tab: 'strategy-view', title: '策略预览' },
         },
         {
           path: 'tb',

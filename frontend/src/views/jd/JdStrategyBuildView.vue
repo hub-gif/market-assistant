@@ -12,12 +12,13 @@ import {
   saveStrategyDraftRecord,
   saveStrategyMatrixScope,
 } from '../../lib/strategyDraftStorage'
-
 const route = useRoute()
 const router = useRouter()
 const { jobs } = useJobs()
 
 const selectedId = ref('')
+/** 与监测分源：入底稿 §1.3，作本品事实边界；成稿应结合报告数据写策略，非单独成篇产品文案 */
+const ourProductProfile = ref('')
 const businessNotes = ref('')
 const err = ref('')
 const genInFlight = generationInFlightKey()
@@ -97,6 +98,7 @@ function buildPayload() {
   const generator = rulesOnlyThisRun.value ? 'rules' : 'llm'
   return {
     generator,
+    our_product_profile: ourProductProfile.value,
     business_notes: businessNotes.value,
     product_role: decisions.product_role,
     stage_goal_type: decisions.stage_goal_type,
@@ -167,8 +169,15 @@ function applyDecisionsFromSavedRecord(jobId) {
       decisions[k] = v == null || typeof v === 'boolean' ? '' : String(v)
     }
   }
+  if (typeof lr.our_product_profile === 'string') {
+    ourProductProfile.value = lr.our_product_profile
+  } else {
+    ourProductProfile.value = ''
+  }
   if (typeof lr.business_notes === 'string') {
     businessNotes.value = lr.business_notes
+  } else {
+    businessNotes.value = ''
   }
   if (lr.generator === 'rules' || lr.generator === 'llm') {
     rulesOnlyThisRun.value = lr.generator === 'rules'
@@ -178,7 +187,7 @@ function applyDecisionsFromSavedRecord(jobId) {
 function formatJobOption(j) {
   const t = j.created_at
   const tail = t ? String(t).replace('T', ' ').slice(0, 16) : ''
-  return tail ? `#${j.id} · ${j.keyword} · ${tail}` : `#${j.id} · ${j.keyword}`
+  return tail ? `${j.id} · ${j.keyword} · ${tail}` : `${j.id} · ${j.keyword}`
 }
 
 async function loadList() {
@@ -322,116 +331,127 @@ watch(
   <div>
     <section class="ma-card">
       <h2>策略生成</h2>
-      <p class="hint-top">
-        选择<strong>已成功</strong>任务，先选顶部<strong>矩阵细类</strong>。<strong>已填项</strong>进入底稿并由大模型落实；<strong>未填项</strong>可由模型结合数据推断。
-      </p>
-
+      <p class="hint-top">选成功任务与矩阵细类；填写的进成稿，未填的可由模型补。</p>
 
       <div class="toolbar">
         <label class="chk-inline">
           <input v-model="rulesOnlyThisRun" type="checkbox" />
-          本次仅生成规则稿（不做大模型全文润色，更快、不调用智能服务）
+          仅规则稿（更快，不调智能服务）
         </label>
       </div>
       <div class="toolbar">
         <label class="sel-label">任务</label>
-        <select v-model="selectedId" class="job-select">
-          <option value="" disabled>请选择任务</option>
-          <option v-for="j in successJobs" :key="j.id" :value="String(j.id)">
-            {{ formatJobOption(j) }}
-          </option>
-        </select>
-        <button
-          type="button"
-          class="ma-btn ma-btn-primary"
+        <div class="toolbar-task-select-wrap">
+          <el-select
+            v-model="selectedId"
+            class="jd-toolbar-el-select"
+            placeholder="请选择任务"
+            filterable
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="j in successJobs"
+              :key="j.id"
+              :label="formatJobOption(j)"
+              :value="String(j.id)"
+            />
+          </el-select>
+        </div>
+        <el-button
+          type="primary"
           :disabled="!selectedId || strategyGeneratingAny || briefMatrixLoading"
           @click="generateAndGoPreview"
         >
-          {{ strategyGeneratingThisTask ? '生成中…' : '生成并前往预览' }}
-        </button>
+          {{ strategyGeneratingThisTask ? '生成中…' : '生成并预览' }}
+        </el-button>
       </div>
-      <div v-if="selectedId" class="toolbar toolbar-stack">
+      <div v-if="selectedId" class="toolbar toolbar-stack toolbar-matrix">
         <label class="sel-label">主推类目（矩阵细类）</label>
-        <select
+        <el-select
           v-model="strategyMatrixScope"
-          class="job-select"
+          class="jd-matrix-el-select"
+          placeholder="全部分类（不收窄）"
           :disabled="briefMatrixLoading || strategyGeneratingAny"
+          placement="bottom-start"
         >
-          <option value="">全部分类（不收窄 · 与全关键词监测样本一致）</option>
-          <option v-for="g in matrixGroups" :key="g.index" :value="g.group">
-            {{ g.group }}（{{ g.sku_count }} 款）
-          </option>
-        </select>
-        <span v-if="briefMatrixLoading" class="ma-muted">正在加载矩阵分组…</span>
-        <span v-else class="ma-muted ma-hint-sub"
-          >与策略稿中的主推类目及报告矩阵一致；收窄后监测摘要与报告节选仅针对该细类。</span
-        >
+          <el-option label="全部分类（不收窄）" :value="''" />
+          <el-option
+            v-for="g in matrixGroups"
+            :key="g.group"
+            :label="`${g.group}（${g.sku_count} 款）`"
+            :value="g.group"
+          />
+        </el-select>
+        <span v-if="briefMatrixLoading" class="ma-muted">加载细类中…</span>
+        <span v-else class="ma-muted ma-hint-sub">收窄后仅针对该细类。</span>
       </div>
       <p v-if="briefMatrixErr" class="ma-err">{{ briefMatrixErr }}</p>
       <p v-if="strategyGeneratingOtherTask" class="ma-warn-banner">
-        任务 #{{ strategyDraftPendingJobId }} 的策略稿正在生成中，请稍候再切换任务或重复提交。
+        任务 {{ strategyDraftPendingJobId }} 生成中，请稍候。
       </p>
       <p v-if="err" class="ma-err">{{ err }}</p>
-      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
+      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先完成一次采集。</p>
 
       <fieldset class="fieldset">
         <legend>策略范围与前提</legend>
-        <p class="fieldset-hint">
-          界定本次策略的任务边界与阶段目标。监测词、批次由任务自动带出；<strong>主推类目</strong>以顶部「矩阵细类」为准。角色、<strong>本阶段策略目标类型</strong>、战场、客群会进入策略稿开篇；目标类型填好后，成稿会按你的表述落实。并与下一栏「主要对标」衔接。
-        </p>
+        <p class="fieldset-hint">边界与阶段目标；主推类目以顶部细类为准。</p>
         <label class="fld">
           <span>本品角色（策略服务对象）</span>
-          <input
+          <el-input
             v-model="decisions.product_role"
-            type="text"
+            clearable
             placeholder="如：追赶型 / 新品 / 防守 / 拓品类"
           />
         </label>
         <label class="fld fld-block">
           <span>本阶段策略目标类型</span>
-          <textarea
+          <el-input
             v-model="decisions.stage_goal_type"
-            rows="2"
+            type="textarea"
+            :rows="2"
             placeholder="如：让更多人愿意尝试购买、把销量和转化做起来、稳住老顾客和份额、先验证新品是否卖得动……按你公司本阶段真实目标写一句即可；不填则由系统在成稿中结合数据推断"
           />
         </label>
         <label class="fld fld-block">
           <span>一句话战场</span>
-          <textarea
+          <el-input
             v-model="decisions.battlefield_one_line"
-            rows="2"
+            type="textarea"
+            :rows="2"
             placeholder="在什么需求场景、与谁争夺同一批检索与购买用户"
           />
         </label>
         <label class="fld fld-block">
           <span>目标客群 / 场景</span>
-          <input
+          <el-input
             v-model="decisions.audience_segment"
-            type="text"
+            clearable
             placeholder="为谁、在什么情境下买（可选）"
           />
         </label>
         <label class="fld">
           <span>时间范围</span>
-          <input
+          <el-input
             v-model="decisions.time_horizon"
-            type="text"
+            clearable
             placeholder="如：本季度 / 未来 12 周（与后文阶段目标一致）"
           />
         </label>
         <label class="fld fld-block">
           <span>成功标准（可量化）</span>
-          <textarea
+          <el-input
             v-model="decisions.success_criteria"
-            rows="2"
+            type="textarea"
+            :rows="2"
             placeholder="如：搜索位次、转化、复购等可验证指标"
           />
         </label>
         <label class="fld fld-block">
           <span>非目标</span>
-          <textarea
+          <el-input
             v-model="decisions.non_goals"
-            rows="2"
+            type="textarea"
+            :rows="2"
             placeholder="本阶段明确不做的边界（可选）"
           />
         </label>
@@ -439,64 +459,66 @@ watch(
 
       <fieldset class="fieldset">
         <legend>本品聚焦 · 主要对标</legend>
-        <p class="fieldset-hint">
-          角色与客群已在上文填写；此处补充<strong>主要对标</strong>（品牌或价位参照），便于后文写差异与竞争应对时对齐同一参照系。
-        </p>
+        <p class="fieldset-hint">主要对标品牌或价位（可选）。</p>
         <label class="fld fld-block">
           <span>主要对标</span>
-          <input
+          <el-input
             v-model="decisions.competitor_reference"
-            type="text"
+            clearable
             placeholder="如：具体头部品牌、或同价位标杆；与上文战场一致时最有效。可写「待业务指定」或留空"
           />
         </label>
       </fieldset>
 
-      <div class="form-skip-note" role="note">
-        <strong>自动撰写部分</strong>：用户痛点、购买理由、品牌承诺与调性等内容<strong>不在本页填写</strong>，将由监测摘要、报告节选与大模型写入策略稿；可通过顶部矩阵收窄与文末「业务备注」影响范围。
-      </div>
+      <div class="form-skip-note" role="note">痛点、理由等由数据与模型写入；可用细类收窄与文末备注影响范围。</div>
 
       <fieldset class="fieldset">
         <legend>与竞品的应对方式</legend>
-        <p class="fieldset-hint">
-          面对头部或主竞品时，优先<strong>侧翼</strong>还是<strong>正面</strong>等。下方「价位阵地」回答在哪条价格带上打，与这里不是一回事。
-        </p>
+        <p class="fieldset-hint">与主竞品的主打法；与下栏「价位阵地」不同。</p>
         <label class="fld fld-block">
           <span>面对竞品时的主打法</span>
-          <select v-model="decisions.competitive_stance" class="job-select full">
-            <option v-for="o in stanceOptions" :key="o.value || 'empty'" :value="o.value">
-              {{ o.label }}
-            </option>
-          </select>
+          <el-select
+            v-model="decisions.competitive_stance"
+            class="jd-ep-block"
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="o in stanceOptions"
+              :key="o.value || 'empty'"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend>阶段目标与路径（补充）</legend>
-        <p class="fieldset-hint">
-          上文「时间、成功标准、非目标」会进入阶段定义；此处填写营销策略、总体策略与资源备注。尽量用<strong>可执行的动词句</strong>，并与痛点动作方向一致（多细类可分句）。
-        </p>
+        <p class="fieldset-hint">营销与总体策略、资源备注；宜写可执行句。</p>
         <label class="fld fld-block">
           <span>营销策略</span>
-          <textarea
+          <el-input
             v-model="decisions.marketing_strategy"
-            rows="3"
+            type="textarea"
+            :rows="3"
             placeholder="传播、活动、投放、内容主线；写清阶段重点而非口号（可选）"
           />
         </label>
         <label class="fld fld-block">
           <span>总体策略</span>
-          <textarea
+          <el-input
             v-model="decisions.general_strategy"
-            rows="3"
+            type="textarea"
+            :rows="3"
             placeholder="增长 / 品类 / 经营总原则；与上文战场与非目标不矛盾（可选）"
           />
         </label>
         <label class="fld fld-block">
           <span>资源与预算备注</span>
-          <textarea
+          <el-input
             v-model="decisions.resource_notes"
-            rows="2"
+            type="textarea"
+            :rows="2"
             placeholder="人力、投放、产能约束；便于成稿写节奏与优先级（可选）"
           />
         </label>
@@ -506,19 +528,19 @@ watch(
         <legend>品牌四线：建设 · 打造 · 运营 · 体验</legend>
         <label class="fld fld-block">
           <span>品牌建设</span>
-          <textarea v-model="decisions.pillar_product" rows="2" placeholder="选填" />
+          <el-input v-model="decisions.pillar_product" type="textarea" :rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
           <span>品牌打造</span>
-          <textarea v-model="decisions.pillar_price" rows="2" placeholder="选填" />
+          <el-input v-model="decisions.pillar_price" type="textarea" :rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
           <span>品牌运营</span>
-          <textarea v-model="decisions.pillar_channel" rows="2" placeholder="选填" />
+          <el-input v-model="decisions.pillar_channel" type="textarea" :rows="2" placeholder="选填" />
         </label>
         <label class="fld fld-block">
           <span>品牌体验</span>
-          <textarea v-model="decisions.pillar_comm" rows="2" placeholder="选填" />
+          <el-input v-model="decisions.pillar_comm" type="textarea" :rows="2" placeholder="选填" />
         </label>
       </fieldset>
 
@@ -527,28 +549,35 @@ watch(
         <div class="tactic-sec">
           <h4 class="tactic-sec-t">产品策略</h4>
           <label class="fld fld-block fld-tight">
-            <textarea v-model="decisions.pillar_product" rows="2" placeholder="选填" />
+            <el-input v-model="decisions.pillar_product" type="textarea" :rows="2" placeholder="选填" />
           </label>
         </div>
         <div class="tactic-sec">
           <h4 class="tactic-sec-t">定价策略</h4>
           <label class="fld fld-block">
             <span>价位阵地</span>
-            <select v-model="decisions.positioning_choice" class="job-select full">
-              <option v-for="o in positioningOptions" :key="o.value || 'empty'" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
+            <el-select
+              v-model="decisions.positioning_choice"
+              class="jd-ep-block"
+              placement="bottom-start"
+            >
+              <el-option
+                v-for="o in positioningOptions"
+                :key="o.value || 'empty'"
+                :label="o.label"
+                :value="o.value"
+              />
+            </el-select>
           </label>
           <label class="fld fld-block">
             <span>补充说明</span>
-            <textarea v-model="decisions.pillar_price" rows="2" placeholder="选填" />
+            <el-input v-model="decisions.pillar_price" type="textarea" :rows="2" placeholder="选填" />
           </label>
         </div>
         <div class="tactic-sec">
           <h4 class="tactic-sec-t">促销与活动策略</h4>
           <label class="fld fld-block fld-tight">
-            <textarea v-model="decisions.tactic_promotion" rows="2" placeholder="选填" />
+            <el-input v-model="decisions.tactic_promotion" type="textarea" :rows="2" placeholder="选填" />
           </label>
         </div>
         <div class="tactic-sec">
@@ -556,11 +585,11 @@ watch(
           <div class="tactic-ch-row">
             <label class="fld fld-block">
               <span>渠道</span>
-              <textarea v-model="decisions.pillar_channel" rows="2" placeholder="选填" />
+              <el-input v-model="decisions.pillar_channel" type="textarea" :rows="2" placeholder="选填" />
             </label>
             <label class="fld fld-block">
               <span>传播</span>
-              <textarea v-model="decisions.pillar_comm" rows="2" placeholder="选填" />
+              <el-input v-model="decisions.pillar_comm" type="textarea" :rows="2" placeholder="选填" />
             </label>
           </div>
         </div>
@@ -568,33 +597,43 @@ watch(
 
       <fieldset class="fieldset">
         <legend>数据与样本风险（确认知晓）</legend>
-        <p class="fieldset-hint">
-          勾选表示了解以下数据局限（不影响生成，仅供自检）。
-        </p>
-        <label class="chk">
-          <input v-model="decisions.ack_risk_keywords" type="checkbox" />
+        <p class="fieldset-hint">勾选即知悉数据局限。</p>
+        <el-checkbox v-model="decisions.ack_risk_keywords" class="chk-ep">
           关注词 / 场景可能以偏概全（需原评论抽样）
-        </label>
-        <label class="chk">
-          <input v-model="decisions.ack_risk_price" type="checkbox" />
+        </el-checkbox>
+        <el-checkbox v-model="decisions.ack_risk_price" class="chk-ep">
           价格带可能含大促或异常挂价（需核对清洗与计价规则）
-        </label>
-        <label class="chk">
-          <input v-model="decisions.ack_risk_concentration" type="checkbox" />
+        </el-checkbox>
+        <el-checkbox v-model="decisions.ack_risk_concentration" class="chk-ep">
           列表集中度与深入样本品牌可能矛盾（需解释差异）
+        </el-checkbox>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>本品说明</legend>
+        <p class="fieldset-hint">
+          与监测摘要分源：写入底稿 §1.3，作<strong>本品事实与宣称边界</strong>；成稿须与报告数据<strong>结合</strong>写策略，勿单靠大段产品说明。留空且配好手册 PDF 时按任务关键词摘录。
+        </p>
+        <label class="fld fld-block">
+          <span>本品 / 手册要点</span>
+          <el-input
+            v-model="ourProductProfile"
+            type="textarea"
+            :rows="6"
+            placeholder="如：核心功效、成分宣称边界、目标人群、价位与渠道定位、与手册一致的表述约束等（可选）"
+          />
         </label>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend>业务备注</legend>
-        <p class="fieldset-hint">
-          法务红线、渠道约束、组织与预算等自由补充，会进入策略稿收尾部分；不替换正文结构，也不替代上方已填的决策字段。
-        </p>
+        <p class="fieldset-hint">合规、渠道、预算等补充，附在成稿末。</p>
         <label class="fld fld-block">
           <span>业务备注</span>
-          <textarea
+          <el-input
             v-model="businessNotes"
-            rows="4"
+            type="textarea"
+            :rows="4"
             placeholder="如法务/合规表述边界、渠道限价、禁止对标表述、预算与人力硬约束等（可选）"
           />
         </label>
@@ -621,37 +660,25 @@ watch(
   color: #2563eb;
   font-weight: 500;
 }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-.toolbar-stack {
-  flex-direction: column;
-  align-items: stretch;
+.toolbar-task-select-wrap {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 .toolbar-stack .sel-label {
   margin-bottom: -0.25rem;
 }
-.sel-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
+.toolbar-matrix :deep(.jd-matrix-el-select.el-select) {
+  align-self: flex-start;
 }
-.job-select {
-  flex: 1;
-  min-width: 220px;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font: inherit;
-}
-.job-select.full {
+.chk-ep {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 0.5rem;
   width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+}
+.chk-ep:first-of-type {
+  margin-top: 0.35rem;
 }
 .ma-muted {
   color: #64748b;
@@ -707,20 +734,6 @@ watch(
   font-size: 0.82rem;
   font-weight: 500;
   color: #4b5563;
-}
-.fld input[type='text'],
-.fld textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 0.88rem;
-}
-.fld textarea {
-  resize: vertical;
-  min-height: 52px;
 }
 .chk {
   display: flex;
@@ -782,10 +795,18 @@ watch(
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem 1rem;
+  align-items: start;
+}
+/* 与单列 .fld 的 margin 规则冲突：同排两列曾出现 0.35rem vs 0.65rem 顶距，导致错位 */
+.tactic-ch-row .fld {
+  margin-top: 0;
 }
 @media (max-width: 640px) {
   .tactic-ch-row {
     grid-template-columns: 1fr;
+  }
+  .tactic-ch-row .fld + .fld {
+    margin-top: 0.5rem;
   }
 }
 .fld-tight {

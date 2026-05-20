@@ -1,0 +1,169 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_umc_equity_delivery",
+  "url": "https://api.m.jd.com/?appid=www-jd-com&client=pc&clientVersion=1.0.0&t=1778490354986&uuid=76161171.17784900693481949486110.1778490069.1778490069.1778490069.1&functionId=jsfbox_umc_equity_delivery&body=%7B%22advertIds%22:%22%22,%22umcCount%22:0,%22newUserModalCount%22:0,%22homeVersion%22:%22simple%22,%22source%22:%22pc-home%22%7D&h5st=20260511170559987%3Bi2ynziy15van2iz4%3Bb5216%3Btk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL%3Ba6ff2d20dcdb91c353d219ac493d4d23%3B5.3%3B1778490354987%3Bq3EpJbINCiIQKSUe6HURxyVN5HFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jZS0P0eJq4f4akQMipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJfWTE_nYguWf4-1ZV2HjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh7pd5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrgzfojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3B43d65e28127fddb0b48d14a640164ff0%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&loginType=3",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "data": {
+      "abBuriedTagMap": {},
+      "cid": "29",
+      "fid": "42",
+      "hongBaoBalance": "3.00",
+      "intervalTime": 5000,
+      "newUserModalCountLimit": 2,
+      "newUserPopUpWindowTitle": "https://img20.360buyimg.com/babel/jfs/t20290318/405405/17/8835/29339/69bb67e9F7a2c65f3/094e2900444df7c8.png",
+      "priceList": [
+        {
+          "p": "15.30",
+          "op": "15.30",
+          "mp": "0.00",
+          "id": "J_10147889810436"
+        },
+        {
+          "p": "3.99",
+          "op": "3.99",
+          "mp": "0.00",
+          "id": "J_10187000434970"
+        },
+        {
+          "p": "6.90",
+          "op": "6.90",
+          "mp": "0.00",
+          "id": "J_10140119341725"
+        },
+        {
+          "p": "6.90",
+          "op": "6.90",
+          "mp": "0.00",
+          "id": "J_10193007766502"
+        },
+        {
+          "p": "9.99",
+          "op": "9.99",
+          "mp": "0.00",
+          "id": "J_10194445924075"
+        },
+        {
+          "p": "4.90",
+          "op": "4.90",
+          "mp": "0.00",
+          "id": "J_10171921421325"
+        },
+        {
+          "p": "3.90",
+          "op": "3.90",
+          "mp": "0.00",
+          "id": "J_10196556605191"
+        },
+        {
+          "p": "9.90",
+          "op": "9.90",
+          "mp": "0.00",
+          "id": "J_10159015048334"
+        },
+        {
+          "p": "9.79",
+          "op": "9.79",
+          "mp": "0.00",
+          "id": "J_10138184056428"
+        },
+        {
+          "p": "7.99",
+          "op": "7.99",
+          "mp": "0.00",
+          "id": "J_10148049269165"
+        }
+      ],
+      "showTime": 5,
+      "skuList": [
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/406124/35/5966/352960/69bbfbbbFf60b4817/08ee3203204ac8bb.jpg",
+          "isGb": false,
+          "jdPrice": "3.99",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOR_pl6LMgEfDJ8j-WCC2W8kOTzov4lQbt6qh_ZwTs72B.dqA7.aWhW",
+          "shortWname": "特厚不锈钢平底锅奶锅电磁炉通用不粘锅辅食锅汤锅煮锅蒸锅汤锅 胡桃木锅17cm",
+          "wareId": "10187000434970"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t20290118/385299/6/18281/63124/696e3422F7085ba77/00ae3203202b0b32.jpg",
+          "isGb": false,
+          "jdPrice": "15.3",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOUqLgpXtsKDvwxJDM3NJSz-RmDwP_CKguu-wKZOA9U5i.dqA7.aWhW",
+          "shortWname": "小推车置物架落地浴室移动零食卫生间多层卧室床头多层收纳储物架 【移动顺滑】 3层",
+          "wareId": "10147889810436"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/287426/15/3982/11224/681b2671Fed40c248/9bd49bd4fdae5f4c.jpg",
+          "isGb": false,
+          "jdPrice": "6.9",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOcFl0VHHuN8W8G4mcPVyRCDFz_880WEIBZJEqqlAWgF4.dqA7.aWhW",
+          "shortWname": "多功能清洁桌面小拖把迷你拖把免手洗吸水海绵卫生间厨房抹布 【经典款】2个拖把",
+          "wareId": "10140119341725"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/358137/40/17685/41166/692c4f5bF591a7804/08ee395395e77a1a.jpg",
+          "isGb": false,
+          "jdPrice": "3.9",
+          "pcdk": "f6iAn7qDglI2FR24F4HEORgTDOqcgJ4kG5EnmOdtBtpNx86Mb-qF_11xvxlvYWGl.dqA7.aWhW",
+          "shortWname": "12大提12000张整箱悬挂式抽纸更划算卫生纸卫生纸餐巾纸家庭批发 【新客尝鲜】5层1000张*1提",
+          "wareId": "10196556605191"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/10561/13/26361/276494/68be8adbF5097fdf5/ac417f72c6125b72.jpg",
+          "isGb": false,
+          "jdPrice": "9.9",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOUNuDR-NU9i9kcL8TLrQ5MCpLyqCJ44aZ1nK2XuySjse.dqA7.aWhW",
+          "shortWname": "火鸡面混合口味泡面蟹黄76g芝士火鸡拌面整箱袋装方便面零食 甜辣奶油火鸡面*5包",
+          "wareId": "10159015048334"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/344722/31/15534/26132/68f758caF6b9da834/bf5b4b05a7132959.jpg",
+          "isGb": false,
+          "jdPrice": "6.9",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOWOGpWWmiylSEXsA6Dyez8jQ3kM_FtERerikxwEjDdnK.dqA7.aWhW",
+          "shortWname": "【防烫手柄】不锈钢汤锅加厚家用加高煲汤大容量煮粥炖锅火锅 18cm【配盖】防烫手柄-加厚款 18cm",
+          "wareId": "10193007766502"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/386893/29/7137/32570/69660055Fc9e2729a/f4326604dc0e8bc4.jpg",
+          "isGb": false,
+          "jdPrice": "9.79",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOaMcqx95VePFUaDsjSEejjLsBMImGf6diPi2s5hb9vzk.dqA7.aWhW",
+          "shortWname": "镜子ins风化妆镜台式桌面学生宿舍木质梳妆镜卧室小镜子旋转款 小号 13*18cm 1件",
+          "wareId": "10138184056428"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/390358/35/9611/9493/697864d0F3015e185/00ae1e01e0e9f31a.jpg",
+          "isGb": false,
+          "jdPrice": "7.99",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOegpRQob_S5eWVgKe9oosgzhP96bCtObByguTYaojVI7.dqA7.aWhW",
+          "shortWname": "电动磨甲器修指甲刀家用全自动手脚指甲防飞溅老人小孩安全修甲 豪华配置电动磨甲器-1个（盒装）",
+          "wareId": "10148049269165"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/365915/36/1298/39402/691ad98aF70f0e344/43c1590ecb57f718.jpg",
+          "isGb": false,
+          "jdPrice": "9.99",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOXbdWSZLNfNfAj-5RTnQUoAU1NTIjGuDSJTq_hO6iyP6.dqA7.aWhW",
+          "shortWname": "瓦罐陶瓷炖盅家用隔水带盖燕窝蒸蛋盅碗煲汤内胆沙县酒店商用炖罐 白色【直筒炖盅】单个装 500ml",
+          "wareId": "10194445924075"
+        },
+        {
+          "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/319594/3/22962/24782/6899d0c1Fb1fd3779/90abe5a6d122c4a8.jpg",
+          "isGb": false,
+          "jdPrice": "4.9",
+          "pcdk": "f6iAn7qDglI2FR24F4HEOUNUmwBHL4yO8dwe9xo0_6P8Yi6D5agtCzsxXxHxUOux.dqA7.aWhW",
+          "shortWname": "女士专用省力锋利不锈钢家用出租房菜刀鱼头刀免磨厨房切菜刀 鱼头切片刀",
+          "wareId": "10171921421325"
+        }
+      ],
+      "type": 7,
+      "umcCountLimit": 2
+    },
+    "msg": "Success"
+  }
+}

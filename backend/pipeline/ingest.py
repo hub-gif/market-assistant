@@ -29,7 +29,7 @@ from .csv.schema import (
     search_csv_effective_total_sales,
     strip_buyer_ranking_line_prefix,
 )
-from pipeline.jd.matrix_group_label import matrix_group_label_from_detail_path
+from pipeline.competitor_report.matrix_group import _competitor_matrix_group_key
 from .models import (
     JdJobCommentRow,
     JdJobDetailRow,
@@ -133,9 +133,10 @@ def _sync_search_rows_matrix_labels(
         sk = (kw.get("sku_id") or "").strip()
         if not sk:
             continue
-        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
-        if mg:
-            sku_to_mg[sk] = mg
+        mg = _competitor_matrix_group_key(kw)
+        if not mg:
+            continue
+        sku_to_mg[sk] = mg
     if not sku_to_mg:
         return
     chunk: list[JdJobSearchRow] = []
@@ -239,7 +240,7 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
     for i, row in enumerate(detail_rows):
         kw = _detail_row_kwargs(row)
         dpv = float_price_from_cell(kw.get("detail_price_final"))
-        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
+        mg = _competitor_matrix_group_key(kw)
         d_objs.append(
             JdJobDetailRow(
                 job=job,
@@ -270,7 +271,7 @@ def ingest_job_dataset_rows(job: PipelineJob) -> dict[str, Any]:
         merged_kw_list.append((i, kw))
     m_objs: list[JdJobMergedRow] = []
     for i, kw in merged_kw_list:
-        mg = matrix_group_label_from_detail_path(kw.get("detail_category_path") or "")
+        mg = _competitor_matrix_group_key(kw)
         pv = effective_list_price_value(
             kw.get("coupon_price"), kw.get("price"), kw.get("original_price")
         )

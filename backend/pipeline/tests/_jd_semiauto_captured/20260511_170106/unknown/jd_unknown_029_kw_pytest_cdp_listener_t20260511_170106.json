@@ -1,0 +1,14 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_newUser_hongbao",
+  "url": "https://api.m.jd.com/api?functionId=jsfbox_newUser_hongbao&uuid=&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZCNIHYAAAAAD3YHWNRW36XLDAX&h5st=20260511170142136;i2ynziy15van2iz4;b5216;tk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL;e2428638cec12f73a86f2d2687d1cd62;5.3;1778490097136;pjbMhjpexGFf9mFO2nYNCCEQyiYRJrJdJrESJrpjh7pf5rJdJz1TIipjLDrgJr4fGe4f5rYfGm4f0TFTKWIfzbYTHWVTFmoS5bFe4bFSJrJdJrEa-OFTGOEjLrJp-j5fIeVeHGYSFeoeFKYSGWoSyfYf1T1e6nITHWISGa1eIipjxj5PKSEQKeFjLrJp-jZf_jpjxjpe2iFjLrJp-j5f9fIg2T0UG6VRFuWeDipjxjJOJrpjh7JjeKoQaWmR4vWg76FjLDIj_ulS9mFPJrpjh7Jj5fIQCOGjLDIjFqEjLrJp-3kjLDLj2SHjLDIj4nYOJipjLrpjh75fLDIj6nYOJipjLrpjh7pe6rJdJrYf2iFjLrpjLDrgz3pjxjJf6XETJrpjLrJp-jZTJOEW0vnX6foVU2lPJrJdJ31QHyVT5ipjLrpjh7pfLDIjzXETJrpjLrJp-rojxj5e2iFjLrpjLDrg4jojxjJe2iFjLrpjLDrg7rJdJXYOJipjLrpjh7pfLDIj3XETJrpjLrJp-X4fLDIj4XETJrpjLrJp-jpe9nIg7jpjxjZf2iFjLrpjLDrg7rJdJ-1OJrpjLrJp-Xojxj5P-ipjLrpjh7pfLDIj-ipjLrpjh7pfLDIjHOEjLrpjLD7NLDIjHyVS3KUSJrpjh7ZMwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;817e3c80b394c94779ecb0db2630a66a;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490097133&client=pc&clientVersion=1.0.0&body=%7B%22source%22:%22pc-home%22%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": -100,
+    "msg": "未登录",
+    "data": null
+  }
+}

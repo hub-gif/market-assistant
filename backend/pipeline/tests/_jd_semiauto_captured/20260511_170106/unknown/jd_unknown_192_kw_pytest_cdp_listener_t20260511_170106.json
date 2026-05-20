@@ -1,0 +1,55 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_user_queryPlusInfo",
+  "url": "https://api.m.jd.com/?appid=www-jd-com&client=pc&clientVersion=1.0.0&t=1778490360331&uuid=76161171.17784900693481949486110.1778490069.1778490069.1778490069.1&functionId=jsfbox_user_queryPlusInfo&body=%7B%22source%22:%22pc-home%22%7D&h5st=20260511170605332%3Bi2ynziy15van2iz4%3Bb5216%3Btk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL%3B146f5e75c8666a1ee52e2c0991c10092%3B5.3%3B1778490360332%3Bq3EpJbINCiIQKSUe6HURxyVN5HFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-j5PMmWggi1fhile_ipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJX4f_aFY1boY4PUVZ_HjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75e5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg4bojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3Bc5b554a865b937b7a99166b950e80347%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&loginType=3",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "isLogin": true,
+      "bPinPlusSwitch": true,
+      "newUserInfo": {
+        "status": true,
+        "login": true,
+        "pin": "jd_sGwKetFlvCqF",
+        "title": "新人福利",
+        "tips": "低至1元包邮"
+      },
+      "plusInfo": {
+        "images": {},
+        "isPlus": false,
+        "texts": {
+          "text1": "权益升级"
+        },
+        "plusStatus": "",
+        "totalYears": 0
+      },
+      "userJumpConfig": {
+        "plusUrl": "https://plus.jd.com/index?flow_system=appicon&flow_entrance=appicon1&flow_channel=pc",
+        "plusNewUserUrl": "https://plus.jd.com/index?flow_system=appicon&flow_entrance=appicon1&flow_channel=pc",
+        "randomBenefits": "享生活服务包"
+      },
+      "user": {
+        "score": 0,
+        "level": "50"
+      },
+      "companyUserInfo": {
+        "giftText": "采购补贴3000元",
+        "pullNewUrl": "https://pro.jd.com/mall/active/2QSx2aihF9gmEyA1gnpqVg15jo86/index.html?babelChannel=ttt38&hdid=5crMGQyZ8tE",
+        "totalDiscountValue": null,
+        "totalDiscountTip": "企业会员首单享优惠",
+        "texts": [
+          "专享价",
+          "企业团购"
+        ],
+        "bvipUrl": "https://bvip.jd.com/?hdid=5crMGQyZ8tE",
+        "bvipButtonText": "查看更多专项权益",
+        "company": false
+      }
+    }
+  }
+}

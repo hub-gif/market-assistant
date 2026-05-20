@@ -1,0 +1,24 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://api.m.jd.com/client.action?fid=pc_address_cmpnt_getAreaNameById",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "body": {
+      "cityId": 1315,
+      "cityName": "厦门市",
+      "complete": true,
+      "countyId": 0,
+      "hideLevel": "4",
+      "provinceId": 16,
+      "provinceName": "福建",
+      "townId": 0
+    },
+    "code": "0",
+    "message": "success",
+    "timestamp": 1778490367341
+  }
+}

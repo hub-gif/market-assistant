@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "京东半自动采集（Market Assistant）",
+  "version": "0.3.1",
+  "description": "拦截 api.m.jd.com JSON，经本地 sidecar 落盘，盘后走现有 postprocess/ingest。",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "https://*.jd.com/*",
+    "https://api.m.jd.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "京东半自动采集"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.jd.com/*", "http://*.jd.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://*.jd.com/*", "http://*.jd.com/*"],
+      "js": ["content_bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

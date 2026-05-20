@@ -1,0 +1,10 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_getAbExpLabel",
+  "url": "https://api.m.jd.com/?appid=item-v3&body=%7B%22source%22%3A%22www.jd.com%22%7D&clientVersion=1.0.0&client=pc&functionId=pctradesoa_getAbExpLabel&screen=&t=1778490354888&uuid=76161171.17784900693481949486110.1778490069.1778490069.1778490069.1&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&jsonp=jsonpAbData&_=1778490354892",
+  "mime_type": "application/json",
+  "parse_error": "Expecting value: line 1 column 1 (char 0)",
+  "parsed": null
+}

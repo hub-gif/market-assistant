@@ -44,6 +44,7 @@ STRATEGY_DECISION_FIELD_NAMES: tuple[str, ...] = (
 STRATEGY_DRAFT_POST_NON_DECISION_FIELD_NAMES: frozenset[str] = frozenset(
     {
         "business_notes",
+        "our_product_profile",
         "generator",
         "strategy_matrix_group",
         "strategy_matrix_group_index",

@@ -1,0 +1,41 @@
+{
+  "code": 0,
+  "msg": "Success",
+  "data": {
+    "isLogin": false,
+    "bPinPlusSwitch": true,
+    "newUserInfo": {
+      "status": true,
+      "login": false,
+      "pin": "",
+      "title": "新人福利",
+      "tips": "低至1元包邮"
+    },
+    "plusInfo": {
+      "images": {},
+      "isPlus": false,
+      "texts": {
+        "text1": "权益升级"
+      },
+      "plusStatus": ""
+    },
+    "userJumpConfig": {
+      "plusUrl": "https://plus.jd.com/index?flow_system=appicon&flow_entrance=appicon1&flow_channel=pc",
+      "plusNewUserUrl": "https://plus.jd.com/index?flow_system=appicon&flow_entrance=appicon1&flow_channel=pc",
+      "randomBenefits": "享无限免邮"
+    },
+    "companyUserInfo": {
+      "giftText": "采购补贴3000元",
+      "pullNewUrl": "https://pro.jd.com/mall/active/2QSx2aihF9gmEyA1gnpqVg15jo86/index.html?babelChannel=ttt38&hdid=5crMGQyZ8tE",
+      "totalDiscountValue": null,
+      "totalDiscountTip": "企业会员首单享优惠",
+      "texts": [
+        "专享价",
+        "企业团购"
+      ],
+      "bvipUrl": "https://bvip.jd.com/?hdid=5crMGQyZ8tE",
+      "bvipButtonText": "查看更多专项权益",
+      "company": false
+    }
+  }
+}

@@ -75,159 +75,128 @@ async function submitJob() {
 
 <template>
   <div>
-    <section class="ma-card">
-      <h2>新建采集任务</h2>
-      <p class="lead">
-        这里只配置<strong>京东搜索与采集脚本</strong>怎么跑（翻几页、采多少 SKU、Cookie 等）。
-      </p>
+    <section class="ma-card ma-card-elevated">
+      <h2>新建采集</h2>
+      <p class="lead">搜索词与范围；展开项可配登录与高级参数。</p>
 
       <div class="sc-block">
-        <label class="sc-main-label">在京东搜什么</label>
-        <input
-          v-model="keyword"
-          type="text"
-          class="sc-input sc-input-wide"
-          placeholder="例如：低GI（对应 PC 搜索框里的词）"
-        />
+        <label class="sc-main-label">搜索词</label>
+        <el-input v-model="keyword" class="sc-ep sc-ep--wide" placeholder="例如：低GI" clearable />
       </div>
 
       <div class="sc-section">
-        <h3 class="sc-title">采集范围（可选）</h3>
-        <p class="sc-help">
-          三项都可以<strong>留空</strong>：将完全使用当前爬虫脚本里的默认页数、默认上限。只有需要缩小或放大本次任务时再填。
-        </p>
+        <h3 class="sc-title">范围（可选）</h3>
+        <p class="sc-help">留空则使用默认；需要限制页数或数量时再填。</p>
         <div class="sc-grid-3">
           <div class="sc-field">
-            <label class="sc-label">最多深入多少个商品</label>
-            <input
+            <label class="sc-label">最多采多少款</label>
+            <el-input
               v-model="maxSkus"
+              class="sc-ep"
               type="number"
-              min="1"
-              class="sc-input"
-              placeholder="留空＝脚本默认"
+              :min="1"
+              placeholder="留空＝默认"
             />
-            <span class="sc-tip">会拉商详、写评价样本的上限，不是全站总数。</span>
           </div>
           <div class="sc-field">
-            <label class="sc-label">搜索列表从第几页</label>
-            <input
-              v-model="pageStart"
-              type="number"
-              min="1"
-              class="sc-input"
-              placeholder="起始页，如 1"
-            />
-            <span class="sc-tip">京东排序列表的「逻辑页码」起点。</span>
+            <label class="sc-label">列表起始页</label>
+            <el-input v-model="pageStart" class="sc-ep" type="number" :min="1" placeholder="如 1" />
           </div>
           <div class="sc-field">
-            <label class="sc-label">搜索列表到第几页</label>
-            <input
-              v-model="pageTo"
-              type="number"
-              min="1"
-              class="sc-input"
-              placeholder="结束页，如 3"
-            />
-            <span class="sc-tip">与上一项一起限定本次翻页范围。</span>
+            <label class="sc-label">列表结束页</label>
+            <el-input v-model="pageTo" class="sc-ep" type="number" :min="1" placeholder="如 3" />
           </div>
         </div>
       </div>
 
       <details class="sc-details">
-        <summary>登录与请求节奏（多数环境需要 Cookie）</summary>
-        <p class="sc-help">
-          若采集经常失败或要登录态，请配置 Cookie：二选一，<strong>粘贴优先于文件</strong>。在浏览器
-          DevTools → Network 点开任意 jd.com 请求，复制请求头里的整行 Cookie（带
-          <code>Cookie:</code> 前缀也可以）。保存后任务会写入临时文件供整条流水线（含 Node 签包与
-          Playwright）使用，<strong>不需要</strong>改仓库里的 jd_cookie.txt。
-        </p>
+        <summary>登录与节奏</summary>
+        <p class="sc-help">需要登录态或降频时配置；Cookie 可文件或粘贴。</p>
         <div class="sc-block">
           <label class="sc-label">Cookie 文件路径（可选）</label>
-          <input
+          <el-input
             v-model="cookieFilePath"
-            type="text"
-            class="sc-input sc-input-wide"
+            class="sc-ep sc-ep--wide"
             placeholder="须在你本机 Low GI 项目根目录之下，例如 common/jd_cookie.txt"
+            clearable
           />
         </div>
         <div class="sc-block">
           <label class="sc-label">或粘贴整份 Cookie 文本（可选）</label>
-          <textarea
+          <el-input
             v-model="cookieText"
-            rows="4"
-            class="sc-textarea"
+            class="sc-ep sc-ep--wide"
+            type="textarea"
+            :rows="4"
             placeholder="与 jd_cookie.txt 单行相同；或粘贴「Cookie: …」整行"
           />
         </div>
         <div class="sc-block">
           <label class="sc-label">请求间隔（可选）</label>
-          <input
+          <el-input
             v-model="requestDelay"
-            type="text"
-            class="sc-input sc-input-mid"
+            class="sc-ep sc-ep--mid"
             placeholder="如 30-60，单位秒；留空＝脚本默认"
+            clearable
           />
-          <span class="sc-tip">适当放慢可降低被风控概率。</span>
         </div>
       </details>
 
       <details class="sc-details">
-        <summary>更多脚本参数（一般不用改）</summary>
-        <p class="sc-help">以下对应流水线脚本里的高阶开关；不懂可全部留空。</p>
+        <summary>更多（一般留空）</summary>
+        <p class="sc-help">高阶参数，可全部留空。</p>
         <div class="sc-block">
           <label class="sc-label">运行结果目录（可选）</label>
-          <input
+          <el-input
             v-model="pipelineRunDir"
-            type="text"
-            class="sc-input sc-input-wide"
+            class="sc-ep sc-ep--wide"
             placeholder="相对本仓库根下 data/JD 的子路径；留空则自动生成「时间戳_关键词」目录"
+            clearable
           />
         </div>
         <div class="sc-block">
           <label class="sc-label">评价列表翻页范围（可选）</label>
-          <input
+          <el-input
             v-model="listPages"
-            type="text"
-            class="sc-input sc-input-mid"
+            class="sc-ep sc-ep--mid"
             placeholder="如 1-2；控制每条 SKU 抓评价时的页数"
+            clearable
           />
         </div>
         <div class="sc-block">
           <label class="sc-label">调试编号 PVID（可选）</label>
-          <input v-model="pvid" type="text" class="sc-input sc-input-mid" placeholder="一般留空" />
+          <el-input v-model="pvid" class="sc-ep sc-ep--mid" placeholder="一般留空" clearable />
         </div>
         <div class="sc-block">
           <label class="sc-label">列表「应用场景」筛选</label>
-          <select v-model="scenarioFilter" class="sc-select">
-            <option value="">不覆盖脚本默认</option>
-            <option value="on">强制开启</option>
-            <option value="off">强制关闭</option>
-          </select>
-          <span class="sc-tip">
-            与京东搜索列表接口里的「应用场景」筛选有关，和 Cookie、和报告里的「用途/场景」统计<strong>无关</strong>；只配 Cookie
-            时请保持「不覆盖脚本默认」即可。
-          </span>
+          <el-select v-model="scenarioFilter" class="sc-ep sc-ep--mid" placement="bottom-start" clearable>
+            <el-option label="不覆盖脚本默认" :value="''" />
+            <el-option label="强制开启" value="on" />
+            <el-option label="强制关闭" value="off" />
+          </el-select>
         </div>
       </details>
 
-      <button type="button" class="ma-btn ma-btn-primary sc-submit" :disabled="loading" @click="submitJob">
-        {{ loading ? '提交中…' : '启动采集并生成报告' }}
-      </button>
+      <el-button type="primary" class="sc-submit" :disabled="loading" @click="submitJob">
+        {{ loading ? '提交中…' : '启动采集' }}
+      </el-button>
       <p v-if="error" class="ma-err">{{ error }}</p>
     </section>
 
-    <p class="ma-muted">
-      当前队列中约 <strong>{{ jobs.length }}</strong> 条任务记录；提交成功后将跳转到「任务列表」。
-    </p>
+    <p class="ma-muted sc-foot">已有 {{ jobs.length }} 条任务 · 提交后进入任务页</p>
   </div>
 </template>
 
 <style scoped>
 .lead {
   margin: 0 0 1.1rem;
-  font-size: 0.88rem;
-  color: #4b5563;
-  line-height: 1.55;
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.45;
+}
+.sc-foot {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
 }
 .sc-block {
   margin-bottom: 1rem;
@@ -278,11 +247,18 @@ async function submitJob() {
 .sc-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.45rem 0.55rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.sc-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
 }
 .sc-input-wide {
   max-width: 100%;
@@ -293,20 +269,37 @@ async function submitJob() {
 .sc-textarea {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.45rem 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
   resize: vertical;
+}
+.sc-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
 }
 .sc-select {
   max-width: 280px;
-  padding: 0.45rem 0.55rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 6px;
   border: 1px solid #d1d5db;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: #111827;
+  background: #fff;
+  box-sizing: border-box;
+}
+.sc-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
 }
 .sc-tip {
   font-size: 0.75rem;

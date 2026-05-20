@@ -1,0 +1,16 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_homeTab",
+  "url": "https://api.m.jd.com/?appid=www-jd-com&functionId=pctradesoa_homeTab",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "tabs": []
+    }
+  }
+}

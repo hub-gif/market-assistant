@@ -15,8 +15,17 @@ backend/**/__pycache__/
 
 backend/runtime_cookies/
 
-# 京东登录 Cookie（本地放置，勿提交）
+# 京东 / 淘宝登录 Cookie（本地放置，勿提交）
 backend/crawler_copy/jd_pc_search/common/jd_cookie.txt
+backend/crawler_copy/tb_pc_search/search/taobao_cookie.txt
+
+# SeleniumBase / UC 本地下载与锁文件
+downloaded_files/
+backend/crawler_copy/**/downloaded_files/
+**/driver_fixing.lock
+
+# 本地诊断碎片
+backend/NUL_diag.md
 
 # 流水线 / 京东采集产出（默认在仓库根下 data/JD）
 /data/

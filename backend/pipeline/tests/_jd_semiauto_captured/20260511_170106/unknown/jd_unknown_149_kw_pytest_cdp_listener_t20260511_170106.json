@@ -1,0 +1,25 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_queryPlusInfo",
+  "url": "https://api.m.jd.com/api?functionId=pctradesoa_queryPlusInfo&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170559887;eije17vniip22j28;fb5df;tk03w7bf31b4818ngN09G0TTdMgcZHO3rU5ACgykDbRPhMkMOHKvHaHgDd4q-wQjKgE2_2G00ljdUW6RIVVcjtsLEASb;c7f049026d520ff8f4dfb2cba90b8c10;5.3;1778490354887;q3EpJLIfBiIf7GVR9S0e6XFRCWFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jpV_bIS3G4fEe1eBipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJX2X0zlXVSWX4fES3PEjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75e5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg3Xojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;fcbf459e5538a8157869026bc0938945;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490354887&client=pc&clientVersion=1.0.0&body=%7B%22pageId%22:%22JD_main%22%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "isLogin": true,
+      "bPinPlusSwitch": true,
+      "plusInfo": {
+        "isPlus": false,
+        "plusStatus": ""
+      },
+      "user": {
+        "score": 0,
+        "level": "50"
+      }
+    }
+  }
+}

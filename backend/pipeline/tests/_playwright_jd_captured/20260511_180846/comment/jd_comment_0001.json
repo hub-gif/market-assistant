@@ -1,0 +1,491 @@
+{
+  "capture_kind": "comment",
+  "function_id": "getLegoWareDetailComment",
+  "url": "https://api.m.jd.com/?functionId=getLegoWareDetailComment&body=%7B%22shopType%22:%220%22,%22sku%22:10151690432869,%22commentNum%22:5,%22source%22:%22pc%22%7D&h5st=20260511180955115%3B22bjj2bje17p2j24%3Bfb5df%3Btk03w96711c6318nuHYIndPpRu20T4TeDGEWsT3JNuvr4_8q1ylc3_8Bt2213cYQ58fYwXlz-uTlCwMK8xeqwqURxheh%3B5567aa00e2d859fbccbf965067deb966%3B5.3%3B1778494190115%3Bq3EpJLIg6zpfJrJdJnYOJipjLDrgJbIfBioP0nYSBiFfBCFT5jIjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jpYUi0ZKy1f-qGW1ipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJnVT3f1ZYKmW4DXO_rEjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh7Jf5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg1fojxj5f2iFjLrpjLDrgJHIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N%3B0fd430b912148971df7533ebbb9c4dbd%3BqbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&uuid=17784941276801826302864&loginType=3&appid=item-v3&clientVersion=1.0.0&client=pc&t=1778494190111&x-api-eid-token=jdd03DZQYMZBJBN3L45HIAJ2LNYOJLJZGDHBLR6UNMIQERBYODI2BTOZ3FFENYHQQQYHEURQ7LWPSZAESUKDELM6JQ2RORAAAAAM6C2BMC4AAAAAADYUNUVZN3WTVTEX&build=100000",
+  "status": 200,
+  "method": "GET",
+  "parsed": {
+    "newStyleText": "查看全部7个问题",
+    "canConsultFlag": true,
+    "commentFloorShowNum": 5,
+    "semanticTagList": [
+      {
+        "id": "e1d8e1fa74728d87ec33edde8a3de65b##V10003T42",
+        "name": "按键反应灵敏",
+        "count": "3",
+        "tagId": "e1d8e1fa74728d87ec33edde8a3de65b##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "55f028d595afe7430b81f40aea2bc05a##V10003T42",
+        "name": "按键手感超舒适",
+        "count": "2",
+        "tagId": "55f028d595afe7430b81f40aea2bc05a##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "22f896dd0630ab079da6bb8464b1e525##V10003T42",
+        "name": "用起来超方便",
+        "count": "5",
+        "tagId": "22f896dd0630ab079da6bb8464b1e525##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "86cdbec9f45a4552fcece4b5421a1c14##V10003T42",
+        "name": "屏幕超清晰",
+        "count": "2",
+        "tagId": "86cdbec9f45a4552fcece4b5421a1c14##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "76146dce89fe5347b235b2c7d654d4f7##V10003T42",
+        "name": "大小正合适",
+        "count": "1",
+        "tagId": "76146dce89fe5347b235b2c7d654d4f7##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "e3c16358f642db27bdd9e290249085c9##V10003T42",
+        "name": "计算超精准",
+        "count": "2",
+        "tagId": "e3c16358f642db27bdd9e290249085c9##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      }
+    ],
+    "isAllDefaultGoodComment": false,
+    "styleType": "1",
+    "showCommentFloor": true,
+    "normalCnt": "10",
+    "commentButtonText": "查看全部评价",
+    "questionList": [
+      {
+        "answerList": [
+          {
+            "systemId": "20",
+            "userImg": "https://storage.360buyimg.com/i.imageUpload/6c6a6a33333732363031313331373532343036383339363339_sma.jpg",
+            "nickName": "牛***芹",
+            "typeIcon": "https://m.360buyimg.com/cc/jfs/t1/111974/1/3159/2654/5ea692a3E5261e88c/9d5ea0287f968cf9.png",
+            "type": "0",
+            "content": "可以带"
+          }
+        ],
+        "systemId": "20",
+        "maidian": "#270463154_3",
+        "id": "108957979",
+        "answerCountText": "3个回答",
+        "content": "这款今年CPA考试有同学成功代进考场吗"
+      },
+      {
+        "answerList": [
+          {
+            "systemId": "20",
+            "userImg": "https://storage.360buyimg.com/i.imageUpload/6a645f776a4b6a6e786b596d67596d31373637313533383437323634_sma.jpg",
+            "nickName": "j***3",
+            "typeIcon": "https://m.360buyimg.com/cc/jfs/t1/111974/1/3159/2654/5ea692a3E5261e88c/9d5ea0287f968cf9.png",
+            "type": "0",
+            "content": "可以"
+          }
+        ],
+        "systemId": "20",
+        "maidian": "#265302732_2",
+        "id": "107064518",
+        "answerCountText": "2个回答",
+        "content": "考试让带考场吗"
+      }
+    ],
+    "allCnt": "100",
+    "lastCommentInfoList": [],
+    "showQualityComment": true,
+    "allCntStr": "5000+",
+    "showPicCnt": "201",
+    "noQuestionText": "商品好不好，问问买过的人吧",
+    "biData": "",
+    "noCommentText": "",
+    "goodCnt": "100",
+    "pictureCnt": "201",
+    "cardStyle": false,
+    "defaultGoodCountText": "NTAwMCvkuIDkuKrnlKjmiLfpu5jorqTor4Tku7fkuobor6XllYblk4HjgII=",
+    "isShowBuyersShow": false,
+    "abTest": "A",
+    "goodRate": "97%",
+    "code": "0",
+    "commentInfoList": [
+      {
+        "userNickName": "无远弗届jd_061999836",
+        "userLevel": "-1",
+        "userImgURL": "https://storage.360buyimg.com/i.imageUpload/6a645f3736353336383434633633383831363339333038373838363736_sma.jpg",
+        "commentId": "103513640156033368",
+        "publishArea": "北京",
+        "commentType": "1",
+        "commentShareUrl": "https://comment.m.jd.com/m-rate/rate-detail?skuId=10151690432869&guid=T6NdPMZ0jpgtdR-AW6Wbw3mJ&osPlant=jd-m&navShow=true&hideNavi=1&share=1",
+        "wareAttribute": [
+          {
+            "颜色": "白色"
+          }
+        ],
+        "plusAvailable": "201",
+        "plusAddress": "https://plus.m.jd.com/index",
+        "afterComment": {},
+        "noCommentMessage": "用户未及时作出评价哦~",
+        "isShowUserLevel": "0",
+        "isShowPlusPendant": "1",
+        "plusLogoId": "tab_gif_085",
+        "plusLogoType": "2",
+        "markingList": [],
+        "imageStatusText": "",
+        "commentOfficerStatus": "0",
+        "iconList": [
+          {
+            "iconId": "skin",
+            "iconTagId": "tab_3863",
+            "iconJumpUrl": "",
+            "iconDarkTagId": "tab_3863_dark",
+            "iconHigh": "14",
+            "iconType": "0"
+          },
+          {
+            "iconId": "shoppingBoss",
+            "iconTagId": "tab_3854",
+            "iconJumpUrl": "",
+            "iconDarkTagId": "tab_3854_dark",
+            "iconHigh": "14",
+            "iconType": "0"
+          }
+        ],
+        "tagCommentContent": "这款计算器真是太棒了！按键布局清晰，操作起来非常方便。而且，它的背面设计也很贴心，电池盖很容易打开，方便更换电池。最重要的是，计算器的显示屏清晰明亮，数字显示非常准确。我非常满意这次的购物体验，强烈推荐给大家！",
+        "carTagInfo": "",
+        "ownerStatus": "0",
+        "productId": "10151690432869",
+        "buyCount": 1,
+        "buyCountText": "",
+        "commentDate": "2025-12-23 00:34:45",
+        "commentScore": "5",
+        "praiseCnt": "0",
+        "bottomBtnStyle": "a",
+        "replyCnt": "0",
+        "commentData": "这款计算器真是太棒了！按键布局清晰，操作起来非常方便。而且，它的背面设计也很贴心，电池盖很容易打开，方便更换电池。最重要的是，计算器的显示屏清晰明亮，数字显示非常准确。我非常满意这次的购物体验，强烈推荐给大家！",
+        "pictureInfoList": [
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/374399/10/16338/83235/69497324F7a59ef5f/00a94a26520f32af.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/374399/10/16338/83235/69497324F7a59ef5f/00a94a26520f32af.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "0"
+          },
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/380389/10/9917/66689/69497324Fdb9bc57c/00a95a06a0d6351f.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/380389/10/9917/66689/69497324Fdb9bc57c/00a95a06a0d6351f.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "0"
+          }
+        ],
+        "guid": "T6NdPMZ0jpgtdR-AW6Wbw3mJ",
+        "maidianInfo": "37462;37562;37623_10151690432869_全部_1_1_T6NdPMZ0jpgtdR-AW6Wbw3mJ_-100_cmt_-100",
+        "ckeKeyWordBury": "",
+        "testId": "cmt",
+        "imageStatus": "1",
+        "excellentCommentIcon": "",
+        "pictureCnt": 0,
+        "officerScore": "4484",
+        "userId": "",
+        "praiseFlag": true,
+        "plusUrl": "https://img14.360buyimg.com/img/jfs/t1/277700/12/22783/7087/6800a0d5Fca71724a/d802d331c10cf16c.png",
+        "plusIconFlag": false,
+        "userGroupCommentCount": "",
+        "highLightIndex": {}
+      },
+      {
+        "userNickName": "小石头JJ",
+        "userLevel": "-1",
+        "userImgURL": "https://storage.360buyimg.com/default.image/6a645f6465665f696d675f393836323331373632333134353936333334_sma.jpg",
+        "commentId": "103481810162480699",
+        "publishArea": "内蒙古",
+        "commentType": "1",
+        "commentShareUrl": "https://comment.m.jd.com/m-rate/rate-detail?skuId=10151690432869&guid=T6NdPc92gJ0tdRyEX66YxnaI&osPlant=jd-m&navShow=true&hideNavi=1&share=1",
+        "wareAttribute": [
+          {
+            "颜色": "白色"
+          }
+        ],
+        "plusAvailable": "201",
+        "plusAddress": "https://plus.m.jd.com/index",
+        "afterComment": {},
+        "noCommentMessage": "用户未及时作出评价哦~",
+        "isShowUserLevel": "0",
+        "isShowPlusPendant": "1",
+        "plusLogoId": "tab_gif_085",
+        "plusLogoType": "2",
+        "markingList": [],
+        "imageStatusText": "",
+        "commentOfficerStatus": "0",
+        "iconList": [],
+        "tagCommentContent": "计算机质量很不错，附带有说明书操作起来很方便，质量很好，很喜欢会推荐给身边的人，性价比也很高",
+        "carTagInfo": "",
+        "ownerStatus": "0",
+        "productId": "10151690432869",
+        "buyCount": 1,
+        "buyCountText": "",
+        "commentDate": "2025-12-27 23:24:11",
+        "commentScore": "5",
+        "praiseCnt": "0",
+        "bottomBtnStyle": "a",
+        "replyCnt": "0",
+        "commentData": "计算机质量很不错，附带有说明书操作起来很方便，质量很好，很喜欢会推荐给身边的人，性价比也很高",
+        "pictureInfoList": [
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/376073/28/23603/145636/694ffa1aF201ec650/00a949882a1f0dd9.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/376073/28/23603/145636/694ffa1aF201ec650/00a949882a1f0dd9.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "1"
+          }
+        ],
+        "guid": "T6NdPc92gJ0tdRyEX66YxnaI",
+        "maidianInfo": "37462;37562;37623_10151690432869_全部_1_2_T6NdPc92gJ0tdRyEX66YxnaI_-100_cmt_-100",
+        "ckeKeyWordBury": "",
+        "testId": "cmt",
+        "imageStatus": "1",
+        "excellentCommentIcon": "",
+        "pictureCnt": 0,
+        "officerScore": "510",
+        "userId": "",
+        "praiseFlag": true,
+        "plusUrl": "https://img14.360buyimg.com/img/jfs/t1/277700/12/22783/7087/6800a0d5Fca71724a/d802d331c10cf16c.png",
+        "plusIconFlag": false,
+        "userGroupCommentCount": "",
+        "highLightIndex": {}
+      },
+      {
+        "userNickName": "九***账",
+        "userLevel": "-1",
+        "userImgURL": "https://storage.360buyimg.com/i.imageUpload/6a645f644277755478786f77576e6631373730363531353533363835_sma.jpg",
+        "commentId": "104841550187433323",
+        "publishArea": "黑龙江",
+        "commentType": "1",
+        "commentShareUrl": "https://comment.m.jd.com/m-rate/rate-detail?skuId=10151690432869&guid=T6NaMcN2jZktdRKBX6Wbw32C&osPlant=jd-m&navShow=true&hideNavi=1&share=1",
+        "wareAttribute": [
+          {
+            "颜色": "大号CP-01A"
+          }
+        ],
+        "plusAvailable": "201",
+        "plusAddress": "https://plus.m.jd.com/index",
+        "afterComment": {},
+        "noCommentMessage": "用户未及时作出评价哦~",
+        "isShowUserLevel": "0",
+        "isShowPlusPendant": "1",
+        "plusLogoId": "tab_gif_085",
+        "plusLogoType": "2",
+        "markingList": [],
+        "imageStatusText": "",
+        "commentOfficerStatus": "0",
+        "iconList": [
+          {
+            "iconId": "skin",
+            "iconTagId": "tab_3863",
+            "iconJumpUrl": "",
+            "iconDarkTagId": "tab_3863_dark",
+            "iconHigh": "14",
+            "iconType": "0"
+          }
+        ],
+        "tagCommentContent": "计算器的大小正合适，非常适合会计人员使用，按键灵敏迅速计算正确。使用两个7号电池，功能完善，没有存储记忆功能，适合注会考试和税务师考试。",
+        "carTagInfo": "",
+        "ownerStatus": "0",
+        "productId": "10151690432869",
+        "buyCount": 1,
+        "buyCountText": "",
+        "commentDate": "2026-05-01 13:20:43",
+        "commentScore": "5",
+        "praiseCnt": "0",
+        "bottomBtnStyle": "a",
+        "replyCnt": "0",
+        "commentData": "计算器的大小正合适，非常适合会计人员使用，按键灵敏迅速计算正确。使用两个7号电池，功能完善，没有存储记忆功能，适合注会考试和税务师考试。",
+        "pictureInfoList": [
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/423374/25/21013/2934794/69f4382aF7ec903a1/00a9000c00a954e6.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/423374/25/21013/2934794/69f4382aF7ec903a1/00a9000c00a954e6.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "0"
+          },
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/427668/16/7706/1893366/69f4382bF3b0f8190/00a9c0000059cdac.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/427668/16/7706/1893366/69f4382bF3b0f8190/00a9c0000059cdac.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "0"
+          }
+        ],
+        "guid": "T6NaMcN2jZktdRKBX6Wbw32C",
+        "maidianInfo": "37462;37562;37623_10151690432869_全部_1_3_T6NaMcN2jZktdRKBX6Wbw32C_-100_cmt_-100",
+        "ckeKeyWordBury": "",
+        "testId": "cmt",
+        "imageStatus": "1",
+        "excellentCommentIcon": "",
+        "pictureCnt": 0,
+        "officerScore": "2894",
+        "userId": "",
+        "praiseFlag": true,
+        "plusUrl": "https://img14.360buyimg.com/img/jfs/t1/277700/12/22783/7087/6800a0d5Fca71724a/d802d331c10cf16c.png",
+        "plusIconFlag": false,
+        "userGroupCommentCount": "",
+        "highLightIndex": {}
+      }
+    ],
+    "showLastComment": true,
+    "tagStatisticsinfoList": [
+      {
+        "id": "e1d8e1fa74728d87ec33edde8a3de65b##V10003T42",
+        "name": "按键反应灵敏",
+        "count": "3",
+        "tagId": "e1d8e1fa74728d87ec33edde8a3de65b##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "55f028d595afe7430b81f40aea2bc05a##V10003T42",
+        "name": "按键手感超舒适",
+        "count": "2",
+        "tagId": "55f028d595afe7430b81f40aea2bc05a##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "22f896dd0630ab079da6bb8464b1e525##V10003T42",
+        "name": "用起来超方便",
+        "count": "5",
+        "tagId": "22f896dd0630ab079da6bb8464b1e525##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "86cdbec9f45a4552fcece4b5421a1c14##V10003T42",
+        "name": "屏幕超清晰",
+        "count": "2",
+        "tagId": "86cdbec9f45a4552fcece4b5421a1c14##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "76146dce89fe5347b235b2c7d654d4f7##V10003T42",
+        "name": "大小正合适",
+        "count": "1",
+        "tagId": "76146dce89fe5347b235b2c7d654d4f7##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "e3c16358f642db27bdd9e290249085c9##V10003T42",
+        "name": "计算超精准",
+        "count": "2",
+        "tagId": "e3c16358f642db27bdd9e290249085c9##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "22885f89dfe42599359dee06f09e10f2##V10003T42",
+        "name": "专为考试设计",
+        "count": "1",
+        "tagId": "22885f89dfe42599359dee06f09e10f2##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "6fd080be011a65506fec51c11ca93331##V10003T42",
+        "name": "续航超持久",
+        "count": "1",
+        "tagId": "6fd080be011a65506fec51c11ca93331##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "78c59a2c43b37fe01a3d08c5b799b9f7##V10003T42",
+        "name": "功能超齐全",
+        "count": "5",
+        "tagId": "78c59a2c43b37fe01a3d08c5b799b9f7##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      },
+      {
+        "id": "db035d0652711476ccaa652337554857##V10003T42",
+        "name": "颜值超高",
+        "count": "5",
+        "tagId": "db035d0652711476ccaa652337554857##V10003T42",
+        "type": "4",
+        "canBeFiltered": true,
+        "stand": "1",
+        "ckeKeyWordBury": ""
+      }
+    ],
+    "isShowConsultBtn": false,
+    "questionGeneralInfo": {
+      "questionCountText": "7个问题",
+      "sum": "7",
+      "deeplinkText": "查看全部",
+      "questionText": "问答",
+      "questionIcon": "https://m.360buyimg.com/cc/jfs/t1/117749/2/1908/3495/5e9d13c8E864ecc1f/b839854ce8687569.png"
+    },
+    "commentIconInfo": {
+      "starIcon": "https://img12.360buyimg.com/img/jfs/t1/378260/16/13072/606/694ba3c8F83ec534d/0276027027b45543.png",
+      "darkFireIcon": "https://img13.360buyimg.com/img/jfs/t1/387200/4/6991/1725/69676947F7e7457ef/027602a02aa89647.png",
+      "darkJoyIcon": "https://img13.360buyimg.com/img/jfs/t1/376971/14/21502/14476/694cf945F414784d7/02760d20d2989c3a.png",
+      "joyIcon": "https://img12.360buyimg.com/img/jfs/t1/374050/4/16340/14364/694cf933F8a05b9da/02760d20d269844d.png",
+      "darkAiTitleIcon": "https://img30.360buyimg.com/img/jfs/t1/386618/27/22060/581/697b6220F63887569/027601f01fd5a782.png",
+      "aiTitleIcon": "https://img30.360buyimg.com/img/jfs/t1/386618/27/22060/581/697b6220F63887569/027601f01fd5a782.png",
+      "darkStarIcon": "https://img13.360buyimg.com/img/jfs/t1/384144/23/2653/629/69534a14Fdc383f7b/02760270270245c0.png",
+      "fireIcon": "https://img11.360buyimg.com/img/jfs/t1/388508/28/2415/1720/69673ba2Fd83bce3d/027602a02a9d40cb.png"
+    },
+    "isShowYoutuShaituBtn": true,
+    "sensitiveBook": 0,
+    "currentSkuStatus": "2",
+    "commentVideoInfoList": [],
+    "isShowCommentBtn": true,
+    "badCnt": "1",
+    "showTag": true,
+    "consultBtnName": "购买咨询",
+    "mdKey": "1_108957979#270463154_3_107064518#265302732_2_NULL",
+    "youTuOrShaiTu": "0",
+    "videoAutoPlaySwitch": "0",
+    "consultationCount": "0",
+    "newCommentStyle": false,
+    "showUgc": false,
+    "commentTitle": "评价",
+    "testId": "cmt",
+    "showKoc": false,
+    "userVideoStyleType": "1",
+    "defaultGoodLogo": "https://m.360buyimg.com/mobilecms/jfs/t10447/176/1359340654/2177/9ceed2ba/59df1d27N55b368df.png"
+  }
+}

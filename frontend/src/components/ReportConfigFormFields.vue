@@ -10,7 +10,7 @@ defineEmits(['add-market', 'remove-market'])
 
     <div class="rc-section">
       <h4 class="rc-subtitle">1. 外部市场信息（可选）</h4>
-      <p class="rc-help">若手边有第三方市场规模、增速等摘录，可填在表里，报告会多一节说明；不需要可整表留空。</p>
+      <p class="rc-help">有则填，无则整表可空。</p>
       <div class="rc-market-wrap">
         <table class="rc-market">
           <colgroup>
@@ -31,16 +31,26 @@ defineEmits(['add-market', 'remove-market'])
           </thead>
           <tbody>
             <tr v-for="(r, i) in marketRows" :key="'m' + i">
-              <td><input v-model="r.indicator" type="text" class="rc-input rc-td" placeholder="可选" /></td>
-              <td><input v-model="r.value_and_scope" type="text" class="rc-input rc-td" placeholder="可选" /></td>
-              <td><input v-model="r.source" type="text" class="rc-input rc-td" placeholder="可选" /></td>
-              <td><input v-model="r.year" type="text" class="rc-input rc-td" placeholder="可选" /></td>
-              <td><button type="button" class="ma-btn ma-btn-secondary rc-mini" @click="$emit('remove-market', i)">删行</button></td>
+              <td>
+                <el-input v-model="r.indicator" class="rc-ep rc-ep--td" size="small" placeholder="可选" clearable />
+              </td>
+              <td>
+                <el-input v-model="r.value_and_scope" class="rc-ep rc-ep--td" size="small" placeholder="可选" clearable />
+              </td>
+              <td>
+                <el-input v-model="r.source" class="rc-ep rc-ep--td" size="small" placeholder="可选" clearable />
+              </td>
+              <td>
+                <el-input v-model="r.year" class="rc-ep rc-ep--td" size="small" placeholder="可选" clearable />
+              </td>
+              <td>
+                <el-button size="small" @click="$emit('remove-market', i)">删行</el-button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="$emit('add-market')">添加一行</button>
+      <el-button class="rc-add" @click="$emit('add-market')">添加一行</el-button>
     </div>
   </div>
 </template>
@@ -67,28 +77,16 @@ defineEmits(['add-market', 'remove-market'])
   color: #6b7280;
   line-height: 1.5;
 }
-.rc-input {
-  flex: 1;
-  min-width: 140px;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 0.88rem;
-  box-sizing: border-box;
+.rc-ep {
+  width: 100%;
 }
-.rc-input.rc-td {
-  flex: none;
-  display: block;
+.rc-ep--td {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  font-size: 0.8rem;
 }
-.rc-mini {
-  font-size: 0.8rem;
-  padding: 0.3rem 0.55rem;
-  flex-shrink: 0;
+.rc-ep--td :deep(.el-input__wrapper) {
+  width: 100%;
 }
 .rc-add {
   margin-top: 0.5rem;

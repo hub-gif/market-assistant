@@ -17,7 +17,7 @@ from .constants import (
     _RANK_TAGLINE_KEY,
     _SELLING_POINT_KEY,
 )
-from .csv_io import _cell, _collect_prices, _md_cell
+from .csv_io import _cell, _collect_prices, _md_cell, _price_context_spec_cell
 from .ingredients import _ingredients_from_product_attributes, _ingredients_single_line
 from .matrix_group import _competitor_matrix_group_key, _merged_rows_grouped_for_matrix
 from .price_stats import _price_stats_extended
@@ -46,10 +46,14 @@ def _matrix_excerpt_line_for_llm(row: dict[str, str], title_h: str) -> str:
 
 def _listing_price_snippet_for_llm(row: dict[str, str], title_h: str) -> str:
     title = _md_cell(_cell(row, title_h), 72)
+    spec = _price_context_spec_cell(row, max_len=44)
     lp = _cell(row, *_LIST_SHOW_PRICE_CELL_KEYS)
     cp = _cell(row, _COUPON_SHOW_PRICE_KEY, _LEGACY_COUPON_SHOW_PRICE_KEY)
     dp = _cell(row, *_DETAIL_PRICE_FINAL_CSV_KEYS)
-    return f"{title}｜标价:{lp}｜券后:{cp}｜详情价:{dp}"
+    head = title or "（无标题）"
+    if spec:
+        head = f"{head}｜规格:{spec}"
+    return f"{head}｜标价:{lp}｜券后:{cp}｜详情价:{dp}"
 
 
 def build_matrix_groups_llm_payload(

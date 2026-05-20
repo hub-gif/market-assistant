@@ -17,6 +17,8 @@ alwaysApply: true
 - **分层分模块**、**最小必要改动**；不顺手大重构、不格式化无关文件。
 - 与周边代码风格一致；优先复用现有抽象。
 - Python：**`.venv`**；不提交 `.venv/`；`.env` 真密钥不入库，维护 `.env.example`。
+- 后端：习惯上 **Django + DRF** 作 Python Web 的默认之一；**接口薄、业务按域分包**；采集/脚本与 HTTP **解耦**、配置集中（具体目录与栈**以本仓库为准**）。完整条目共 **`user-dev-style` 技能**。
+- 前端：本仓库为 **Vue 3 + Pinia + Element Plus**；共享状态走 `stores/`，新界面优先 EP 组件与 `src/styles/element-plus-app.css` 等既有主题，**不**默认再堆一套自绘按钮/表格。完整条目共 **`user-dev-style` 技能**。
 
 ## SeleniumBase / 爬虫
 

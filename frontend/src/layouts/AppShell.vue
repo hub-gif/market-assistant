@@ -14,13 +14,14 @@ const currentPlatform = computed(() => {
 })
 
 const jdTabs = [
-  { to: '/jd/search', label: '搜索采集', key: 'search' },
-  { to: '/jd/results', label: '任务列表', key: 'results' },
-  { to: '/jd/dataset', label: '库内数据浏览', key: 'dataset' },
+  { to: '/jd/semiauto', label: '半自动', key: 'semiauto' },
+  { to: '/jd/search', label: '采集', key: 'search' },
+  { to: '/jd/results', label: '任务', key: 'results' },
+  { to: '/jd/dataset', label: '数据', key: 'dataset' },
   { to: '/jd/analysis-build', label: '报告生成', key: 'analysis-build' },
-  { to: '/jd/analysis-view', label: '报告查看', key: 'analysis-view' },
+  { to: '/jd/analysis-view', label: '报告预览', key: 'analysis-view' },
   { to: '/jd/strategy-build', label: '策略生成', key: 'strategy-build' },
-  { to: '/jd/strategy-view', label: '策略稿预览', key: 'strategy-view' },
+  { to: '/jd/strategy-view', label: '策略预览', key: 'strategy-view' },
 ]
 
 function selectPlatform(id) {
@@ -49,26 +50,26 @@ onMounted(async () => {
       </div>
       <p class="nav-label">平台</p>
       <nav class="platform-nav">
-        <button
-          type="button"
+        <el-button
+          text
           class="plat-item"
-          :class="{ active: currentPlatform === 'jd' }"
+          :class="{ 'plat-item--active': currentPlatform === 'jd' }"
           @click="selectPlatform('jd')"
         >
           <span class="plat-icon jd">京</span>
           <span class="plat-name">京东商城</span>
           <span class="plat-tag">可用</span>
-        </button>
-        <button
-          type="button"
+        </el-button>
+        <el-button
+          text
           class="plat-item"
-          :class="{ active: currentPlatform === 'tb', disabled: false }"
+          :class="{ 'plat-item--active': currentPlatform === 'tb' }"
           @click="selectPlatform('tb')"
         >
           <span class="plat-icon tb">淘</span>
           <span class="plat-name">淘宝天猫</span>
           <span class="plat-tag soon">筹备</span>
-        </button>
+        </el-button>
       </nav>
     </aside>
 
@@ -77,7 +78,7 @@ onMounted(async () => {
         <div class="topbar-inner">
           <h1 class="page-title">{{ route.meta.title || 'Market-Assistant' }}</h1>
           <p v-if="currentPlatform === 'jd'" class="page-desc">
-            搜索采集、任务列表、库内浏览、报告生成/查看与市场策略制定
+            围绕关键词任务：采集与跑数、报告与策略生成、预览与数据浏览
           </p>
           <p v-else-if="currentPlatform === 'tb'" class="page-desc">多平台能力规划中</p>
         </div>
@@ -112,7 +113,7 @@ onMounted(async () => {
   min-height: 0;
   width: 100%;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f3f4f6;
+  background: linear-gradient(165deg, #f1f5f9 0%, #f8fafc 45%, #eef2f7 100%);
   color: #111827;
 }
 .sidenav {
@@ -177,22 +178,26 @@ onMounted(async () => {
   align-items: center;
   gap: 0.65rem;
   width: 100%;
+  height: auto;
+  min-height: unset;
   padding: 0.65rem 0.75rem;
   border: none;
   border-radius: 10px;
-  background: transparent;
+  margin: 0;
+  justify-content: flex-start;
+  font: inherit;
   color: #cbd5e1;
-  cursor: pointer;
+  background: transparent !important;
   text-align: left;
   transition: background 0.15s, color 0.15s;
 }
 .plat-item:hover {
-  background: rgb(255 255 255 / 0.06);
-  color: #f1f5f9;
+  color: #f1f5f9 !important;
+  background: rgb(255 255 255 / 0.06) !important;
 }
-.plat-item.active {
-  background: rgb(59 130 246 / 0.25);
-  color: #fff;
+.plat-item--active {
+  color: #fff !important;
+  background: rgb(59 130 246 / 0.25) !important;
 }
 .plat-icon {
   width: 34px;
@@ -247,33 +252,41 @@ onMounted(async () => {
   letter-spacing: -0.03em;
 }
 .page-desc {
-  margin: 0.35rem 0 0;
-  font-size: 0.88rem;
-  color: #6b7280;
+  margin: 0.45rem 0 0;
+  max-width: 42em;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #475569;
+  letter-spacing: 0.01em;
 }
 .func-tabs {
   display: flex;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.15rem;
   padding: 0 1.75rem;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgb(0 0 0 / 0.06);
 }
 .func-tab {
-  padding: 0.65rem 1.1rem;
-  font-size: 0.88rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.84rem;
   font-weight: 500;
-  color: #6b7280;
+  color: #64748b;
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  border-radius: 8px 8px 0 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .func-tab:hover {
-  color: #2563eb;
+  color: #1d4ed8;
+  background: rgb(241 245 249 / 0.9);
 }
 .func-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: #1d4ed8;
+  border-bottom-color: #3b82f6;
+  background: #fff;
 }
 .content {
   flex: 1;

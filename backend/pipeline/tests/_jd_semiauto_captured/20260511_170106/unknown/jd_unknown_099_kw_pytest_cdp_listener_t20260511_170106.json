@@ -1,0 +1,27 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_equityInfo",
+  "url": "https://api.m.jd.com/api?functionId=pctradesoa_equityInfo&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170511103;eije17vniip22j28;fb5df;tk03w7bf31b4818ngN09G0TTdMgcZHO3rU5ACgykDbRPhMkMOHKvHaHgDd4q-wQjKgE2_2G00ljdUW6RIVVcjtsLEASb;54b5c174bc20c2027a38234a827058b7;5.3;1778490306103;pjbMhjpd5DFf5rURCyFO0nYSBGVSJrJdJrESJrpjh7pf5rJdJz1TIipjLDrgJr4fGe4f5rYfGm4f0TFTKWIfzbYTHWVTFmoS5bFe4bFSJrJdJrEa-OFTGOEjLrJp-j5fIeVeHGYSFeoeFKYSGWoSyfYf1T1e6nITHWISGa1eIipjxj5PKSEQKeFjLrJp-jZf_jpjxjpe2iFjLrJp-j5f9fIg2T0UG6VRFuWeDipjxjJOJrpjh7Jj36VZ2moW4roSSiIjLDIj_ulS9mFPJrpjh7Jj5fIQCOGjLDIjFqEjLrJp-3kjLDLj2SHjLDIj4nYOJipjLrpjh75fLDIj6nYOJipjLrpjh7pe6rJdJrYf2iFjLrpjLDrgz3pjxjJf6XETJrpjLrJp-jJZSSURX23ZFeoOWaGOJrJdJ31QHyVT5ipjLrpjh7pfLDIjzXETJrpjLrJp-rojxj5e2iFjLrpjLDrg0jojxjJe2iFjLrpjLDrg7rJdJXYOJipjLrpjh7pfLDIj3XETJrpjLrJp-XYeLDIj4XETJrpjLrJp-jpe9nIg7jpjxjZf2iFjLrpjLDrg7rJdJ-1OJrpjLrJp-Xojxj5P-ipjLrpjh7pfLDIj-ipjLrpjh7pfLDIjHOEjLrpjLD7NLDIjHyVS3KUSJrpjh7ZMwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;d0275585cc607f6c6af3663832b9ab91;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490306102&client=pc&clientVersion=1.0.0&body=%7B%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "abBuriedTagMap": {
+        "qyPlus": "tsabtest|base64|UENUZXN0Xzc3ODYwfHRlc3Qy|tsabtest",
+        "modalLogin": "tsabtest|base64|UENUZXN0XzY1OTIyfGJhc2U|tsabtest"
+      },
+      "loginConfig": {
+        "exitLoginImgUrl": "//img14.360buyimg.com/imagetools/jfs/t1/258113/38/17765/79646/67a708d5F692b1ae2/8047ecc989f54728.png"
+      },
+      "bPinPlusSwitch": true,
+      "isPlus": false,
+      "iscPinPotential": true,
+      "userRights": [],
+      "isModalLogin": true
+    }
+  }
+}

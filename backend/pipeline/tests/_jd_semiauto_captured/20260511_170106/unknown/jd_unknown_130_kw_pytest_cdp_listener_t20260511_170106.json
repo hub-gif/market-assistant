@@ -1,0 +1,36 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://api.m.jd.com/",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "msg": "成功",
+    "code": 0,
+    "data": {
+      "enableReport": true,
+      "enableInvokeLog": true,
+      "resources": {
+        "jdwebm": {
+          "version": "7.1.0",
+          "url": "",
+          "timeout": 5000,
+          "hitGray": false
+        }
+      },
+      "runMode": "1",
+      "colorDomain": "api.m.jd.com",
+      "policy": {
+        "reportPeriod": 0,
+        "reportMaxCount": 0,
+        "configCacheTtl": 60,
+        "finishMaxTime": 10000,
+        "invokeLogSampleRate": 10000,
+        "finishMinTime": 1000,
+        "sampleRate": 100
+      }
+    }
+  }
+}

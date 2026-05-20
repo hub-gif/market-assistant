@@ -197,6 +197,56 @@ export function jobExportUrl(jobId, kind, exportFmt) {
   return `/api/jobs/${jobId}/export/?kind=${encodeURIComponent(kind)}&export_fmt=${encodeURIComponent(exportFmt)}`
 }
 
+/** 搜索结果大模型整理表；opts: { batchSize, maxWorkers } */
+export function jobDatasetSearchLlmXlsxUrl(jobId, opts) {
+  const p = new URLSearchParams()
+  if (opts && opts.batchSize != null && String(opts.batchSize).trim() !== '') {
+    p.set('batch_size', String(opts.batchSize).trim())
+  }
+  if (opts && opts.maxWorkers != null && String(opts.maxWorkers).trim() !== '') {
+    p.set('max_workers', String(opts.maxWorkers).trim())
+  }
+  const q = p.toString()
+  return `/api/jobs/${jobId}/dataset/search-llm-xlsx/${q ? `?${q}` : ''}`
+}
+
+export async function downloadJobSearchLlmXlsx(jobId, opts) {
+  let q = {}
+  if (typeof opts === 'number') q = { batchSize: opts }
+  else if (opts != null && typeof opts === 'object') q = opts
+  const url = jobDatasetSearchLlmXlsxUrl(jobId, q)
+  const r = await fetch(url)
+  const ct = r.headers.get('Content-Type') || ''
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`
+    try {
+      if (ct.includes('application/json')) {
+        const j = await r.json()
+        msg = j.detail || JSON.stringify(j)
+      } else {
+        const t = await r.text()
+        if (t) msg = t.length > 500 ? `${t.slice(0, 500)}…` : t
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
+  }
+  const blob = await r.blob()
+  let filename =
+    filenameFromContentDisposition(r.headers.get('Content-Disposition')) ||
+    `job_${jobId}_search_llm_enriched.xlsx`
+  const u = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = u
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(u)
+}
+
 function filenameFromContentDisposition(header) {
   if (!header) return null
   const star = /filename\*=UTF-8''([^;\s]+)/i.exec(header)
@@ -253,10 +303,6 @@ export function jobConfigHint(j) {
     parts.push(`页 ${j.page_start ?? '—'}–${j.page_to ?? '—'}`)
   }
   if (j.max_skus != null) parts.push(`SKU≤${j.max_skus}`)
-  if (j.pipeline_run_dir) {
-    const s = j.pipeline_run_dir
-    parts.push(s.length > 24 ? `目录:${s.slice(0, 24)}…` : `目录:${s}`)
-  }
   if (j.cookie_file_path) parts.push('Cookie:文件')
   if (j.inline_cookie_used) parts.push('Cookie:粘贴')
   if (j.request_delay) parts.push(`延迟:${j.request_delay}`)
@@ -264,6 +310,21 @@ export function jobConfigHint(j) {
   if (j.pvid) parts.push('pvid')
   if (j.scenario_filter_enabled === true) parts.push('筛选:开')
   if (j.scenario_filter_enabled === false) parts.push('筛选:关')
+  return parts.length ? parts.join(' · ') : '默认'
+}
+
+/** 任务表「范围」列：短句展示，不含目录与内部标识；完整信息用 jobConfigHint 作 title。 */
+export function jobConfigTableCell(j) {
+  const parts = []
+  if (j.page_start != null || j.page_to != null) {
+    parts.push(`页 ${j.page_start ?? '—'}–${j.page_to ?? '—'}`)
+  }
+  if (j.max_skus != null) parts.push(`SKU≤${j.max_skus}`)
+  if (j.request_delay) parts.push(`间隔 ${j.request_delay}`)
+  if (j.list_pages) parts.push(`评论 ${j.list_pages} 页`)
+  if (j.scenario_filter_enabled === true) parts.push('筛选开')
+  if (j.scenario_filter_enabled === false) parts.push('筛选关')
+  if (j.cookie_file_path || j.inline_cookie_used) parts.push('已配登录')
   return parts.length ? parts.join(' · ') : '默认'
 }
 

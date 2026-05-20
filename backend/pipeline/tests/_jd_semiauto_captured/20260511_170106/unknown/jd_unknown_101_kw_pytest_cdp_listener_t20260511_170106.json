@@ -1,0 +1,19 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://storage.360buyimg.com/miniprogram-platform/configure-lowcode-platform-node/prod/json/prod/JwxGUX5i.json",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "data": [
+      {
+        "duration": "5000",
+        "ppms_itemName": "活动通知线上配置",
+        "ppmsItemId": "xeuPoQzh",
+        "waitTime": "15000"
+      }
+    ]
+  }
+}

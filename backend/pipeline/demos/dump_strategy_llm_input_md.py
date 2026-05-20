@@ -69,6 +69,7 @@ def main() -> int:
         load_report_matrix_group_evidence_markdown,
     )
     from pipeline.reporting.report_strategy_excerpt import load_report_strategy_excerpt
+    from pipeline.reporting.product_manual import merged_our_product_profile_for_strategy
 
     p = argparse.ArgumentParser(description=__doc__)
     src = p.add_mutually_exclusive_group()
@@ -97,10 +98,10 @@ def main() -> int:
         help="覆盖 strategy_decisions 的 JSON 对象文件（与线上一致时传入）",
     )
     p.add_argument(
-        "--business-notes",
+        "--our-product-profile",
         type=str,
         default="",
-        help="与接口 business_notes 一致的业务备注",
+        help="与接口 our_product_profile 一致；与 PDF 合并后写入底稿 §1.3 业务侧本品依据",
     )
     p.add_argument(
         "--snapshot-job-id",
@@ -220,6 +221,10 @@ def main() -> int:
             scoped_label,
         )
 
+    our_profile = merged_our_product_profile_for_strategy(
+        user_text=(args.our_product_profile or "").strip(),
+        strategy_keyword=(kw or "").strip(),
+    )
     payload, user_body, tier_note = resolve_strategy_draft_llm_input_snapshot(
         job_id=job_id,
         keyword=kw,
@@ -230,6 +235,7 @@ def main() -> int:
         report_strategy_excerpt=excerpt_raw or None,
         report_matrix_group_evidence_md=evidence_md.strip() or None,
         report_config=rc,
+        our_product_profile=our_profile,
     )
 
     min_comp = _min_strategy_completion_tokens()

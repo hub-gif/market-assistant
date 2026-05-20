@@ -15,6 +15,7 @@ import {
 } from '../../lib/marketingDetailPackStorage'
 import { loadStrategyDraftRecord } from '../../lib/strategyDraftStorage'
 import { marketingPackResultToMarkdown } from '../../lib/marketingPackMarkdown'
+import { formatApiDateTime, formatSourceLabel } from '../../lib/formatApiDateTime'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,43 +82,11 @@ const selectedJob = computed(() =>
   successJobs.value.find((j) => String(j.id) === selectedId.value),
 )
 
-function pickDetailPackSubset(pack, keys) {
-  if (!pack || typeof pack !== 'object') return null
-  const o = {}
-  for (const k of keys) {
-    if (Object.prototype.hasOwnProperty.call(pack, k)) o[k] = pack[k]
-  }
-  return Object.keys(o).length ? o : null
-}
+const draftGeneratedTime = computed(() => formatApiDateTime(draftMeta.value?.generated_at))
 
-/** 列表/详情页主文案（与「触点」分开展示） */
-const marketingPackDetailList = computed(() =>
-  pickDetailPackSubset(marketingResult.value?.detail_page_pack, [
-    'listing_titles',
-    'listing_subtitle',
-    'detail_headline',
-    'detail_mid_story_paragraphs',
-    'selling_bullets',
-    'usage_and_pairing_tips',
-    'spec_sidebar_lines',
-    'faq',
-    'short_graphic_post_variants',
-  ]),
-)
+const marketingTime = computed(() => formatApiDateTime(marketingResult.value?.generated_at))
 
-/** 依据、主图要点、文生图/文生视频提示词、短视频钩句、客服 */
-const marketingPackTouchBlock = computed(() =>
-  pickDetailPackSubset(marketingResult.value?.detail_page_pack, [
-    'traceability_note',
-    'main_image_three_points',
-    'text_to_image_prompt_main',
-    'text_to_image_prompt_scene',
-    'text_to_video_prompt',
-    'live_or_short_hook',
-    'live_script_bullets',
-    'customer_service_opening',
-  ]),
-)
+const marketingSourceText = computed(() => formatSourceLabel(marketingResult.value?.source))
 
 const marketingMd = computed(() => {
   if (!marketingResult.value) return ''
@@ -365,61 +334,59 @@ watch(successJobs, (list) => {
 <template>
   <div>
     <section class="ma-card">
-      <h2>策略稿预览</h2>
+      <h2>策略预览</h2>
       <p class="hint-top">
-        选择在<strong>策略生成</strong>页已生成过的任务查看文稿（保存在本机浏览器 <strong>localStorage</strong>，同域名下可跨标签查看）。需要改决策请回到
-        <RouterLink to="/jd/strategy-build">策略生成</RouterLink>
-        重新提交。分析数据见
-        <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
+        文稿存于本机浏览器。改内容去
+        <RouterLink to="/jd/strategy-build">策略生成</RouterLink>；数据见
+        <RouterLink to="/jd/analysis-view">报告预览</RouterLink>。
       </p>
 
       <div class="toolbar">
         <label class="sel-label">任务</label>
-        <select v-model="selectedId" class="job-select">
-          <option value="" disabled>请选择任务</option>
-          <option v-for="j in successJobs" :key="j.id" :value="String(j.id)">
-            #{{ j.id }} · {{ j.keyword }} · {{ j.run_dir?.split(/[/\\]/).pop() || '' }}
-          </option>
-        </select>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
-          :disabled="!draftMd"
-          @click="downloadDraftMd"
-        >
-          下载文稿
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        <div class="toolbar-task-select-wrap">
+          <el-select
+            v-model="selectedId"
+            class="jd-toolbar-el-select"
+            placeholder="请选择任务"
+            filterable
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="j in successJobs"
+              :key="j.id"
+              :label="`${j.id} · ${j.keyword}`"
+              :value="String(j.id)"
+            />
+          </el-select>
+        </div>
+        <el-button :disabled="!draftMd" @click="downloadDraftMd">下载文稿</el-button>
+        <el-button
           :disabled="!draftMd || !selectedId || exportBusy"
           @click="exportStrategyFmt('docx')"
         >
           {{ exportBusy ? '导出中…' : '导出 Word' }}
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        </el-button>
+        <el-button
           :disabled="!draftMd || !selectedId || exportBusy"
           @click="exportStrategyFmt('pdf')"
         >
           导出 PDF
-        </button>
-        <button type="button" class="ma-btn ma-btn-primary" @click="goBuildSameJob">
-          去策略生成
-        </button>
-        <button
-          type="button"
-          class="ma-btn ma-btn-secondary"
+        </el-button>
+        <el-button type="primary" @click="goBuildSameJob">编辑策略</el-button>
+        <el-button
           :disabled="!draftMd || !selectedId || marketingBusy"
           @click="generateMarketingDetailPack"
         >
           {{ marketingBusy ? '营销内容生成中…' : '生成营销内容' }}
-        </button>
+        </el-button>
       </div>
 
-      <p v-if="draftMeta?.generated_at" class="meta-line ma-muted">
-        生成时间：{{ draftMeta.generated_at }}
+      <p
+        v-if="draftMeta?.generated_at"
+        class="meta-line ma-muted"
+        :title="draftGeneratedTime.title"
+      >
+        生成时间：{{ draftGeneratedTime.text }}
         <template v-if="draftMeta.keyword"> · 关键词：{{ draftMeta.keyword }}</template>
       </p>
       <p v-if="exportErr" class="ma-err">{{ exportErr }}</p>
@@ -427,89 +394,54 @@ watch(successJobs, (list) => {
       <p v-if="marketingExportErr" class="ma-err">{{ marketingExportErr }}</p>
       <div v-if="marketingResult" class="marketing-pack-out">
         <h3 class="marketing-pack-h">营销内容</h3>
-        <p class="ma-muted marketing-pack-meta">
-          {{ marketingResult.generated_at }} · {{ marketingResult.source }}
+        <p class="ma-muted marketing-pack-meta" :title="marketingTime.title">
+          {{ marketingTime.text }}<template v-if="marketingSourceText"> · {{ marketingSourceText }}</template>
         </p>
 
         <div class="toolbar marketing-pack-actions">
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
+          <el-button
             :disabled="!selectedId || marketingExportBusy || marketingBusy"
             @click="downloadMarketingPackJson"
           >
             下载 JSON
-          </button>
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
+          </el-button>
+          <el-button
             :disabled="!selectedId || marketingExportBusy || marketingBusy"
             @click="exportMarketingPackFmt('docx')"
           >
             {{ isMarketingExporting('docx') ? '导出中…' : '营销内容导出 Word' }}
-          </button>
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
+          </el-button>
+          <el-button
             :disabled="!selectedId || marketingExportBusy || marketingBusy"
             @click="exportMarketingPackFmt('pdf')"
           >
             {{ isMarketingExporting('pdf') ? '导出中…' : '营销内容导出 PDF' }}
-          </button>
+          </el-button>
         </div>
-        <details open class="marketing-details">
-          <summary>核心信息卡</summary>
-          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.core_info_card, null, 2) }}</pre>
-        </details>
-        <details v-if="marketingPackDetailList" open class="marketing-details">
-          <summary>列表与详情页主文案</summary>
-          <pre class="marketing-pre">{{ JSON.stringify(marketingPackDetailList, null, 2) }}</pre>
-        </details>
-        <details v-else-if="marketingResult.detail_page_pack" open class="marketing-details">
-          <summary>详情页包字段</summary>
-          <pre class="marketing-pre">{{ JSON.stringify(marketingResult.detail_page_pack, null, 2) }}</pre>
-        </details>
-        <details v-if="marketingPackTouchBlock" open class="marketing-details">
-          <summary>依据、主图、文生图/文生视频提示词、钩句与客服</summary>
-          <pre class="marketing-pre">{{ JSON.stringify(marketingPackTouchBlock, null, 2) }}</pre>
-        </details>
       </div>
-      <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        任务目录：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
-      </p>
       <p v-if="!successJobs.length" class="ma-muted">暂无成功任务。</p>
-      <p v-else-if="selectedId && !draftMd" class="ma-muted empty-hint">
-        当前任务尚无已生成的策略稿。请先在「策略生成」填写并点击「生成并前往预览」。
-      </p>
+      <p v-else-if="selectedId && !draftMd" class="ma-muted empty-hint">请先在「策略生成」里生成文稿。</p>
     </section>
 
     <section v-if="draftMd || marketingMd" class="ma-card preview-card">
       <div class="preview-head">
         <h2>预览</h2>
-        <div v-if="marketingMd" class="tabs doc-tabs">
-          <button
-            type="button"
-            :class="{ on: previewDoc === 'strategy' }"
-            @click="previewDoc = 'strategy'"
-          >
-            策略稿
-          </button>
-          <button
-            type="button"
-            :class="{ on: previewDoc === 'marketing' }"
-            @click="previewDoc = 'marketing'"
-          >
-            营销内容
-          </button>
-        </div>
-        <div class="tabs">
-          <button type="button" :class="{ on: viewMode === 'render' }" @click="viewMode = 'render'">
-            渲染
-          </button>
-          <button type="button" :class="{ on: viewMode === 'raw' }" @click="viewMode = 'raw'">
-            原文
-          </button>
-        </div>
+        <el-radio-group
+          v-if="marketingMd"
+          v-model="previewDoc"
+          class="doc-doc-rg"
+        >
+          <el-radio-button value="strategy">策略稿</el-radio-button>
+          <el-radio-button value="marketing">营销内容</el-radio-button>
+        </el-radio-group>
+        <el-radio-group
+          v-model="viewMode"
+          class="ep-view-rg"
+          :class="{ 'ep-view-rg--end': !marketingMd }"
+        >
+          <el-radio-button value="render">渲染</el-radio-button>
+          <el-radio-button value="raw">原文</el-radio-button>
+        </el-radio-group>
       </div>
       <template v-if="previewDoc === 'strategy' && draftMd">
         <div v-if="viewMode === 'render'" class="md-box">
@@ -523,9 +455,7 @@ watch(successJobs, (list) => {
         </div>
         <pre v-else class="raw-md">{{ marketingMd }}</pre>
       </template>
-      <p v-else class="ma-muted preview-fallback">
-        暂无当前页面对应的文稿（请先生成策略稿或营销内容）。
-      </p>
+      <p v-else class="ma-muted preview-fallback">请先生成策略或营销内容。</p>
     </section>
   </div>
 </template>
@@ -542,41 +472,14 @@ watch(successJobs, (list) => {
   color: #2563eb;
   font-weight: 500;
 }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-.sel-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-}
-.job-select {
-  flex: 1;
-  min-width: 220px;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font: inherit;
+.toolbar-task-select-wrap {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 .meta-line {
   margin: 0.5rem 0 0;
   font-size: 0.82rem;
-}
-.run-dir-note {
-  margin: 0.5rem 0 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.run-dir-path {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  word-break: break-all;
-  color: #475569;
 }
 .ma-muted {
   color: #64748b;
@@ -604,30 +507,19 @@ watch(successJobs, (list) => {
 .preview-head h2 {
   margin: 0;
 }
-.doc-tabs {
+.doc-doc-rg {
   margin-right: auto;
+  flex-shrink: 0;
 }
 .preview-fallback {
   margin: 0;
   font-size: 0.9rem;
 }
-.tabs {
-  display: flex;
-  gap: 0.35rem;
+.ep-view-rg {
+  flex-shrink: 0;
 }
-.tabs button {
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 0.35rem 0.85rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: #4b5563;
-}
-.tabs button.on {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+.ep-view-rg--end {
+  margin-left: auto;
 }
 .md-box {
   border: 1px solid #e5e7eb;
@@ -682,30 +574,5 @@ watch(successJobs, (list) => {
   font-size: 0.82rem;
   line-height: 1.45;
   max-width: 52rem;
-}
-.marketing-pack-actions {
-  margin: 0 0 0.75rem;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-.marketing-details {
-  margin-bottom: 0.65rem;
-}
-.marketing-details summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: #334155;
-}
-.marketing-pre {
-  margin: 0.5rem 0 0;
-  padding: 0.65rem;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  overflow: auto;
-  max-height: 320px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
 }
 </style>

@@ -197,6 +197,7 @@ def build_strategy_draft_markdown(
     keyword: str,
     brief: dict[str, Any],
     business_notes: str = "",
+    our_product_profile: str = "",
     generated_at_iso: str = "",
     strategy_decisions: dict[str, Any] | None = None,
     report_config: dict[str, Any] | None = None,
@@ -391,6 +392,17 @@ def build_strategy_draft_markdown(
             "",
         ]
     )
+    opp = (our_product_profile or "").strip()
+    if opp:
+        opp_esc = _esc(opp)
+        lines.extend(
+            [
+                "- **业务侧本品依据**（产品手册或内部共识摘要；**辅助**监测与报告：仅界定**本品**可引用的成分、功效、人群与宣称边界；**策略主干**仍须来自上方监测任务与 `structured_brief`/报告节选；成稿须**综合两者**，**勿**以大段照抄本节代替 §2 及后续战术；与竞品监测数据分源）：",
+                "",
+                opp_esc,
+                "",
+            ]
+        )
 
     lines.extend(
         [
@@ -497,9 +509,9 @@ def build_strategy_draft_markdown(
                 else "- **一句话**：*（占位）*"
             ),
             (
-                "- **调性**：透明、可验证、合规控糖叙事。"
+                "- **调性**：*（成稿结合品类、`structured_brief` 与表单写沟通风格；**勿**将本句复制到 §8.1～§8.4 当各节正文。）*"
                 if for_llm_input
-                else "- **调性**：透明、可验证、合规控糖叙事（成稿可细化）。"
+                else "- **调性**：*（占位；成稿结合品类写清风格，忌全篇与 §8 各节套同一句。）*"
             ),
             "",
             "### 4.2 信任与证据",

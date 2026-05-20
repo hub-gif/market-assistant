@@ -688,7 +688,7 @@ def build_competitor_markdown(
         lines.extend(price_tbl)
         lines.append("")
         lines.append(
-            "**解读提示**：价差大通常反映规格、组合装、品牌溢价或促销差异；B 端定价策略需结合成本与渠道单独建模。"
+            "**解读提示**：价差大通常反映规格、组合装、品牌溢价或促销差异；**读价时请对照每条 SKU 的规格信息——「规格属性」列与标题中的计量片段（如 ml、g、瓶装件数）**，避免不同规格直接比绝对价；B 端定价策略需结合成本与渠道单独建模。"
         )
         lines.append("")
         lines.extend(_markdown_price_promotion_section(promo_sig))
@@ -953,6 +953,9 @@ def build_competitor_brief(
                 {
                     "sku_id": _cell(row, sku_header),
                     "title": _cell(row, title_h),
+                    "spec_attributes": _md_cell(
+                        _price_context_spec_merged(row), 400
+                    ),
                     "brand": _cell(
                         row,
                         MERGED_FIELD_TO_CSV_HEADER["detail_brand"],

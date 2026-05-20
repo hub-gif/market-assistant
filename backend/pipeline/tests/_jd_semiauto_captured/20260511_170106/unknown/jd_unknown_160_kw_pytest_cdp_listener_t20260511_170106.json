@@ -1,0 +1,395 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "jsfbox_middle_floor",
+  "url": "https://api.m.jd.com/api?functionId=jsfbox_middle_floor&uuid=&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170600569;i2ynziy15van2iz4;b5216;tk03waf9c1bfa18njeg1F6MomShUjSRUUwTE9GjugDALroXBYv92jCvrIK2lNl55IhmLKugjkGK6PIluM7-aAwhNd-HL;f8fa34006f325eaa38869b1bb19fe6b8;5.3;1778490355569;q3EpJbINCiIQKSUe6HURxyVN5HFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jJRSO4WdG3f5m0Y5ipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJvnYzvleEiWR4f4OUCFjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh7Zd5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrgzfojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;4be332de5e0c0a133ab79b8b2749638c;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490355567&client=pc&clientVersion=1.0.0&body=%7B%22homeVersion%22:%22simple%22,%22source%22:%22pc-home%22,%22area%22:%2216_1315_0_0%22%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "middleFloorComponents": [
+        {
+          "componentName": "oneCentFlashSale",
+          "type": "custom",
+          "data": {
+            "skuList": [
+              {
+                "wareId": "10145037195959",
+                "shortWname": "森系纯水手口湿巾加大加厚80抽柔软湿纸巾一次性清洁 80抽/包*1包",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/387756/7/15682/63067/6975f403F138b8b2b/0083320320b7b501.jpg",
+                "jdPrice": "7.69",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egvzdx9OOakGpMLWJzQv5yQzmT6SKVV6xTcIAx-Hy3Khk.dqA7.aWhW"
+              },
+              {
+                "wareId": "10182316035578",
+                "shortWname": "【全金属】360度旋转手机支架机械折叠桌面平板通用追剧懒人直播便携 特惠款-斜线镂空灰【全金属】360°旋转折叠",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/347748/35/10384/23438/68e59e24F7d24a7f8/56fc169b82b36153.jpg",
+                "jdPrice": "5.99",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egvWaoFhxnJe4LJ0ZS0PlQ-7jkwDWxcKLnP5H0gmvNqHO.dqA7.aWhW"
+              },
+              {
+                "wareId": "10177321881709",
+                "shortWname": "悬挂式洗脸巾一次性柔巾干湿两用加厚洗面巾擦脸巾棉妆棉 常规款 1片 1大提悬挂款70张 珍珠纹（外投）",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/381273/34/16602/14469/695c80d8Fbc4db3d0/c0527de201790c51.jpg",
+                "jdPrice": "4.5",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egrtf6JA-Y55M_hxOJJvVnh_N0GBOWYN6SxSB2uwU0kME.dqA7.aWhW"
+              },
+              {
+                "wareId": "10167058215837",
+                "shortWname": "创意透明花茶水杯茶水分离玻璃杯单层泡茶杯过滤水杯便携男女杯子 泡茶杯-400ML【一个装】",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/313830/6/24882/13152/68984226Fbf4168cb/be592b1e4139d7c3.jpg",
+                "jdPrice": "5.99",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egqhMK7HcsZvZQ0nqyJMh2a3oZFaOUcOQ3skYtkcwF82F.dqA7.aWhW"
+              },
+              {
+                "wareId": "10198765899750",
+                "shortWname": "微波炉加热盖盖子热菜专用盘容器防油盖防溅罩防溅盖保鲜盖食品级 加热盖1个【耐100度高温】",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/358195/20/18662/36178/692e7d4eF0412c621/5bec899085af3ff8.jpg",
+                "jdPrice": "3.9",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3eglyDS70_O1-FxNAV26Ni01cca4RUSQfRFg2wHj2TY1oR.dqA7.aWhW"
+              },
+              {
+                "wareId": "10170813669490",
+                "shortWname": "【加大刀网】毛球修剪器充电式家用去球器去毛球器剃毛器打毛器衣服除毛器毛衣毛球修剪神器剃毛机 罗兰紫 【标配自带1刀头】",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/337372/1/20656/17142/68f1890dF5f65c175/d2d26fcfdfe00c22.jpg",
+                "jdPrice": "9.9",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egg-Fitz7Mf3wPx2x-yZJybW0dEuOltaXb0Ugb1WoW0IT.dqA7.aWhW"
+              },
+              {
+                "wareId": "10186874015414",
+                "shortWname": "【优等品】520张超大包原木抽纸餐巾纸面巾纸卫生纸家庭装实惠装 优等品大包 6层 520张*3包",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/377604/8/13353/198285/693ff453F0fc200ce/e0dc80af6c8df4bd.jpg",
+                "jdPrice": "7.99",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egnWO6fIOoGVYeWdQc0udCYJccwQjSW1VxM5ovmCtzEFy.dqA7.aWhW"
+              },
+              {
+                "wareId": "10204534302059",
+                "shortWname": "【防烫双耳】不锈钢猪油罐大容量猪油锅耐高温家用调味罐双耳带盖 2升【配钢盖】双柄猪油罐",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/395528/38/13059/32947/699d47e4Fdafa4df8/0083320320769117.jpg",
+                "jdPrice": "13.99",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egqeEBHx-ugBrxqV2MREYQzNg2lUQVhZPh8EwuqGvT1Ee.dqA7.aWhW"
+              },
+              {
+                "wareId": "10191712143499",
+                "shortWname": "锅刷加液可旋转家用厨房刷锅玻璃清洁刷刷子神器清洁刷丝瓜络洗碗 象牙白/1个装【旋转加液锅刷】 按压出液 不脏手",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/398066/33/12240/5083/69a7dbf6F1561805d/00ae1e01e0e31194.jpg",
+                "jdPrice": "6.9",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egk8a-InrzgbAMVvup7sYf_8o2JLI0jDzPdOj4L_8f6Od.dqA7.aWhW"
+              },
+              {
+                "wareId": "10159044077421",
+                "shortWname": "马克杯ins风萨摩叠叠学生牛奶杯可爱大容量喝水杯家用陶瓷杯 咖色小狗摩叠叠杯",
+                "imageUrl": "https://m.360buyimg.com/babel/jfs/t1/339045/3/8942/10681/68c0fe3aF9655e511/b6c9ed3fc35b5688.jpg",
+                "jdPrice": "5.01",
+                "benefitDesc": null,
+                "algoRdInfo": null,
+                "isGb": false,
+                "benefitType": null,
+                "pcdk": "uYLCKIjTQH7wzhnHIY3egqOVpi7TTMLycfIc5EaybgJdD9pxRRGJISuePUXgW_a8.dqA7.aWhW"
+              }
+            ],
+            "priceList": [
+              {
+                "p": "5.99",
+                "op": "5.99",
+                "mp": "0.00",
+                "id": "J_10182316035578"
+              },
+              {
+                "p": "3.90",
+                "op": "3.90",
+                "mp": "0.00",
+                "id": "J_10198765899750"
+              },
+              {
+                "p": "7.99",
+                "op": "7.99",
+                "mp": "0.00",
+                "id": "J_10186874015414"
+              },
+              {
+                "p": "6.90",
+                "op": "6.90",
+                "mp": "0.00",
+                "id": "J_10191712143499"
+              },
+              {
+                "p": "5.01",
+                "op": "5.01",
+                "mp": "0.00",
+                "id": "J_10159044077421"
+              },
+              {
+                "p": "4.50",
+                "op": "4.50",
+                "mp": "0.00",
+                "id": "J_10177321881709"
+              },
+              {
+                "p": "9.90",
+                "op": "9.90",
+                "mp": "0.00",
+                "id": "J_10170813669490"
+              },
+              {
+                "p": "7.69",
+                "op": "7.69",
+                "mp": "0.00",
+                "id": "J_10145037195959"
+              },
+              {
+                "p": "5.99",
+                "op": "5.99",
+                "mp": "0.00",
+                "id": "J_10167058215837"
+              },
+              {
+                "p": "13.99",
+                "op": "13.99",
+                "mp": "0.00",
+                "id": "J_10204534302059"
+              }
+            ],
+            "promotionMap": {}
+          }
+        },
+        {
+          "componentName": "newUserOrderRebate",
+          "type": "custom",
+          "data": {
+            "exposureInfo": {
+              "mkt_comp_un": {
+                "det": {
+                  "recomInfo": "eyJhY3Rfa2V5IjoidHZzMGljeWFwemlxdGh1aWNlZXo1In0="
+                },
+                "rid": null,
+                "ddfjd": "[{\"totalRewardAmount\":\"8.00\",\"progressIndex\":\"0\",\"progressStatus\":\"1\"},{\"totalRewardAmount\":\"13.00\",\"progressIndex\":\"1\",\"progressStatus\":\"0\"},{\"totalRewardAmount\":\"16.00\",\"progressIndex\":\"2\",\"progressStatus\":\"0\"},{\"totalRewardAmount\":\"24.00\",\"progressIndex\":\"3\",\"progressStatus\":\"0\"}]",
+                "compInfo": "eyJhY3Rfa2V5IjoidHZzMGljeWFwemlxdGh1aWNlZXo1In0=",
+                "cid": null,
+                "fid": null
+              }
+            },
+            "instanceEndTime": "2026-05-16 23:59:59",
+            "actData": [
+              {
+                "progressIndex": 0,
+                "progressStatus": 1,
+                "totalRewardAmount": "8.00",
+                "rewardShowInfoList": [
+                  {
+                    "recomInfo": null,
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.1,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1498158495
+                    }
+                  },
+                  {
+                    "recomInfo": null,
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 3.1,
+                      "couponDiscount": 3.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1443946170
+                    }
+                  }
+                ],
+                "rewardReceiveKey": "eaaa902242512058cf0e1aa10be4c4a82ed8b96f0b56296636f7fd13ffbaf36f448c4a78ac37eaf7",
+                "totalRewardShowStatus": "10006"
+              },
+              {
+                "progressIndex": 1,
+                "progressStatus": 0,
+                "totalRewardAmount": "13.00",
+                "rewardShowInfoList": [
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTUyNTIzMzMyMyIsImRpcyI6IjUuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.01,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买京东健康部分商品",
+                      "couponBatchId": 1525233323
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTUyNTIzOTY3MSIsImRpcyI6IjUuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.01,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买3C数码部分商品",
+                      "couponBatchId": 1525239671
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ1Mjc2NDUwMiIsImRpcyI6IjMuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 3.01,
+                      "couponDiscount": 3.0,
+                      "couponLimitStr": "仅可购买配件部分商品",
+                      "couponBatchId": 1452764502
+                    }
+                  }
+                ],
+                "rewardReceiveKey": "eaaa902242512058cf0e1aa10be4c4a82ed8b96f0b56296636f7fd13ffbaf36f42766527cf9f9fa5ed300ea377dbe292e9601fe811964942",
+                "totalRewardShowStatus": "10000"
+              },
+              {
+                "progressIndex": 2,
+                "progressStatus": 0,
+                "totalRewardAmount": "16.00",
+                "rewardShowInfoList": [
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ5ODE1ODQ5NSIsImRpcyI6IjUuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.1,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1498158495
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ0Mzk0NjE3MCIsImRpcyI6IjMuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 3.1,
+                      "couponDiscount": 3.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1443946170
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTUyNTIzMzMyMyIsImRpcyI6IjUuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.01,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买京东健康部分商品",
+                      "couponBatchId": 1525233323
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTU1MjYwNjYwOSIsImRpcyI6IjMuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 3.01,
+                      "couponDiscount": 3.0,
+                      "couponLimitStr": "仅可购买文教文化用品部分商品",
+                      "couponBatchId": 1552606609
+                    }
+                  }
+                ],
+                "rewardReceiveKey": "eaaa902242512058cf0e1aa10be4c4a82ed8b96f0b56296636f7fd13ffbaf36f42766527cf9f9fa5ed300ea377dbe29206cb973d85668857",
+                "totalRewardShowStatus": "10000"
+              },
+              {
+                "progressIndex": 3,
+                "progressStatus": 0,
+                "totalRewardAmount": "24.00",
+                "rewardShowInfoList": [
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ5ODE1ODQ5NSIsImRpcyI6IjUuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 5.1,
+                      "couponDiscount": 5.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1498158495
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ0Mzk0NjE3MCIsImRpcyI6IjMuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 3.1,
+                      "couponDiscount": 3.0,
+                      "couponLimitStr": "仅可购买京喜部分商品",
+                      "couponBatchId": 1443946170
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTQ1Mjc2NDUxOCIsImRpcyI6IjYuMCJ9",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 6.01,
+                      "couponDiscount": 6.0,
+                      "couponLimitStr": "仅可购买图书部分商品",
+                      "couponBatchId": 1452764518
+                    }
+                  },
+                  {
+                    "recomInfo": "eyJhY3RQb29sSWQiOiIzNiIsImJjIjoieHJkZGYiLCJjdCI6Im5ld2RkZi5wYyIsImFjdFRlbXBsYXRlSWQiOiIzMCIsImFjdElkIjoiMTIxIiwic3ljIjoiaHVpeXVhbiIsImh1IjoibnVsbCIsImZ0IjoiMiIsImZkIjoiMTU1MjAxNjY3MyIsImRpcyI6IjEwLjAifQ==",
+                    "couponInfo": {
+                      "couponId": null,
+                      "couponQuota": 10.01,
+                      "couponDiscount": 10.0,
+                      "couponLimitStr": "仅可购买京东健康部分商品",
+                      "couponBatchId": 1552016673
+                    }
+                  }
+                ],
+                "rewardReceiveKey": "eaaa902242512058cf0e1aa10be4c4a82ed8b96f0b56296636f7fd13ffbaf36f42766527cf9f9fa5ed300ea377dbe292063e4d8173ee42d8",
+                "totalRewardShowStatus": "10000"
+              }
+            ]
+          }
+        },
+        {
+          "componentName": "newUserRedPacket",
+          "type": "custom",
+          "data": {
+            "hbId": "68063474771",
+            "hbActivityId": "4534312",
+            "balance": "3",
+            "endTime": "1778491739000"
+          }
+        }
+      ]
+    }
+  }
+}

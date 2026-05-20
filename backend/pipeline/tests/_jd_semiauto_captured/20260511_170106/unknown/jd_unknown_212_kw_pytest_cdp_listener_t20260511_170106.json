@@ -1,0 +1,10 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://passport.jd.com/user/petName/getUserInfoForMiniJd.action?&callback=jsonpUserinfo&_=1778490366864",
+  "mime_type": "text/json",
+  "parse_error": "Expecting value: line 1 column 1 (char 0)",
+  "parsed": null
+}

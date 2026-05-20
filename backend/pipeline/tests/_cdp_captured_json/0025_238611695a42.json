@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "data": {
+    "abBuriedTagMap": {},
+    "cid": "29",
+    "fid": "42",
+    "intervalTime": 3600000,
+    "newUserModalCountLimit": 2,
+    "showTime": 5,
+    "type": -1,
+    "umcCountLimit": 1
+  },
+  "msg": "Success"
+}

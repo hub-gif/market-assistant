@@ -1,0 +1,1290 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_mixer",
+  "url": "https://api.m.jd.com/api?appid=search-pc-java&t=1778490374384&client=pc&clientVersion=1.0.0&cthr=1&uuid=17784900693481949486110&loginType=3&functionId=pctradesoa_mixer&body={%22lim%22:12,%22p%22:202002,%22ec%22:%22utf-8%22,%22uuid%22:%2217784900693481949486110%22,%22lid%22:%2216%22,%22ck%22:%22pinId,lighting,pin,ipLocation,atw,aview%22,%22page%22:%221%22,%22c1%22:%22%22,%22c2%22:%22%22,%22c3%22:%22%22,%22brand%22:%22%22}&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170619384;2npp1v7ejp2j22p7;f06cc;tk03w81261ba918n8l7w5plCaDAfANahSyaCC0D1Jka9hWQD2ye6PJ2jafGxMO1mRBPI2OvpRHKUWeIDw05lnYczfqyD;529049f553fc8d3d563e80947be3ecdd;5.3;1778490374384;q3EpJPoP5jIR5rERGOIO6rkP9iIjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jZQ6PWWfi4fVa4QMipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJzleVe4WW63S4r4QCGHjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75f5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg0Pojxj5f2iFjLrpjLDrgJTIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;c1f20c24a18eed71a4eade5407cd52b3;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490374385",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "encode": "utf-8",
+    "floatLayerList": [],
+    "error_msg": "",
+    "data": [
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAyNDY4NzYxNjkiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/421455/34/13384/169854/69e87a76Fb63c92db/025815e15ef29019.png",
+        "itemType": 0,
+        "jp": "199",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100246876169.html",
+        "finalPrice": {
+          "estimatedPrice": "196",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLXV6mpRNmdfs5n0hV1Z_y4jFRF_q5D6wSXd99Rlwu7aD.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "199",
+          "op": "199",
+          "mp": "259",
+          "finalPrice": {
+            "estimatedPrice": "196",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100246876169"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100246876169,
+        "userMyssFlag": false,
+        "pcp": "199",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"16777216\",\"campaign_type\":\"28\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100246876169\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"70127902070\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDI0Njg3NjE2OS5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBkjxrgMZ0WZ0WPUWjF5un9IwsuYUGAqo4nvH8gei8ZdAAmwvh20KOeIKjkmaSbqqgRncm1kLXxpgVU3fYdpMWUtJPjKYErE391ppkS8-ZJTb5hY-iWH1Wd9mBdRdy26DzRGVsBgi4joS3LZg-4pJD3D9JHhBHr5TkTjFr_ddLJSlQyZ4ocIV_8vXn_30EEWsuLYneVEOKGQjrNNTVadq56GrLoJ4lldqn6PcaYKm95ybpQHAGTnilhcemkntJbk3_i5Owun8zsweRiVoGzZdlnTPRES3xz-MCmakxNYUh-4fCD1Q4EWT4Ehzk6Y-Hw-TdhYd-CqrEb6SU2Q6X9NnRtWtMdStHIyFbbCdWJLQ1IJ8cPl3N6YiRRJDzEW6S5zLfIoQldaVqA9XwEJvKgcF0Kf3WL2ZBqVJNcCMmJ-ehjROgAePY8uVJLnTKL9gGgC94ljmOuFcqjnPnZdcAXWJlACL3EuUygLlEyoznoctei5n0uikurUxvA_Zms3Gcyj1pTxR3OSPy8TXLLqd0wQCQp64GfdseFmReNXPOC7o4jbBLAHQWXyLRwMXsKguI9DmTcWZeBBvB9_wx98kkOVqgFKlgytimamjvpV0VdsxUBGNpUU_MWyIEfjJlsIub-PglBAEdousO2vMWq-_VhZ_prZTnp-N-rk23g0FhsePbH1TFpvveKmViMTEb7sX3GeKLOi466EHXtfxb3EfV8KSdiVZ9So4UfoI5hj1y_wzkO1x2pXryR2fr_Pm1xWevJMud-J1l6-Bk3In7eE3aSI8LKsFZd_t8kMNGpw1zuhuXFjfrPB-ebn-1wMsoNzcMsoD4Kix52cO7ni0xD_KeD0cNPe8TkDHo1_bNU5DGYALJNAUZNeq63Al5A2p9zY2--W8BdXodGjomM7qKrFSZSdozALGayym4t86iaBklazUNozu3ufZq0Lvp-25cpDp6Ufb3tHk5x6fG2S3fz_SMDFTvXZheS8DbO30v5u9mWFVz6TOp2rp1GQFZgBBP-FR1-crSlRqbn8hnlEANSsbmf9hUn6BwxIXRWmfTXJShua9l1Pt9xeT1czmkf9LGjGn2XBtywWxmjvuQcgwGwqWCjS9UFrY7nU6eVYVeAZOZPRikZQv5i49cfYR8qOqrQEqL4HIKCxW6imMnySaI-dxmHpd2U2eMsiwUJiSFKN_4vhDhyLZPpsoXShgbvjLV0UICAhMjOr3sxgfpP99RphVGZokvHoOwO2MXzf6M6B5z9RixJIgjYcnYf2tLh_3WNZLKQKwER-89bSeHZ0-T5Qe39yHDYPPPb7NAOsCKQlRdm4Q8Bhu7WfWutUCpCwafbGJrY9XZ2CTFLC6HgMyKDf5Ysw17B8F-P3XLTTXQ3gyf3Sl27Rog&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 16756,
+        "abt": "0",
+        "t": "【明星同款】柔顺修护洗发水",
+        "client_exposal_url": "https://sh.jd.com/g/9RcohpObREAeXxxROQe8SN",
+        "clk_url": "",
+        "spu": 100246876169,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAyODM0NzEyNDYiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/395867/11/2058/116985/6987fe47F72c807a5/008332032000c17d.jpg",
+        "itemType": 0,
+        "jp": "98",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100283471246.html",
+        "finalPrice": {
+          "estimatedPrice": "85",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLZxwJS09sR7v6w8N3YDtMMdToBt_ho27Ao2GLPzEe-mL.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "98",
+          "op": "98",
+          "mp": "199",
+          "finalPrice": {
+            "estimatedPrice": "85",
+            "type": 18,
+            "title": "新人专享到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100283471246"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100283471246,
+        "userMyssFlag": false,
+        "pcp": "98",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"134217728\",\"campaign_type\":\"61\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100283471246\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"67783566919\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDI4MzQ3MTI0Ni5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBl42U_tHrbLPG-OthEoOF-N0wqe3447_m5XOpjcrugdJl0hdDZzOUd6j5TBv7A0KrudNm8dT1G6dp9B2HbL6wrEO9cfs4FDT2TQlETicBnxJuHd37ubE8ReiA0KA-5iKz7SpvQThW7NlxoEYFk9M4PhgX8FmMm9gnnkCtSpA55IPQeJ-kOHflq603w9YdeesfDIHusP5cTjLr9qDVgxaAGEe4OO2cxGoFaIB_9qySeq7zzyMaShHtIEMXFCmLQ7snh7shJsXrVupf6Ut4Umg6s8GfqTju1aQCNYZ-xYvy6IzhZ7SCc5Pi7khT8l7t4Q2Tvs8zqZf8o02SivTDZNaZSRkFnn-swRa7N1Dpn4_jpvBTWIpp4_k-c1mrS7SDFiCuTtoXYmXZUHAzTdlXDBA2-ha_7LaK5ZCB2CwXhtkunFTW_UtctBcqKpHI6fxCi7jVQqK1J1fq1Ty2GBmBaXEamBauMdaP7qawiLh3NLad37E1REypqDh82XeRe0YO2Fx9Oz-ESKgeE51vHRSEPM8XiUkre0h4GbD03sZv6uZ2IZGukiq6LIB-e1KSfT0CDT7VBgrmJbi7c4958sSaQ-qDZ28ApFUPnTM67dc5FbkbFyF_cMeYHioG5Y7f6kqiqFlIB27hEiNRc-LOg5RSgo4J13ISHRqE6y-YutPAp4aDwKs8UcqAywuPAutyGlT-E7fppXCL62K4XGQy6s7NCVTxOZ9Ly1K9DzqKgv-AKvYQvxnjbkAgSw6Wb_nyRrIb-0_QQoLsPyIa0ZevxIB_ltL0N3ZXp7keWDJnDmLeUJoUgIVXxMPnvsAroh1ncwlcVJLwce84vbIyvjanGZcECh3PBlz2zJqq8UCjAhCKn2O4L5eZphXC6-64tnJXmR264T6S-l0TgKRbAZu3CGewdR9nYm78nqAM_tpip5azPOJTJTCDu_xRLCuj47hEJZbSLYLKp1z7DBYqRNlci4k5bvmW5ve66pmbh8iT7A_EUVp3nz2rwKKoOmmdE-su535kpXvZ2hsGZEew06qYbBFCKmNZ47LhBzsVs0OM9_pY8K4lpMe2UvvxOqZRpmDstIiY9ipDtbyix2NVWYJwPBQYdSfQcYqMcnuaqgh2rjgY1SvpqjMUtamP4XcoaWJCE6HDB98CKu035emeQy3K58try8bhMUJ7qvaUX3ArEj63DiWR7kminLgb36F8d4SSuBYuJjuXB8fCTzcg5f5Ciq78sAGofDn-lSX1gEVMPh9HMKN8YdLnPcyLA_lFjJJnYFONGnHpCefmjGbJMOXf1U5NNemZ92RoZErHcnCnyZi2x3Vb69wABnhczQNn83CO-Zgxw0EEnF07BVdiMAZ29PRElmoDpz&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1390,
+        "abt": "0",
+        "t": "BUV去黑头导出液黑头水去粉刺闭口白头收缩毛孔深层清理神器150ml",
+        "client_exposal_url": "https://sh.jd.com/g/btau-P50hR036rslCYNm1x",
+        "clk_url": "",
+        "spu": 100116576876,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDA2Mzg3OTU0NDIzNyIsInAiOiIyMDIwMDIiLCJzb3VyY2UiOiIxIiwiYWRfcmVxdWVzdF90eXBlIjoiMSIsIm1peGVyUXVldWVOYW1lIjoiYWQifQ==",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/434332/12/321/142424/69fddcfcF348b3723/008332032086f7f1.jpg",
+        "itemType": 0,
+        "jp": "960",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/10063879544237.html",
+        "finalPrice": {
+          "estimatedPrice": "907",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLd-MaiNXdE5913HoL-0hQ0wgskGgkgT8U0LG0AQEIAdZ.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "960",
+          "op": "960",
+          "mp": "960",
+          "finalPrice": {
+            "estimatedPrice": "907",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_10063879544237"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 10063879544237,
+        "userMyssFlag": false,
+        "pcp": "960",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"16777216\",\"campaign_type\":\"28\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"10063879544237\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"70365933368\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDYzODc5NTQ0MjM3Lmh0bWw&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBnnvCExDT8J-EPCe_OTPJlQRwvQBuhgGM8LhKfQDNgOMmPt8TCLtmlGF_JjPe8HueII8VSsFg9G07eIeuhbhvfqYLf2zJq_hGfgFKgEBZTjzgSu7DluImqG_mv_2E6buTewLa_CJpBP0yNBWmn_Cn8olKC575R14lRJ8YgQq1cP-Bp9w3u6qqafN4DKlfqgm3wHqmpuuBStIcJ_mA1jZRBJk_RDFWgrZXV3qXdfZlh9vB-ensUhnGJEb8Yy3uKZRibFUbF3Nox8gYDWJPPVz6b584bqUk_xAe1J0AMeaExs5foAAjpj23VHp4but-_kX63_JPXjtzAVfdJHSb6T_Zioj2grGf9pjQHqL0rKRmSY_C31pAvAa0L_eNjOT49s0cFXKhxTJkOp4t6Y5eK0sMKZ0oCe0INGpUgmjVshPFZm6_1cYEBiPafUuqVcDlJe-b5vzFb7GOX6CFuLhXUueZkfzhSYC57N8dBtSglU-1r7mPnXMnjXegu1uYQ589z7LJ3HGMK1ullsMijSI8FgypUW6ThGrkuZvbYStuCJjk994Y-s_nDyk6y77Emn17CQTVFXI1GWEaiGGWjIRiExqyE6mU50QSRAxW28rf0yMm3THly8qVrV--bqcke5bp2_7lp80chH_KOEyBmRkoYSvpRW0Ju2m94ROlxdMwW98x6RS43OtbhmwKU0HZrBWfzdi6RL0sZO6eB6ln4Ow61ZhlfNBm0YRuWwXMKYULUKDMqEaPP3pUBdN1lS0Xcq4fOfO0mj6InfGhAakhZMBQJ4wcWsF9eChCG28DS7uvMoMjSYXz5mZ-aTtKItH8BJERJnxvFguitVm4UXVy8BUECx8AKAhGdaIepPxQTu2WCXJMlqwu1uCzJDDE0oeg8JMQ82zEiCPKDM1hvVuGkv5ebAB4cXNzuwbl0ad_9LqueK1kOKisBWCWebTEQ-CqPZFG6JZ8dd4z9Ocw_gEHvLK2WAQ7o3S80V3N0OLDFoFmmE4oJYx0-i9nhZgJKNPI9sNMn2L3Y0cxlUCY4yRRunVHrLBfUOlNUZAI4lFgBhRtNKUfFPlBqrjGWX49S1TUbGEmfWrawa1U6AXpZEe2JwKcohcP1YBVOOb0TXST2jcfFlcpwSDBG0cqLJqKggUxP4ct1sCWpMAIteGylbZbuVgS_DEnH8psXec4IXe3RYRAxj8fYirKVvJM6uqtEtiMV975H1fz9mYhDHJPxMuOZ6F0oDPVxEFSIDJtOcJyl_G-xWM1KjW5y_4FBTxLJGONob1WR8nut6uvJuAicgtDu74N6IvTS609eMYlmEwYrMStWsvFs7Jw&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 13546,
+        "abt": "0",
+        "t": "优斐斯（uface）氨甲环酸精华液传明酸5%浓度提亮肤色淡化色沉补水礼物 20ml*2瓶",
+        "client_exposal_url": "https://sh.jd.com/g/1Th0lozsJ_T2Rz6kPtdHFe",
+        "clk_url": "",
+        "spu": 10060230574829,
+        "isSelfSku": false
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAyMDA1MjgzMzQiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/431037/19/7577/82995/69fee97dFfe30b79e/00833203209e1510.jpg",
+        "itemType": 0,
+        "jp": "299",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100200528334.html",
+        "finalPrice": {
+          "estimatedPrice": "281",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLSITmLa5OCbZapLzBmMT-14_zS6p_nB_PAwGZuw4DjX3.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "299",
+          "op": "299",
+          "mp": "399",
+          "finalPrice": {
+            "estimatedPrice": "281",
+            "type": 18,
+            "title": "新人专享到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100200528334"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100200528334,
+        "userMyssFlag": false,
+        "pcp": "299",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100200528334\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"9010280120743028475\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDIwMDUyODMzNC5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBmjsleaefulfcnDjaSpqCfk8oYDpNjuogWdL4Thmr_9IcW24NLlq1XD8xJCpD9QCHoMo2HYrhMGEM6BJLK5v485cxX93AkS2LjpQZeFIgOfUM0_rWdLrd5r7zBJQBoziBhVsF0mgS7b580K9QxGmb9BEspmUC-AowKsH51BWibcZD4TI-mORcXu-JthQ1J-I2_Vi4YgJ8VxdLKsfQJH-lJ-9V8NL1mHI_JotRNE4ew_dp2MzLfNqtNkkclzmIEd3G39n5LY-h7YYs7KAIAZYBWPXd3AqzyCIsLQeP-cTjW46RK7s3TMnZZSnkLc0BHuqNhVpq_yUJ1ebxtBxnuQCMgNy1z3e2p2W0tbhPiZMgiQXbet52EjTL8npghdLVVVTn55T7kn_0xZf83xPCim5_Fmb8rF9UqciUP79jwYD75DE2CQ8g6LPN0GzcerEstBAHmU0fKXmXkzDjuWxVQxI9_h0hFbnsxxiGOG_NF7HII5_tmbBG1_e3z0KREbjilhovKHwTORgAJFcauhI05Mhq2bjzj05h4vhYexx1YkooLLrmRgxBMmeGqy6lAqTTehHYdznENxQpVa9T2bAryy4xDwULyKYYkVpDO3n_AJ-w_ofRYtcabK396ZNBLBaSymbMWxvSIgDI717m89aG73bIuUub6xnzGm0sE2VynJJq4OFI-TZNUkola6LDPILfb7b6mM2rPNt5UJ0SzVhBAw3UTJ5Xt-B4U-jb_RnS1eKoibukjoiGznd7J7hjyt0VZOwJdmTaFievM8Kpabe6oCFcF0J-gdMzkNUAXuMCrK97-4_jV5Y4dhP3q9fJuOeKZq7PBVPfPnrIAPOP8TrivL5lhupqXYXDsvED5Puip-QTdUhN6tjB27HcIMw8H1JvVB_HaaD_ob_GsYRwRR56gs0sVOtWZifKTfnEX_fr0XGLQ7YK76dmwIwcMiaEgJMsNOiqdE20pModMNeR3JMHY7RHwybdl2cJAk1Gk-Q_mYI-jgKeVHh-ZIrsVRLkntqxV6sNhkdQYqaMcdw7kmTUxqLHg8AKrA6Wg2GzCFxVCg3XZqDnm5nzKjWzKK7u7betURY2xssdEG_eSybiD6nrspHoYlOxRw_dMWeHkUgW691eQdmvQpGCWcKi53ZBjlh0Hid3fdto4hpxgp1LFdNSdkO5gxkW5kprv1m71PIDz0HaXqknR5ciK6A1Sw5kN6r8du_H4K5Wq2qvFQM4PI9CQZS2DFT4pp-Q9eqzKAth0M2Tf0niFuhiZ3LdqNZuL8HP0jhiNGlgZa3J4287ALdV4I1HlOJ_v2adt7rVZlETmduHYvn5EMMhon5OKKs1Yn4-HNeB0&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1396,
+        "abt": "0",
+        "t": "珀莱雅紧致肌密水乳套装护肤品套装礼盒抗皱紧致化妆品520礼盒生日礼物",
+        "client_exposal_url": "https://sh.jd.com/g/ffDf8cQfd6J82yIrmowChy",
+        "clk_url": "",
+        "spu": 100020406760,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAwMTYxMzc1MjEiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/430257/3/13630/140342/69ff0cfcF9d340c05/0083320320f684a6.jpg",
+        "itemType": 0,
+        "jp": "508",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100016137521.html",
+        "finalPrice": {
+          "estimatedPrice": "455",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLVhwrPkY9tWCZjSEOFqYOiLfWYssNaq4u0AtteIdLcSs.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "508",
+          "op": "508",
+          "mp": "510",
+          "finalPrice": {
+            "estimatedPrice": "455",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100016137521"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100016137521,
+        "userMyssFlag": false,
+        "pcp": "508",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100016137521\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"9077415481132506280\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDAxNjEzNzUyMS5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBmnxIyfevVIoJub2A8BL4Sq5sjNAYTZsswYHmGCrYUtaY-qg-ugJMyazWAoZ_pJI_RWOjoIJQfXOi7tH7Xz3cp5mX3Gw6BpXZFHqtf_SJPThkNatUoQmBf3rBnH_2iW4DmObGfq228UKKfYKwvaoqleEbFsI_DR5GaWm1UFF3b2HbLKOlc69LZnIpmwrNv4wUJYQ4UIYQtLjsazRkE-nqqE_j9YEiByYpVSuIGcXAPj6K4_XPQF4wXBhNFoz3OwcvDZpNZdW_5Ws-WH0JUk2MjMITfDbDcolNXuSmClNS1P-cHhMFHFElD-u6p03eOQmkS5M_YxxWYR7vl05xE5BOExOvJP8OS0DQQlHyKp1BaWZbf4N96mKU3CEBGZwGy0VCMS_n68UejqnUxphDVv1Y3z3Yh58IpvKzMaSHy0mQghxNhJ6vLIqmh4eryTVLb5TyolkSN0AehfiiXKdDmpedHpCU_5ND1XOoqdCma8iQZlwYh3IvyplgBR8wCgVqNlnzGX35UZl9nSj5-J69kKAO-3dyM1il_M4sZrSMAxq6cYBCrFmrAFG_WurxuGnCE6t_nojNUAfr739Pao5u6RcBqq5W6yWBwYLlBG2bghfIvRGwLL5TlTatSR1xfOXizYFcye9n2afb4rzhfHp6Nmo6USlAWzdZCvbxZ-3UqUdu-uKX2bUEolsXeWUWn5xS_dF_CCTfri0W8ZlDS1_Q6kAygOZZcKi1KsTaiLWkqP0Qc1dGdQfjZy29_JLo4J-qyTgZ22gfrps_JEG_rXgJ72M8U2Qux1gZuFUYQqfgt3ZE1Md3BecEwwyfPS_qd0x3V0NsmHbuarUEkwUaGTmJ1XuDEs-ICVDTh-VuMimVCnClUP1kMoOj5y7tooTeQN4Yi43y3JbCj4IB04Oa5xsbob1zFKxd894aDOPT2bTwg_zi4LCQs5izja3eNQpIzXk7mZUsGGyubXNCaq7mfANQVBRT1kMxY0cUIIcQEisjR6tG5owdidgLOWgfixGkeCTukY3uiQ91gXnsrdeFPxclXlv5CvL2pFrqNqBoIHguRDe-6w7_3fHMM_5Tn8MtcIGd0E75f_e4exbcepIam9XVJNLdJvQ0UE6kgRs4RXelRLFDUiBnH5HBANqa-CHLGyGKQrwrhj86neFtU6MIbwk0P8h_gCy_tdq5TTV4VGA2mNE8wNmEE51i557C6djnGAtARoRTcAfdrMArqXZZHwcnkXg9A4RCRAb4QSji3tDxu5dNuIRzi0URAHgzqlUypW1Is95BXNRz15bjN9gTRqGB5CC3HVwpMqaEzOYAYbR6Gr0HyDKiLyJ0ybSzCew_x1-TRsseY&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1396,
+        "abt": "0",
+        "t": "珀莱雅红宝石水乳套装护肤品套装礼盒抗皱紧致化妆品套装 520礼物",
+        "client_exposal_url": "https://sh.jd.com/g/6aMppi5TdaYdy3OJPFpI2p",
+        "clk_url": "",
+        "spu": 100016137521,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAxNTQ5MzI1NDIiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/373296/7/8771/75136/693fb961F6242c9c1/dc44d1fb0f4becfa.jpg",
+        "itemType": 0,
+        "jp": "28.2",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100154932542.html",
+        "finalPrice": {
+          "estimatedPrice": "25.2",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLakReOSRcLoyEO9CjsrR749TKzo4vGLs3vs2jNoJ4nqh.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "28.2",
+          "op": "28.2",
+          "mp": "29",
+          "finalPrice": {
+            "estimatedPrice": "25.2",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100154932542"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100154932542,
+        "userMyssFlag": false,
+        "pcp": "28.2",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100154932542\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"9205002423713712506\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDE1NDkzMjU0Mi5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBlsQiwcphllManoeFNJuRhznDFtqE-HHSo3vn_u0kMxj7N-sHHauOKJgUKRiOBGKoVvZy5y34V6-_QxFFvzaAVsSU-8akL432HMHcbwMenUou_pOMkforWz-NjAGEitdX_94IQP1_3W-NwlgJmLIPLm6jVYeUWHtIzoRMgCCi555PEulho5tNiXSpsDofWZxgTsQTh3mPCAr7FP8cUOZ6N1KVrBCU8put80_8DVq7iRQHqjmEx2L-C8C2o_3m2s9E3ePqVardfDxslfFJPlNR7NDGHaW1pVjj2uilXat9jn3aspNzNxW8MmLmO3wk-nwyttQRCD9pyCiJpe-IocN9zocBAvpDMqYbv3e5fWG6w9cRTi9WhBf9F-T29uYdasmsaFu_6p5rVbtTQEARI-ZWLLkGO5yzsPl7t6J3EgexCT0O-bkVcKkLvs31zccaJUXD1Rr57DlA-qaQj0l-oZmxrdVFxljfEGLGjfTlYMqMAQW08LOuTTQRHfCo1i6Id6aQfIu8_DkZOaGAAkUVIIY3g-uR9XnZZ8AcA-nqMdiDm57DtDUV4ETllFBtsPX1OCH5ji6AXy6lzvOPt-s1rxw70OpRZfdnpLt0OxiA6RA7YF2emnbVZBtud_X7Ng3D9zlFA7bD1V_ufKbmfDbv24UC4ghUbkF0SakibeI1Rs4aY6yT-3D5Zv5ZBcp_YRjdcuMHtT2lRyDkd68K5GPBM06Kl-yCGTEcrM859_Ur_cnNEHoFo8bNkZTVDpMOw7UZMeJLVISZlys8pAnZ9Qkfb2FJYU9nDZoZqYkXtULIe4GccGU5rNfWgukcitcvsX-yioNFgJUkIPA9s6kMHpt3ecen-4sc8a0HQmVCq67A6FuIHNvUQhKL57uj6SqjBAoVjUhFHA8Ru6nK-4iqpCYyhtdjOxjXt-L4sfrCd3F4CJpl9X_BdIA0p7OZRk92ttrHTs4nA7RMA60QBypoZSo3Pg5Ll9XgANzr60HfoHJW7kJof9H-zrdvqs1u8HLLVDGXLxgQPkakTw3E1EEP0zCqeQUtlFp2XtkJQ_VI4pX7hDJlxQGRvkn_4EeAklxPDL5X36onIhnl-tVIVYfuoSQchSU4SZmZuA5iR-9poH65-yVGHc5vdKyNfmA0H91ygZyv9mZ_DxC88YyjkGYsTa_qBmrn3yyA-pBWJN6g6W90d4nZBOsTWsTJKdIdLMotf1M-sRsjp2vi2hPeslSDBpNGc51huhfcAecmeCwoyhVvxNkMz1ZG696LvQGb1Zq38K4_CaHwAErjL2CWIC6Su52-2J6izYgsIS_QQcMGYNoHNc26J09P7Q3e7hFl98W0mwpylEgarLScnB1F9QFhzBA2pjg7_-&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1391,
+        "abt": "0",
+        "t": "百雀羚（PECHOIN）水润保湿霜营养滋润(新一代)50g补水滋润面霜母亲节礼物",
+        "client_exposal_url": "https://sh.jd.com/g/3OTYPPM0ofAeL9KVGBLf3A",
+        "clk_url": "",
+        "spu": 100154932542,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAyNDYyMjkyNDEiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/434038/24/2354/156847/69ff0544Fabea7364/0083320320e23fb8.jpg",
+        "itemType": 0,
+        "jp": "2700",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100246229241.html",
+        "finalPrice": {
+          "estimatedPrice": "2497",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLXV6mpRNmdfs5n0hV1Z_y4h8asdp0H-DFAj3r93tqLWA.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "2700",
+          "op": "2700",
+          "mp": "2701",
+          "finalPrice": {
+            "estimatedPrice": "2497",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100246229241"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100246229241,
+        "userMyssFlag": false,
+        "pcp": "2700",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100246229241\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"8656988966512007962\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDI0NjIyOTI0MS5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBmF-8I5yHCN2E8pa8H6PCu7LX2YAP0y3OpntwfMgeH_Hj2oqJbBaZIAoi2H-bbMgdFA3sQZGhBcnl3PdmD1YqhKMxzH4eB0hly030yN0G4FTJUJ1UZiE1lXBFckNuIefqe33YKvuZEwALmuSw5gFvYaurYMPoTSr_m5vtuhT4Vh4xgdw2ZRGS_Eibqd0gguVpfCz9XgS1Q_JuIKOjTemgrPD_1DYbZjUGxa1CgoacORhwtJlxaQH0Dfys7pIa9GZc0owAJBJIWi5Xj2nD-V62ePNFTVuE5eob1GhyrgK3KOkodkd-tx4HMMoYLfTA0o8umMPOpVjggwxILAjHLmg8uRHGdSoSMqfFLnGQIZNzd8VWAI5DUJHbTm8Lnk7r2qgrG0HC1i6aOUFlW_3PUp-mtVSjDAWxlDKBnjaQkdeyRHJUBZ03uAZCc7fkDl1lalJSoQ5qPMubRrlla9ppPR3Nh2FeBtVcyJiI-iXuZqX0EiUjsg6-gcbUovsEIgDjXbCKw3Vx1XP47bAxTNLBZYMfF-pKNG_ajbpbiApsoL0C90jNF972yIs1GUBDtJFjjU4VgCfjVMQ4U6MblPmKKvBPoj1xBZVKFPANGWp8xL5K71RqYL8yaXDmKXSYs8HS_hGkg1c14lOSIwhDKEAQbpIGaZvSJUmwT1JgOC-Lj6UNxoP9L0yVdjGNddZoBe380FwEuCPwAHn_7KSfC2AS-pLLzaiK1-Bf6hmM-T3KhZR2qsgvtTdf76uWkAzGHAfSxyJax4xsb54PCjjD1UOGIowbQtqoDcLECeqUYj1OBQggIlTIJHh_uUc_532agIcb8I-F0oznUebiL6wro9OoQHHyrJqDsHlNlB4BzuiBa7bMR_Pl2Z_vT7vIfyvZh38pHbN5osaWSigMNW3l8iffhNEemqEnxkjLTJNxpcILHF8w0lHTV3sDi-KZiQxoz8uRUvsEc2bEhd7SopGYsZWQE-Ys5RvrPdL-D0QTuWZAHKN6vhu7C_xtr7meUmRaQ6lF_xuORkjS82wjHV6DzWmV167zphJWLMmpaSDyPREXCgmGMhfg2E_h4-AjbZFNs6ZyfQAgBdsdwgO93yoeNl6v8aDg3fUUHUQVxqB9Mt7aauuu-mH6BlwcXou7BLQh974MSI8suQZWphCyFCD-F0QbwHH6LBdmEvw-LttR710FxfK3yIDw5XgJYxRaDBPuWOP1fnN7RWw0fpp_g77xijw9YJFXV6hh8Cu8qQTz99fZwe8lVsXR5wPzp2Qr7tOClSJ8gLdCdpYFzw3egapa7WBCNQ_0LHvDKB67LY-aqy8JaFSlRQng&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1396,
+        "abt": "0",
+        "t": "海蓝之谜（LA MER）油皮精萃水乳套装(油皮水+油皮乳)护肤品化妆品礼盒520女朋友礼物",
+        "client_exposal_url": "https://sh.jd.com/g/1zpMLh8ayDE5A4tT4AHyBQ",
+        "clk_url": "",
+        "spu": 100033103276,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAxNTI3MTkzMjciLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/431581/36/11395/151401/6a018ac4F71c264f2/00833203209b2189.png",
+        "itemType": 0,
+        "jp": "535",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100152719327.html",
+        "finalPrice": {
+          "estimatedPrice": "482",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLakReOSRcLoyEO9CjsrR74-qalKqyNhLsNntKeDLN1AS.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "535",
+          "op": "535",
+          "mp": "536",
+          "finalPrice": {
+            "estimatedPrice": "482",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100152719327"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100152719327,
+        "userMyssFlag": false,
+        "pcp": "535",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"16777216\",\"campaign_type\":\"28\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100152719327\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"69231258478\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDE1MjcxOTMyNy5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBlgYjoQzB6vgmyLUUTmXFGq4W-xl2Q_lIS3kCx6xWPlBAyXmo5a-pU-yoMmkaWH0HNS3X_qA8D-DZY2gy9Eh8iLtOaYj6GwAFzOdeZde66wPiHmijFJDvT30Tikp6mIWj4T-8z8BFJ0nwAnKWcXJTQ_COivJ3P5JApWO8I5FECwxezZJ1rmKuCmSvbw5QDPU5gdCODu-slkd_xNWYw9_oErcDiY47CePXjHq6h9jeoMm97YkGyxA_jdzjNqwCnNfp3LQXqlrCD7fUt5QFIv2yK_HajvUrcZdq4HrMlMCFUG2p4YFc7fBPb_W5vn6FE2C5wYi95MtuozbCdzgB7Qmc5KL-qh2dGT6a-Q0Xmrv_w_8Wp0ssEdyNv-TSw_9CNhAmHeTjuESAi8YuU49iii3wh-iMh5KSpPdstRNWsXYgb_kC3i3FaJky1EKYbG-BGFD9PqiaIaCzln1w89cC8BpoM0wOgGtMR_bw5ULgRdAfleE0ighMp-81-nlwD3ScCh2v9JqOe6UuMH6ZpruLNW5JbblJJ3wFDeWWi8tSsdscCYcBUNKVX6A1upiN25OTmYDh0khhJsrQe4EaNcOrrAQ7DmJuZQB1nQrA83vYrhQo5_wEBVkgQjAPk_H4guxKmXLWtmiEXRF5AHs6HRA56wWZirz79PLghUth5wQla9rrF5HrAj_ePMOPgBu0yTQRlYHfi1M-1uavuQaWpy_2LA2pcYvXSmLnVmJ4VFi01Bv_iH8Xhe9_W975rLWKsCR-V3l2EsAGoPmvZG1S0XTzPSY2pCs1ffyT7MNNtbmtx7UKbaN_4x9qpGlbih0kEnITpKoEUxsuTgDiew_ltSNrYDuKglwFGVAjyPGpnfe_aAxIMeL5_ZlPiwhoIBrUweJmeCrNvC2H27gYB2t35Wr4nq5CakXsdBzq6P5NQVc4IGJAjrVNBwL3S5gRPLRQoLRgu8jrpSxThnIPqql6XJJfs7rw1CoaP59OfXjXpBqW001WJhLeYqTW00DHo7C-O-NiGJBupD9XFLtrZNap9T8WOYzcVOfUPlpQ4hRzdrCGuA72qajmwqentwsZEQ1Nsnf_40H8dZy8gWNqrdkqcvDAf5cgE9-PEr3Yodm2TxkFnwUvmWMtCEaLk9pd8SS8c4oH7dO6WEWgcn-TD4W0kfReCkcYXfErCdYbIX1GF5gKGkFhQ4srjlJzths0ffP2ukWzDTOGUXJ9V99ETtgJbdMSy4CK7zms93uyosEXeM6_2N3TedUP937AYeBi7mQJP41T8ePCEEPURhfgfv6fcHwbPYgteTlDPP6jD5QB0bCIIFwJEYGUCvBX92wDEA_WOO2C5qRIg&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 13546,
+        "abt": "0",
+        "t": "雅诗兰黛樱花水100ml精华液舒缓修护化妆品礼盒护肤品套装520送女朋友礼物",
+        "client_exposal_url": "https://sh.jd.com/g/eQELAb14KpC0FPjKJMq6DV",
+        "clk_url": "",
+        "spu": 100035480876,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAwNDg3NDM4NjkiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/427878/28/15954/94302/69f9c934F1094e448/0083320320e09853.jpg",
+        "itemType": 0,
+        "jp": "449",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100048743869.html",
+        "finalPrice": {
+          "estimatedPrice": "446",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLdT3IVOQcmuaVWATx5XL_7KBxZAdXCoaEZ6MNsXX6RuD.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "449",
+          "op": "449",
+          "mp": "480",
+          "finalPrice": {
+            "estimatedPrice": "446",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100048743869"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100048743869,
+        "userMyssFlag": false,
+        "pcp": "449",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100048743869\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"8601267369561298155\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDA0ODc0Mzg2OS5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBmhYKbUiW52PeTtGqEyMObDLXl758OI0eYL4Py4q_xOmmKQqx6bnMmAvU1Ick8gl8oHo8jjIaZx8QsuVcz7lRq2VXi4sDcsSe1tYq1YgBmW5kk2R0UlcrNnsccxQl8PzbNAO_xiQU-EEpbDgOgju_bz_WWS6AYek6l5dTDpuTbVn7m46LOUq0-nBx-Pny7UWGYpwHPhNhKj1KOg-QJY1WExknSySaB8UmIIwdZJ4tfZytZcqNWpGCgoQk_kpOXX4PdksBwdN17BUezFXmGwMqnd7nuz7voqKqqQM3yFSPN91wdOg0k7559Xzr0GeLUXiRJsqjCak5McKgQHR6gAAHUe-Vz7hxQPxj1qTHVGfsj28FnBIW_aJ4Z5SRGij52uBJExZUea_8CzJmeNywj6WfOaVXwCadlKiV5tfbzvoQGB0xlN2ZYjDTeFbojkhegAZsoPmYsiO6lraphqV-Rlw5t7Ks4_DTKgn1wseIG_ShoeDm9LH6aOU6wT213rJrgeZ4XkCtGtHRg-7W9HaR-uzm3mO3ZMpKV671Ac65RGjgOyIPObqUUcW1pu1rL1VqA689-lv-NhTgCuZnTwMIN82X9at4auXu-8diIOwVNe08j-4v-zMi7CAy1HfAQhhrQH-YWwsK4Vd5pGBEX4FfFJoDNOiVavkXgXzkJO6lZ4Cj3raF1eIYHmE0jKoHvrWwtRgq08Q7mnfbKRi3iysHG9SU7Hz783VPOpgJXui0NzsUP8dCwYY4OeIh7-I_sUWDEJ5rZ7icN66a0_4Cefcd-tHykQ52ONyLrhHoA-FI_jGuPCNghXozzpEtTgCBDLIZZ6_6IuOZYk4NHtyiBRkSkLTvBBQhEJZEk08sMgPUb5rcyE7RBzESZ1OYRyyXb8MPRvmjncbL10gXARZgcqp9OYwt6T8kfn39ag92teOw63PY6chpwkMxeHbSTv-ZodkkA9WrBhBh5FgVX6vuzguBSXHUNoYcR6YvQUlv5rSuoJ6wlWpBRto90nB1i3YqZJHdtsypfu3_uC5_cOZ_VHNa0buOMZHVvSW1eMtO0p-rOji9kx8Go3L0T9MD1fQP1f5LNq0GocvuX-ZhbC5esForO4ZTWpFSoFfXFtgCuRMjXrTUbR7SHxUDqofz0BzEJZMDxxHmRqtHSOrw6g3QkZN19U5D0MLrO2pNgDoFM8VBext6I_Ps2RwvxZ20F8HmhOXFt61uHF17WGuZy8TdbyTtyNqo46DO55yENLZBs1uMZOoMFVerkYvP1T4QgETjMz0r0_hk2nsL5c603kX8dDpLOxIezszs7nQG5hLrA1ZaMRKjgYCCdFhoQV-uWuPnxvKDbq9P8&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 13546,
+        "abt": "0",
+        "t": "珀莱雅（PROYA）能量精华油 抗皱修护以油养肤保湿面部护肤精油20ml 生日礼物",
+        "client_exposal_url": "https://sh.jd.com/g/dOuI9FpHJ7h7FMIsTYWJow",
+        "clk_url": "",
+        "spu": 100048743869,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDIwODc4NTQwNTM2OCIsInAiOiIyMDIwMDIiLCJzb3VyY2UiOiIxIiwiYWRfcmVxdWVzdF90eXBlIjoiMSIsIm1peGVyUXVldWVOYW1lIjoiYWQifQ==",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/381720/28/21371/83640/69645e8cF170f7cc6/3dd5031e4f182d3c.jpg",
+        "itemType": 0,
+        "jp": "72.9",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/10208785405368.html",
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLU59I2TSZ5m4NfNw81HRCNXz4z3sNEDxq1aPkQFAQpLT.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "72.9",
+          "op": "72.9",
+          "mp": "0",
+          "id": "J_10208785405368"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 10208785405368,
+        "userMyssFlag": false,
+        "pcp": "72.9",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"10208785405368\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"8514430436904157047\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMjA4Nzg1NDA1MzY4Lmh0bWw&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBn5fvlu9QrbwJDeXVFd4WD4L5F5JW_RQmbqPNTVYEUbY4jOv3SGe_V3ut4SzGY03hkiBOPrsf_9PGZNRAQTBQAx7U5yzfFai5EimiEyxRfliDvKf_KmRIICZFbObhtuyGjgGFxFgpZQq5VZFQ_u9pEf4qah23l-qxwehXwqgFor4CYuiT4GoEWn4Cp-UD33fS7kyLc6e4FQZxqQcCIiQ2DEQsMZ8vL97KE4WfU-OOFpQ72c39E_Hgl-24ScnOOWIkH1IoKS1qeUbDyidkGgM2zp9GGgmF36x8hOvj--SuylX_M3hNlVCSk5VRWddT66EaVO5NoXhnK_skfa6l5JBRd7DlRjxDqGs4PXs_7UYKtgGeSUOyUvZotnfSP1WwTeJs4m_nV9xaI1z2EvKwjT3-Rvil3O_ehwMqGIJBK_8cf_Bpg2v5E470ULDnn8WA1GJ_NBxeYa6H5jLMlvblrLb8VaE3VmslFMKrRUPmz-YeDjJDcAdq2GGQTrtU1Pd9khuDWlisMhvFIv_x8-wDXFPe1c_-ZhKpRUC190j-R00JzC76YrFyOxxT5L_wC-Sppk0C6vp3NexCVgrMwohaU-4ceMRWGBTLCRk9ObVrQSAHXi5e0woaUccWTiZVihl-6pL6qHQdTI9s8TYku6eFn-KNWoiI7XRrjXg_3dPAtNig32b_a9qaNxJba5a4j9eC0-Gw4spJsWi1qxXyQ0tJrr4iFr9xX9l7he6-mqw32IgEQhfAIUk0ghaENfXoRyntweWSB904sc7JRxGIQq-GDRa33UwD3_-AZRiIp2MzcEZPTgQ-OFuZ_azd3i6O-qOVZCTvC9b9clIk6vmEWiWYo0v6jmDurmdLlvVOrtDreR5jdsraEn7aQUdMhdWdPbuF7dT_nMMlpiHatrkjcI_4GRYokLLq8POrgUn_4Jf6RyigAyfIt_fjkXoKbrO67hFqCj2CaPkz0LDabkBso4VzcLeOXmNwspQqvo84NlATDuQ3ipq_3fH7Lt0WffxTYPsE0QRCdO2-T3vJJaI-4s2bH754zilbjTeQ4O4It8D1ng0aKgDm2ujktnYVhGJb3425WGEMR89LeHEwD8RsrsQdN9z-EQpLT8sWGGDdF-0JzQJEAn9ouo9a0lcfoRTzB_6K2_5qrT7rI__YTxIuJ5GG77hFscFFOF_PUYUnE-iTDe4VK50J8YvzDymmcxXy4SFMmq9W5cRIdZl5zdb22YVy_UsSAF2bOyzz-UaiLw-fQx_ZKzVywebefrigW_BtY-V-xBbsMJWAKPpH2255ORlKCpGyb-&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 13546,
+        "abt": "0",
+        "t": "娇丽【持证舒缓】活性胶原舒缓次抛精华紧致抗皱敏感肌改善泛红正品 舒缓次抛1.5ml*30支【1盒】",
+        "client_exposal_url": "https://sh.jd.com/g/eVqmgssu-VE7KlOuVZgvTC",
+        "clk_url": "",
+        "spu": 10208785405368,
+        "isSelfSku": false
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiI3NTc2MTAzIiwicCI6IjIwMjAwMiIsInNvdXJjZSI6IjEiLCJhZF9yZXF1ZXN0X3R5cGUiOiIxIiwibWl4ZXJRdWV1ZU5hbWUiOiJhZCJ9",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/420110/20/19277/143411/69e878bfFa8a97f80/00833203201e3cd0.png",
+        "itemType": 0,
+        "jp": "99",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/7576103.html",
+        "finalPrice": {
+          "estimatedPrice": "91",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLcDM86xCsK6_dIG5PU-AeZCSRQBijVOKHllVweJBzqeU.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "99",
+          "op": "99",
+          "mp": "239",
+          "finalPrice": {
+            "estimatedPrice": "91",
+            "type": 1,
+            "title": "到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_7576103"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 7576103,
+        "userMyssFlag": false,
+        "pcp": "99",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"16777216\",\"campaign_type\":\"28\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"7576103\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"16674081927\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzc1NzYxMDMuaHRtbA&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBnst_vvUD3EYTXeP4xs0lIY5ESSYoonVOEzT7zIDnIKU0O0_Cr9jMYjNZN3h994beXUyuOqdva5vSfmDfCvSvQfAwQzupew-fSqLO4xqUPL4M3lonqWdkf1SQ_p0WeUXCc2g4yLX6GnC1viT54-8YhJ13d7ZkWMbkS9IDLso9sQmiPDwB-p0LBoNgZtjXfAiGkBSFj-W_a7oz0hxFWZ2OJ2cNi91hjFn4ADPTYr5TJYoABLPs_91mJcyY3XTKyc3zxaCbAHsDdqVrcBxaytrH-vNq9-t1PdmM9GscNBaPunC8cbLYQnTsu6qYX9aLzOyLZXpbidIvqRtNF7kaKUu-vj0L97OGUJnh-KC3pM5jvKGqClu_77jmb_pIHQA7qEohK1VIC3wFQp6Fh7GKCqjbZrWWv3WcYUmBejXyp6Txf71-7IPIOjmykN6DMBVrxSI_4uXpKQkktFHsNdA37_Yk1NquvoHNt31ps4GxQPPD3LhHoGmaSB4MMGRAgrxzE5CvZrs9qC-QnJZxcKSUXq-CV1T6zkrQPyikcKanL1p0GcWvfGgxa4G4VMgT0PRTXLRMUZYPL3Ci7JUi8j_Gk7K_GxU6nBYkQNXra3kJFItjxOEiL3My5dmonevMYkkHcCAUr30-AI6jFL09O4pXRxFXmoWtB-5PKR6vXb58oOa3dAr7Meham2OhThRCBh8zccSTETegguxvVfHwJrtXCW3qBwtBjLYg7xvtkl_HYZXZsgQApKSyqBzeswDDc60EsRyyJHTFZ1UCV382armJUDukqsE5j8EETp_oodERtpiJXnXgF0EkV3HT8A7TWhovYch7ckHwLQP60b-BqZV0tHs9IjRCCJbMXQ8hWgg9EJdjOw4B4BDxpQ-3YX748QModUAoTpcGK4xZID48FVHUDC89OTVnfk_bz4p54CbRtJJgV6t-oBWqDSzeItI3LRRn8FOiJOgUpZWeyAJNADheidkcWKlfISVfqTZ0um9lVNnY4Bp4CQO17E1VB3AHQ6LwDBYdIHBBro-c2ovg4FwVFXKb6LayIUvtHXs2_CsrGG512__GQKDN1VzbLDZKwFp25GAYtcO3g2yLYca9gWNNf2uoidBtDL9o1RJ1h22F8Ia38If-Bt7crS-zkSydLV50SCxQF6zNrUywjI9fsPsoa5HG-XHZHahyyySiXMGeWSaC2597fV_LBrasqnw7ijz7N03HbbLL46y6jrVzHgOl1n--UbeGIng8zYv5OXls5wlbAG4M2G45jyM_f0O79rsb156UbpbyS183UEd0dLmPWur1zYh-nvaWXDaD3rg2SjF_meDry3V-ckII8qtxhValIjaQw&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 16756,
+        "abt": "0",
+        "t": "滋源【云旗】防脱控油固发生姜洗发水套装1035ml侧柏叶护发无硅油第1",
+        "client_exposal_url": "https://sh.jd.com/g/85GH3FuJliqdj30BW_Q0LI",
+        "clk_url": "",
+        "spu": 7576103,
+        "isSelfSku": true
+      },
+      {
+        "broker_info": "eyJyZXF1ZXN0X2lkIjoiMTAxMDQ2OTc5MjMtMTI2OTI0LTE3Nzg0OTAzNzQ4MjYiLCJwYWxhbnRpcl9leHBpZHMiOiIiLCJza3VfaWQiOiIxMDAwMTc3MDg4ODIiLCJwIjoiMjAyMDAyIiwic291cmNlIjoiMSIsImFkX3JlcXVlc3RfdHlwZSI6IjEiLCJtaXhlclF1ZXVlTmFtZSI6ImFkIn0=",
+        "subsku": [],
+        "rt": "0",
+        "img": "jfs/t1/428536/17/13236/103619/69f9c92fFd4424ca3/0083320320a6ca1f.png",
+        "itemType": 0,
+        "jp": "339",
+        "commentAbStrategy": "A",
+        "target_url": "http://item.jd.com/100017708882.html",
+        "finalPrice": {
+          "estimatedPrice": "316",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "source": "1",
+        "bn": "",
+        "ssid": 33,
+        "tips": [],
+        "pcdk": "JnCanae85ClpSHcwCxcwLVhwrPkY9tWCZjSEOFqYOiK4-upnLw5deJf2Pk3dnkMf.6sCX.qQPQ",
+        "sid": "a6d534f4-2e69-4592-9aee-6824960987aa",
+        "vid": 0,
+        "duration": 0,
+        "price": {
+          "p": "339",
+          "op": "339",
+          "mp": "350",
+          "finalPrice": {
+            "estimatedPrice": "316",
+            "type": 18,
+            "title": "新人专享到手价",
+            "subPriceType": null,
+            "count": 1,
+            "isFinal": 1,
+            "rpt": 1
+          },
+          "id": "J_100017708882"
+        },
+        "impr": "",
+        "mealCardFlag": false,
+        "miniCanAddCart": "0",
+        "sku": 100017708882,
+        "userMyssFlag": false,
+        "pcp": "339",
+        "extension_id": "{\"ad\":\"1805\",\"business_type\":\"524288\",\"campaign_type\":\"3\",\"ch\":\"2\",\"organic_atrribution_type\":\"-1\",\"sku\":\"100017708882\",\"ts\":\"1778490375\",\"uniqid\":\"{\\\"material_id\\\":\\\"8922669509209614412\\\",\\\"pos_id\\\":\\\"1805\\\",\\\"sid\\\":\\\"a6d534f4-2e69-4592-9aee-6824960987aa\\\"}\"}",
+        "newSource": "-1",
+        "isEbook": false,
+        "clk": "https://ccc-x.jd.com/dsp/nc?ext=aHR0cDovL2l0ZW0uamQuY29tLzEwMDAxNzcwODg4Mi5odG1s&log=tVyr33tfEgyOWTtApe6I6ctoAsuQHHIjPKF2drvOjBl5GFcKedWNa-hfuf19ieA05fYMXVVnqHxIzUTUXh4wgZduqPfbTTt3q8Z-oB0lgrlTjMajCkNQeGSHkCruqBWVtK48N4lVsByJXRK5Jfloxfv54UsFcX6jQVelha7uSSrIGJE5g7aKTXRXjXoe7viEk7walRR8bim0CAX0DzePx8gLuvu14vjOt3bum5gNMqye787GUOmXfIOg6bHqfMMIPi31ZY7WR0TaRbO4qWs8pYo_BmnkC2aXox6UOJwTZbbTLOAl8QKbYGXw-f6xNe9cYtYctg-g9RrYGCzeOcLDJw3G5HAmq5hTMLyZwH2ge9qkvEQlfSOXxIn09y8PgFxzh-GMed5DOm_hBzikUN2nfmJETkwlFHRrX-LEZ9GYTczUefeQ7vJXbBXwG0-ZRfq6nfbBBshKX6qh-UiSycAE_FSlRn4C0Ia-3OKbuUuPOlPrlDDlQxbZUmOnnzE9HJ4D6s89bxJA0l1BBfNzwwXkoaXDeLiVotsPpC3Mh2Hj1ap1wetIhzsHC4iPu611pZdAB7lS73jv_AJ4MNFDenVmGlpNOkmU7xVsi-lGjF8IUbkLgtFTT12RODFCAKw87QQljNT8p9bNgcH88OBEfxS7z2WM5es9GQgMdxriYIBnI2Qii1qgNNpS00uzlMfzII9voZbSPKvhTHRZqX7YVq7umxdsrJ58WikHp6paSGtHUWdIbq6x74AWlSYh3nS5LKzgcBDa3FUoJE0grbWAnKddC1WeF-_ZfavDVEyd6NbHX23uZLAHeBZsEYHW4p2l1tpSUGy0SnW9BTcz8sm2hIJHivxQewolEqLH_GRitkQIiqUnDG2RQUAiAo0NF45RC7kukmTmpvXQxOkCNzG5nJWi_9oM1lmTi3hArRCG1DBtmIEtpCCmdHgLPSoIdWTaWBZT2UtTUWJbeVow-vVzkMiKQPCrnJNam3hqJkYLcQbOVVo8z2DLzDXb_ayads2n1ky7asfk6COZ7xLjC29s1xcSSFYP16ejh11k2ack-U5nOHdaMk-uJrX8i6vCDzrWfO2mlHk-vVzkT5bD0Gja8B1iBISXISh-qt4PESqVt1x9nEO8Rl8XP0znEY1YoVetZNsDsDsEfKS3hR_PF3r3N8yX2OXByoSqIvtznWWR7dJVE54cubAz8sN__ByL4HYPCaMtMXUHpaQjadJnXqRMrkNHkhwC3UQosxvm0u2lQyo_Dh-KYt9NMoB8k46ymyzqNsN_WXzq-NRnJzsCT7WQrqoYyX8KRqMQTW9rwy-CATNsNWhdDTdJ7AhjnOvRczUVhFbZloVYxINlKGUzsaBQL70d7tVfqg20cgw0ZuFnhjY1_VA&v=404",
+        "mp": "0.00",
+        "miniDuration": 0,
+        "lp_type": "0",
+        "recVid": 0,
+        "c3": 1391,
+        "abt": "0",
+        "t": "珀莱雅红宝石面霜滋润50g抗皱紧致淡纹细纹保湿乳液面霜女士 生日礼物",
+        "client_exposal_url": "https://sh.jd.com/g/1f52bRlR28r9fflfO-kn0_",
+        "clk_url": "",
+        "spu": 100017708882,
+        "isSelfSku": true
+      }
+    ],
+    "promotionMap": {
+      "7576103": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100246876169": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100154932542": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100152719327": {
+        "iconList2": [
+          {
+            "imgUrl": "//img11.360buyimg.com/img/jfs/t1/262452/22/21322/10497/67b47bc4F418880ce/9e303a96e7526ca4.png",
+            "text": "重磅新品",
+            "attr": "cjxp"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100246229241": {
+        "iconList2": [
+          {
+            "imgUrl": "//img11.360buyimg.com/img/jfs/t1/262452/22/21322/10497/67b47bc4F418880ce/9e303a96e7526ca4.png",
+            "text": "重磅新品",
+            "attr": "cjxp"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100283471246": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100048743869": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100017708882": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100200528334": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      },
+      "100016137521": {
+        "iconList2": [
+          {
+            "imgUrl": "//img14.360buyimg.com/img/jfs/t1/260782/38/21411/10119/67b47b85Fe4ca69d1/bc40d6b5406e535a.png",
+            "text": "京东超市",
+            "attr": "IsJDMarket"
+          }
+        ],
+        "iconList1": [
+          {
+            "imgUrl": "//img11.360buyimg.com/imagetools/jfs/t1/274758/36/238/2219/67ce4f01Fb5fa4601/373b5ccb83c6a398.png",
+            "text": "自营",
+            "attr": "isSelfSku"
+          }
+        ]
+      }
+    },
+    "abExpLabel": {
+      "guobu": {
+        "label": "base",
+        "keyParamMap": {
+          "hit": 1
+        },
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzYyNDc4fGJhc2U|tsabtest"
+      },
+      "handPrice": {
+        "label": "Received_price_Test",
+        "keyParamMap": {
+          "hit": 1,
+          "priceUp": 1
+        },
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzU2MDc1fFJlY2VpdmVkX3ByaWNlX1Rlc3Q|tsabtest"
+      }
+    },
+    "latency": 230,
+    "priceMap": {
+      "7576103": {
+        "p": "99",
+        "op": "99",
+        "mp": "239",
+        "finalPrice": {
+          "estimatedPrice": "91",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_7576103"
+      },
+      "100246876169": {
+        "p": "199",
+        "op": "199",
+        "mp": "259",
+        "finalPrice": {
+          "estimatedPrice": "196",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100246876169"
+      },
+      "100154932542": {
+        "p": "28.2",
+        "op": "28.2",
+        "mp": "29",
+        "finalPrice": {
+          "estimatedPrice": "25.2",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100154932542"
+      },
+      "10208785405368": {
+        "p": "72.9",
+        "op": "72.9",
+        "mp": "0",
+        "id": "J_10208785405368"
+      },
+      "10063879544237": {
+        "p": "960",
+        "op": "960",
+        "mp": "960",
+        "finalPrice": {
+          "estimatedPrice": "907",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_10063879544237"
+      },
+      "100152719327": {
+        "p": "535",
+        "op": "535",
+        "mp": "536",
+        "finalPrice": {
+          "estimatedPrice": "482",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100152719327"
+      },
+      "100246229241": {
+        "p": "2700",
+        "op": "2700",
+        "mp": "2701",
+        "finalPrice": {
+          "estimatedPrice": "2497",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100246229241"
+      },
+      "100283471246": {
+        "p": "98",
+        "op": "98",
+        "mp": "199",
+        "finalPrice": {
+          "estimatedPrice": "85",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100283471246"
+      },
+      "100048743869": {
+        "p": "449",
+        "op": "449",
+        "mp": "480",
+        "finalPrice": {
+          "estimatedPrice": "446",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100048743869"
+      },
+      "100017708882": {
+        "p": "339",
+        "op": "339",
+        "mp": "350",
+        "finalPrice": {
+          "estimatedPrice": "316",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100017708882"
+      },
+      "100200528334": {
+        "p": "299",
+        "op": "299",
+        "mp": "399",
+        "finalPrice": {
+          "estimatedPrice": "281",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100200528334"
+      },
+      "100016137521": {
+        "p": "508",
+        "op": "508",
+        "mp": "510",
+        "finalPrice": {
+          "estimatedPrice": "455",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100016137521"
+      }
+    },
+    "pingouMap": null,
+    "priceResCode": 1000,
+    "priceList": [
+      {
+        "p": "99",
+        "op": "99",
+        "mp": "239",
+        "finalPrice": {
+          "estimatedPrice": "91",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_7576103"
+      },
+      {
+        "p": "199",
+        "op": "199",
+        "mp": "259",
+        "finalPrice": {
+          "estimatedPrice": "196",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100246876169"
+      },
+      {
+        "p": "28.2",
+        "op": "28.2",
+        "mp": "29",
+        "finalPrice": {
+          "estimatedPrice": "25.2",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100154932542"
+      },
+      {
+        "p": "72.9",
+        "op": "72.9",
+        "mp": "0",
+        "id": "J_10208785405368"
+      },
+      {
+        "p": "960",
+        "op": "960",
+        "mp": "960",
+        "finalPrice": {
+          "estimatedPrice": "907",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_10063879544237"
+      },
+      {
+        "p": "535",
+        "op": "535",
+        "mp": "536",
+        "finalPrice": {
+          "estimatedPrice": "482",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100152719327"
+      },
+      {
+        "p": "2700",
+        "op": "2700",
+        "mp": "2701",
+        "finalPrice": {
+          "estimatedPrice": "2497",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100246229241"
+      },
+      {
+        "p": "98",
+        "op": "98",
+        "mp": "199",
+        "finalPrice": {
+          "estimatedPrice": "85",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100283471246"
+      },
+      {
+        "p": "449",
+        "op": "449",
+        "mp": "480",
+        "finalPrice": {
+          "estimatedPrice": "446",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100048743869"
+      },
+      {
+        "p": "339",
+        "op": "339",
+        "mp": "350",
+        "finalPrice": {
+          "estimatedPrice": "316",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100017708882"
+      },
+      {
+        "p": "299",
+        "op": "299",
+        "mp": "399",
+        "finalPrice": {
+          "estimatedPrice": "281",
+          "type": 18,
+          "title": "新人专享到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100200528334"
+      },
+      {
+        "p": "508",
+        "op": "508",
+        "mp": "510",
+        "finalPrice": {
+          "estimatedPrice": "455",
+          "type": 1,
+          "title": "到手价",
+          "subPriceType": null,
+          "count": 1,
+          "isFinal": 1,
+          "rpt": 1
+        },
+        "id": "J_100016137521"
+      }
+    ],
+    "bucket": 1,
+    "callNewMixerStrategy": "A",
+    "success": true,
+    "impr": "",
+    "request_id": "10104697923-126924-1778490374826",
+    "flow": "10",
+    "yushouList": {},
+    "timestamp": 1778490374843
+  }
+}

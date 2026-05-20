@@ -69,6 +69,11 @@ urlpatterns = [
         name="job-dataset-merged",
     ),
     path(
+        "jobs/<int:pk>/dataset/search-llm-xlsx/",
+        views.JobDatasetSearchLlmXlsxView.as_view(),
+        name="job-dataset-search-llm-xlsx",
+    ),
+    path(
         "jobs/<int:pk>/export/",
         views.JobDatasetExportView.as_view(),
         name="job-dataset-export",

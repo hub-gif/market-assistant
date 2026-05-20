@@ -1,0 +1,111 @@
+{
+  "data": [
+    {
+      "cateIcons": [
+        {
+          "iconUrl": "//img14.360buyimg.com/imagetools/jfs/t1/95664/15/40921/296/66d13f7cF7ed5ab7d/bd4d68f33a69c7dc.png",
+          "ppms_itemName": "冰洗 / 空调 / 电视 / 厨卫大电",
+          "ppmsItemId": "xap0xE4c"
+        },
+        {
+          "iconUrl": "//img12.360buyimg.com/imagetools/jfs/t1/242395/34/16729/259/66d13f7bF0d8cc517/d0b621d6a5d57409.png",
+          "ppms_itemName": "电脑 / 办公 / 文具用品",
+          "ppmsItemId": "JzVok155"
+        },
+        {
+          "iconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/247476/17/17051/251/66d13f7dF795a4306/93894d9675b21bc9.png",
+          "ppms_itemName": "手机 / 运营商 / 数码",
+          "ppmsItemId": "ty8chyPN"
+        },
+        {
+          "iconUrl": "//img14.360buyimg.com/imagetools/jfs/t1/357125/1/4260/1897/690b47acFac125a8f/342f5a54963ed7f9.png",
+          "ppms_itemName": "生活电器 / 厨房小电 / 个护健康",
+          "ppmsItemId": "t0qhKq1y"
+        },
+        {
+          "iconUrl": "//img12.360buyimg.com/imagetools/jfs/t1/90075/15/45774/323/66d13f7dF22e7951a/45d57a26b924d416.png",
+          "ppms_itemName": "食品 / 酒类 / 生鲜 / 特产",
+          "ppmsItemId": "LYlDWYUs"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/78165/1/28972/293/66d13f7bF366459f6/ccc78435369c55f1.png",
+          "ppms_itemName": "美妆 / 个护清洁 / 宠物",
+          "ppmsItemId": "Rl1rcqET"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/89890/2/48950/379/66d13f7eFf9e73676/7183b7ebb5f0f6f7.png",
+          "ppms_itemName": "元器件 / 劳保物资 / 五金机电",
+          "ppmsItemId": "wBzXXmXf"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/346272/36/22668/2329/690b3dd0Fb50b76c1/8e55dfe18da9b3b7.png",
+          "ppms_itemName": "家装 / 建材 / 家具",
+          "ppmsItemId": "SeWmXf0k"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/359560/40/4557/5661/690c0832Fddb88021/ed237162580199ae.png",
+          "ppms_itemName": "家居日用 / 厨具",
+          "ppmsItemId": "p3XTfYFx"
+        },
+        {
+          "iconUrl": "//img12.360buyimg.com/imagetools/jfs/t1/132989/18/46173/321/66d13f7dF21b29c8a/0204c8f1aefd017a.png",
+          "ppms_itemName": "男鞋 / 运动 / 户外",
+          "ppmsItemId": "mpb4HvXX"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/236205/4/26259/315/66d13f7bFa6179f46/01e945d3bae87a8d.png",
+          "ppms_itemName": "男装 / 女装 / 童装 / 内衣",
+          "ppmsItemId": "N48iN9TK"
+        },
+        {
+          "iconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/16651/22/22897/298/66d13f7dFd30ce327/d1a18d7f18fa5c57.png",
+          "ppms_itemName": "京东买药 / 计生情趣",
+          "ppmsItemId": "MxSzB23M"
+        },
+        {
+          "iconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/238399/24/22617/307/66d13f7bFe05d9a35/b7f1e233a982662a.png",
+          "ppms_itemName": "房产 / 汽车 / 汽车用品",
+          "ppmsItemId": "xSrm7ZNz"
+        },
+        {
+          "iconUrl": "//img11.360buyimg.com/imagetools/jfs/t1/237297/11/24156/285/66d13f7dF72f9ce96/895285b6d3152e8c.png",
+          "ppms_itemName": "图书 / 文娱 / 教育 / 电子书",
+          "ppmsItemId": "h5GXpXd"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/57285/32/26773/372/66d13f7dFd5e7f8fa/c97b8634e410fd2f.png",
+          "ppms_itemName": "女鞋 / 箱包 / 钟表 / 珠宝",
+          "ppmsItemId": "Y2Rhiagy"
+        },
+        {
+          "iconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/231301/22/25764/350/66d13f7cF939a0236/582b896f1eefdbc8.png",
+          "ppms_itemName": "母婴 / 玩具乐器",
+          "ppmsItemId": "fkwZ1941"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/5483/29/26319/345/66d13f7cFa42c4968/b4e804da707192d9.png",
+          "ppms_itemName": "机票 / 酒店 / 旅游 / 生活",
+          "ppmsItemId": "FBviipEz"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/236708/14/24350/454/66d13f7dF06f78533/cc5f6bdb00c717fd.png",
+          "ppms_itemName": "艺术 / 礼品鲜花 / 农牧园艺",
+          "ppmsItemId": "ESI8Oa5G"
+        },
+        {
+          "iconUrl": "//img13.360buyimg.com/imagetools/jfs/t1/57896/27/28003/327/66d13f7bFfb6b714e/99e43fc125413c2d.png",
+          "ppms_itemName": "安装 / 维修 / 清洗 / 二手",
+          "ppmsItemId": "40cd504h"
+        },
+        {
+          "iconUrl": "//img10.360buyimg.com/imagetools/jfs/t1/49480/29/26553/562/66d13f7eFa1218f0b/b2e47cdae98f0879.png",
+          "ppms_itemName": "支付 / 白条 / 保险 / 企业金融",
+          "ppmsItemId": "IUM4NFbo"
+        }
+      ],
+      "ifReact": true,
+      "ppms_itemName": "线上配置",
+      "ppmsItemId": "trKMu9IT"
+    }
+  ]
+}

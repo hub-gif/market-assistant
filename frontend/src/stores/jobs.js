@@ -32,6 +32,7 @@ function stopJobsListPoll() {
 export const useJobStore = defineStore('ma-jobs', {
   state: () => ({
     jobs: [],
+    semiAutoJobId: null,
   }),
 
   actions: {
@@ -52,6 +53,10 @@ export const useJobStore = defineStore('ma-jobs', {
       this._syncJobsListPoll()
     },
 
+    setSemiAutoJobId(id) {
+      this.semiAutoJobId = id ?? null
+    },
+
     /**
      * 用单条任务详情写回列表（与 PATCH 轮询、详情 GET 对齐）。
      * @param {Record<string, unknown>} updated
@@ -61,6 +66,9 @@ export const useJobStore = defineStore('ma-jobs', {
       const idx = this.jobs.findIndex((x) => sameJobId(x.id, updated.id))
       if (idx >= 0) {
         this.jobs.splice(idx, 1, updated)
+        this._syncJobsListPoll()
+      } else {
+        this.jobs.push(updated)
         this._syncJobsListPoll()
       }
     },

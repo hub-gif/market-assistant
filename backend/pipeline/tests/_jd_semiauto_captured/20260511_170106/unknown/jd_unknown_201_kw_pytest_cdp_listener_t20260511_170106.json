@@ -1,0 +1,19 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "hiswords",
+  "url": "https://api.m.jd.com/api?appid=search-pc-java&functionId=hiswords&client=pc&clientVersion=1.0.0&uuid=17784900693481949486110&pvid=d07a65ab09e64e32b1304edf25aaa4d4&t=1778490362159",
+  "mime_type": "text/json",
+  "parse_error": null,
+  "parsed": [
+    {
+      "his": "1",
+      "key": "打印纸"
+    },
+    {
+      "his": "1",
+      "key": "联想笔记本"
+    }
+  ]
+}

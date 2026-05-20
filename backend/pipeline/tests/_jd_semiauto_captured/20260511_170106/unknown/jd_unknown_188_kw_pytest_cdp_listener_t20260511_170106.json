@@ -1,0 +1,264 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pctradesoa_equityInfo",
+  "url": "https://api.m.jd.com/api?functionId=pctradesoa_equityInfo&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170605286;eije17vniip22j28;fb5df;tk03w7bf31b4818ngN09G0TTdMgcZHO3rU5ACgykDbRPhMkMOHKvHaHgDd4q-wQjKgE2_2G00ljdUW6RIVVcjtsLEASb;3d84abacb7b3ab8396efdf8584b2bf11;5.3;1778490360286;q3EpJLIfBiIf7GVR9S0e6XFRCWFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jpP6nVY4a1fGakQ6jpjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJn4YbKnVIikS4zXR2TFjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75e5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg3Xojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;208643d411c6b0d7a8cb8021ddd3e352;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490360285&client=pc&clientVersion=1.0.0&body=%7B%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "msg": "Success",
+    "data": {
+      "abBuriedTagMap": {
+        "qyPlus": "tsabtest|base64|UENUZXN0Xzc3ODYwfHRlc3Qy|tsabtest",
+        "modalLogin": "tsabtest|base64|UENUZXN0XzY1OTIyfGJhc2U|tsabtest"
+      },
+      "loginConfig": {
+        "exitLoginImgUrl": "//img14.360buyimg.com/imagetools/jfs/t1/258113/38/17765/79646/67a708d5F692b1ae2/8047ecc989f54728.png"
+      },
+      "bPinPlusSwitch": true,
+      "isPlus": false,
+      "iscPinPotential": true,
+      "userRights": [
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/230266/40/32327/2083/67603b43F3d697dd9/a57bcab821054cd4.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "免费试用",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102081056-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "免费试用",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://plus.jd.com/index"
+          },
+          "advertId": "9102081056",
+          "desc": "https://plus.jd.com/index"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/250255/18/25699/2208/67603547Fb8560691/ab278b2adc364778.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "无限免邮",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102081052-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "无限免邮",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://plus.jd.com/right/index#item-freight"
+          },
+          "advertId": "9102081052",
+          "desc": "https://plus.jd.com/right/index#item-freight"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/258705/20/10036/1989/677ea4e6Fdd7bee67/2d1eec0d47c23361.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "只换不修",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102081053-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "只换不修",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://plus.jd.com/right/index#item-change180"
+          },
+          "advertId": "9102081053",
+          "desc": "https://plus.jd.com/right/index#item-change180"
+        }
+      ],
+      "potentialUserRights": [
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/311515/20/1121/2452/6825b24dF96530930/43aef4bceeded642.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "专享低价",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102102458-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "专享低价",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://pro.jd.com/mall/active/QQ2oWZJBBe51n1KVsVLqFytznW8/index.html?babelChannel=ttt43"
+          },
+          "advertId": "9102102458",
+          "desc": "https://pro.jd.com/mall/active/QQ2oWZJBBe51n1KVsVLqFytznW8/index.html?babelChannel=ttt43"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/315926/10/1060/2007/6825b260F2462f69b/960d43018694a291.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "实名免邮",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102102459-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "实名免邮",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html"
+          },
+          "advertId": "9102102459",
+          "desc": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/313982/4/1139/2912/6825b26fF39f8ea5f/6bad9d1624389222.png",
+          "productGroupId": "07358743",
+          "link": null,
+          "name": "团购优惠",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07358743-24864315-9102102460-N#0-1567---66--#1-0-#1-#ace1041510",
+            "text": "团购优惠",
+            "biclk": "2",
+            "url": null,
+            "desc": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96"
+          },
+          "advertId": "9102102460",
+          "desc": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96"
+        }
+      ],
+      "plusStatus": "0",
+      "userBenefit": [
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/293434/10/6626/2620/6825aa9dFa388ab96/9b3c3c94f3502f04.png",
+          "bgColor": "1",
+          "bPinPlusType": "1",
+          "productGroupId": "07841686",
+          "link": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96",
+          "name": "企业团购",
+          "ext_text1": "1",
+          "comment": [
+            "1",
+            "2"
+          ],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122473-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "企业团购",
+            "biclk": "99#null-null-null#212088253#dct0&&&&",
+            "url": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96",
+            "desc": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96"
+          },
+          "advertId": "1502122473",
+          "desc": "https://pro.jd.com/mall/active/2BFvc7VoG2TmWqQSeEHq32ZdzLi7/index.html?babelChannel=ttt96"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/293971/20/6541/1992/6825ab16F4ef5f266/7824faa3430f5134.png",
+          "bPinPlusType": "1",
+          "productGroupId": "07841686",
+          "link": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html",
+          "name": "自营免邮",
+          "ext_text1": "1",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122474-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "自营免邮",
+            "biclk": "5##",
+            "url": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html",
+            "desc": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html"
+          },
+          "advertId": "1502122474",
+          "desc": "https://pro.jd.com/mall/active/3X27XhXNZpCg7gvghgmxpt8DrFUG/index.html"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/319705/14/892/2448/6825ab46Faf282daf/ce7068df2a1186a7.png",
+          "bPinPlusType": "1",
+          "productGroupId": "07841686",
+          "link": "https://bact.jd.com/amountreturnpc?entry=pc-sydb",
+          "name": "达量返",
+          "ext_text1": "1",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122475-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "达量返",
+            "biclk": "5##",
+            "url": "https://bact.jd.com/amountreturnpc?entry=pc-sydb",
+            "desc": "https://bact.jd.com/amountreturnpc?entry=pc-sydb"
+          },
+          "advertId": "1502122475",
+          "desc": "https://bact.jd.com/amountreturnpc?entry=pc-sydb"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/307338/32/1162/3724/6825b4c4F84fcf18c/22dfa976a94e4dea.png",
+          "bgColor": "1",
+          "bPinPlusType": "2",
+          "productGroupId": "07841686",
+          "link": "https://bact.jd.com/amountreturnpc?entry=pc-plus",
+          "name": "采购返利",
+          "ext_text1": "2",
+          "comment": [
+            "1",
+            "2"
+          ],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122476-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "采购返利",
+            "biclk": "5##",
+            "url": "https://bact.jd.com/amountreturnpc?entry=pc-plus",
+            "desc": "https://bact.jd.com/amountreturnpc?entry=pc-plus"
+          },
+          "advertId": "1502122476",
+          "desc": "https://bact.jd.com/amountreturnpc?entry=pc-plus"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/307090/7/1410/2765/6826eb20Fb7e6551e/598df035dd8327e2.png",
+          "bPinPlusType": "2",
+          "productGroupId": "07841686",
+          "link": "https://pro.jd.com/mall/active/QQ2oWZJBBe51n1KVsVLqFytznW8/index.html?babelChannel=ttt4",
+          "name": "折上95折",
+          "ext_text1": "2",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122477-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "折上95折",
+            "biclk": "5##",
+            "url": "https://pro.jd.com/mall/active/QQ2oWZJBBe51n1KVsVLqFytznW8/index.html?babelChannel=ttt4",
+            "desc": "https://bvip.jd.com/"
+          },
+          "advertId": "1502122477",
+          "desc": "https://bvip.jd.com/"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/309296/17/1387/1891/6826ebf0F80003e39/398655b6d0a3ecaa.png",
+          "bPinPlusType": "2",
+          "productGroupId": "07841686",
+          "link": "https://item.jd.com/100038556004.html?bbtf=1",
+          "name": "自营免邮",
+          "ext_text1": "2",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122479-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "自营免邮",
+            "biclk": "5##",
+            "url": "https://item.jd.com/100038556004.html?bbtf=1",
+            "desc": "https://bvip.jd.com/"
+          },
+          "advertId": "1502122479",
+          "desc": "https://bvip.jd.com/"
+        },
+        {
+          "img": "https://m.360buyimg.com/babel/jfs/t1/287300/40/7651/1918/6826ec2bFc64ba575/13701fe6649dd88f.png",
+          "bPinPlusType": "2",
+          "productGroupId": "07841686",
+          "link": "https://pro.jd.com/mall/active/2MQJUNZQPNtfkoD4mH2zrNBwRstd/index.html?babelChannel=ttt1",
+          "name": "专属补贴",
+          "ext_text1": "2",
+          "comment": [],
+          "ext_columns": {
+            "mcinfo": "07841686-26290248-1502122480-M#0-9171-1--66--#1-0-#1-#ace1041510",
+            "text": "专属补贴",
+            "biclk": "5##",
+            "url": "https://pro.jd.com/mall/active/2MQJUNZQPNtfkoD4mH2zrNBwRstd/index.html?babelChannel=ttt1",
+            "desc": "https://bvip.jd.com/"
+          },
+          "advertId": "1502122480",
+          "desc": "https://bvip.jd.com/"
+        }
+      ],
+      "isModalLogin": true,
+      "plusSubsidy": ""
+    }
+  }
+}

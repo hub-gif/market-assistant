@@ -208,75 +208,78 @@ watch(
 <template>
   <div>
     <section class="ma-card">
-      <h2>分析报告生成</h2>
+      <h2>报告生成</h2>
       <p class="hint-top">
-        选择<strong>已成功</strong>的任务，调整下方统计规则后点「保存以上设置」，再点「重新生成报告」。默认会<strong>先按系统规则生成统计稿</strong>，再<strong>用全文智能润色与补充</strong>（需本系统已配置可用的智能服务）；不会重新爬取数据。各章是否做评价智能解读等，可用「填入推荐示例」带上，或在下方「高级选项」里微调（多数情况不必动）。
-        阅读与下载请至
-        <RouterLink to="/jd/analysis-view">报告查看</RouterLink>。
+        成功任务 → 保存设置 → 重新生成；不抓数。成稿见
+        <RouterLink to="/jd/analysis-view">报告预览</RouterLink>；细则用「推荐示例」或「高级选项」。
       </p>
 
       <div class="toolbar">
         <label class="chk-inline chk-rules-only">
           <input v-model="useRulesOnly" type="checkbox" />
-          本次只生成规则统计稿（不做全文智能润色，更快、不调用智能服务）
+          仅规则稿（更快，不调智能服务）
         </label>
       </div>
       <div class="toolbar">
         <label class="sel-label">任务</label>
-        <select v-model="selectedId" class="job-select">
-          <option value="" disabled>请选择任务</option>
-          <option v-for="j in successJobs" :key="j.id" :value="String(j.id)">
-            #{{ j.id }} · {{ j.keyword }} · {{ j.run_dir?.split(/[/\\]/).pop() || '' }}
-          </option>
-        </select>
-        <button
-          type="button"
-          class="ma-btn ma-btn-primary"
+        <div class="toolbar-task-select-wrap">
+          <el-select
+            v-model="selectedId"
+            class="jd-toolbar-el-select"
+            placeholder="请选择任务"
+            filterable
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="j in successJobs"
+              :key="j.id"
+              :label="`${j.id} · ${j.keyword}`"
+              :value="String(j.id)"
+            />
+          </el-select>
+        </div>
+        <el-button
+          type="primary"
           :disabled="!selectedId || regenBusyAny"
-          title="不重新爬取，仅根据本批次已有数据更新报告文件"
+          title="不重新抓数，仅重算本批次报告"
           @click="regenerateReport"
         >
           {{ regenBusyThisTask ? '生成中…' : '重新生成报告' }}
-        </button>
-        <button
+        </el-button>
+        <el-button
           v-if="regenBusyAny"
-          type="button"
-          class="ma-btn ma-btn-secondary"
-          title="仅清除浏览器里记录的「报告生成中」状态；若后端仍在执行请勿点"
+          title="仅清本页「生成中」标记；后端若仍在跑请勿点"
           @click="clearLocalRegenLock"
         >
           清除误锁（本地）
-        </button>
+        </el-button>
       </div>
       <p v-if="!successJobs.length" class="hint-top">
-        当前没有<strong>已成功</strong>的任务，无法生成报告；请先在任务列表确认流水线成功。
+        尚无成功任务，请先在「任务」里跑通一次采集。
       </p>
       <p v-else-if="regenBusyAny" class="hint-top">
-        按钮因本页记录的「生成中」状态而暂时不可用。若你已重启服务或确定没有在生成，可先点「清除误锁（本地）」再试。
+        本页正记录「生成中」。若已结束可点「清除误锁（本地）」后重试。
       </p>
       <p v-if="regenBusyOtherTask" class="ma-warn-banner">
-        任务 #{{ regenPendingJobId }} 的报告正在重新生成中，请稍候再切换任务或重复提交。
+        任务 {{ regenPendingJobId }} 生成中，请稍候。
       </p>
 
       <div v-if="selectedId" class="report-config-block">
         <h3 class="report-config-title">报告配置</h3>
         <div class="report-config-actions">
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
+          <el-button
             :disabled="reportConfigDefaultsLoading"
             @click="loadReportConfigDefaults"
           >
             {{ reportConfigDefaultsLoading ? '加载中…' : '填入推荐示例' }}
-          </button>
-          <button
-            type="button"
-            class="ma-btn ma-btn-primary"
+          </el-button>
+          <el-button
+            type="primary"
             :disabled="reportConfigSaveLoading"
             @click="saveReportConfigToJob"
           >
             {{ reportConfigSaveLoading ? '保存中…' : '保存以上设置' }}
-          </button>
+          </el-button>
         </div>
 
         <ReportConfigFormFields
@@ -286,26 +289,17 @@ watch(
         />
 
         <details class="rc-advanced" @toggle="onAdvancedJsonToggle">
-          <summary>高级选项（编辑底层配置，一般不需要）</summary>
-          <p class="rc-help">
-            打开时会根据上面表单生成内容；改完后点「写回表单」再保存。可在此加入
-            <code>llm_comment_sentiment</code>、<code>llm_matrix_group_summaries</code>
-            等布尔字段（须为 <code>true</code>/<code>false</code>）。页顶「重新生成报告」默认已使用
-            <code>generator:&quot;llm&quot;</code>；若只要规则稿请勾选「本次仅用规则引擎」。
-          </p>
+          <summary>高级选项</summary>
+          <p class="rc-help">与表单同步；改后先写回再保存。纯规则稿勾页顶。</p>
           <textarea v-model="advancedJsonText" class="report-config-editor" rows="10" spellcheck="false" />
-          <button type="button" class="ma-btn ma-btn-secondary rc-add" @click="applyAdvancedJsonToForm">将配置写回表单</button>
+          <el-button class="rc-add" @click="applyAdvancedJsonToForm">将配置写回表单</el-button>
         </details>
 
         <p v-if="reportConfigErr" class="ma-err">{{ reportConfigErr }}</p>
       </div>
 
-      <p v-if="selectedJob?.run_dir" class="run-dir-note ma-muted">
-        本任务在本机的数据目录（排查问题时可用）：<span class="run-dir-path">{{ selectedJob.run_dir }}</span>
-      </p>
-
       <p v-if="regenErr" class="ma-err">{{ regenErr }}</p>
-      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先在「搜索采集」跑通一条流水线。</p>
+      <p v-if="!successJobs.length" class="ma-muted">暂无成功任务，请先完成一次采集。</p>
     </section>
   </div>
 </template>
@@ -322,12 +316,10 @@ watch(
   color: #2563eb;
   font-weight: 500;
 }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+.toolbar-task-select-wrap {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 .chk-rules-only {
   width: auto;
@@ -346,31 +338,6 @@ watch(
 }
 .chk-inline input {
   margin-top: 0.2rem;
-}
-.sel-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-}
-.job-select {
-  flex: 1;
-  min-width: 220px;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font: inherit;
-}
-.run-dir-note {
-  margin: 0.85rem 0 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.run-dir-path {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  word-break: break-all;
-  color: #475569;
 }
 .ma-muted {
   color: #64748b;

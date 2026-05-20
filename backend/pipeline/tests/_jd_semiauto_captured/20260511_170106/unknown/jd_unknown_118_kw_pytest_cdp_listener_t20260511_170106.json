@@ -1,0 +1,10 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://seq.jd.com/jseq.html?d=7TJI7l7pq4P47eAB6SJ*ihZBW09eJN9UFN9HzlkVz09dygEVW0wd7T7L7lfsFgkPzdR7FIWPwj%3Cdz09dygEuigkP7eAe6eJBFh%3Cd7TZ37tZuygFQfGWPw4wdWlfBWlPXz4P47eAB6SWlwBADwT2BwTAeZLwEZBcjZH4D7eAe6eJBW0fHygNs7eAB6SW*7eAe6eJBWIWPwj%3Cx7T7L7tFPWdZpzlDd7TZ37B%3CuwIWPw4wdFgP47eAB6SJOSHJySNb0R4xZT4Cfg%3CbRZk6tZTwlwkPFRAph6jNSZjbfwjJ%3CZfPLZkPFf4xTTACIRPNO6BfFfARNf4N7SAikfjJART7fS%3Cb1S4NOgLZLRjE56jF%3CTjpLf%3C%3Cd7T7L7tFbzIWPwj%3Cd7eAe6eJHJ0PCFSWPwj%3CxZBWDZL4*wBwEZBiD7TJ%3C22/&p=&loc=https://passport.jd.com/uc/newPopupLogin?ReturnUrl=https%253A%252F%252Fwww.jd.com%252F&apmAb=&hideWechatQQLogin=&callback=jsonp_01140826600217516",
+  "mime_type": "application/json",
+  "parse_error": "json root is not object or array",
+  "parsed": null
+}

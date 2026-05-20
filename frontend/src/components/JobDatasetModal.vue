@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import {
   api,
   downloadJobDatasetExport,
+  downloadJobSearchLlmXlsx,
   jobDatasetSummaryUrl,
   jobDatasetPageUrl,
 } from '../composables/useJobs'
@@ -34,7 +35,6 @@ const SORT_LABELS = {
 const tab = ref('search')
 const page = ref(1)
 const pageSize = ref(30)
-const pageJumpDraft = ref(1)
 const summary = ref(null)
 const list = ref({ results: [], total: 0, page: 1, page_size: 30 })
 const loading = ref(false)
@@ -52,6 +52,8 @@ const detailCategoryQ = ref('')
 const exportPanelOpen = ref(false)
 const exportLoading = ref(false)
 const exportErr = ref('')
+const llmExportLoading = ref(false)
+const llmExportErr = ref('')
 
 function onBackdrop(e) {
   if (e.target === e.currentTarget) emit('close')
@@ -185,7 +187,6 @@ async function refreshList() {
       return
     }
     list.value = await r.json()
-    pageJumpDraft.value = list.value.page || page.value
   } catch (e) {
     err.value = String(e)
   } finally {
@@ -193,27 +194,31 @@ async function refreshList() {
   }
 }
 
-watch(
-  () => [props.embedded, props.open, props.job?.id],
-  () => {
-    if (paneActive.value) {
-      tab.value = 'search'
-      page.value = 1
-      sortField.value = 'row_index'
-      sortOrder.value = 'asc'
-      reportGroup.value = ''
-      selectedShop.value = ''
-      priceMin.value = ''
-      priceMax.value = ''
-      detailCategoryQ.value = ''
-      commentSkuFilter.value = ''
-      err.value = ''
-      summary.value = null
-      exportPanelOpen.value = false
-      exportErr.value = ''
-    }
-  },
+/** 仅当 embedded / open / 任务 id 变化时重置；勿用返回新数组的 getter，否则父组件重渲染（如任务列表轮询）会与旧值引用不同而误判变化，反复重置标签并打爆接口。 */
+const datasetPaneResetKey = computed(
+  () =>
+    `${props.embedded ? '1' : '0'}:${props.open ? '1' : '0'}:${String(props.job?.id ?? '')}`,
 )
+
+watch(datasetPaneResetKey, () => {
+  if (paneActive.value) {
+    tab.value = 'search'
+    page.value = 1
+    sortField.value = 'row_index'
+    sortOrder.value = 'asc'
+    reportGroup.value = ''
+    selectedShop.value = ''
+    priceMin.value = ''
+    priceMax.value = ''
+    detailCategoryQ.value = ''
+    commentSkuFilter.value = ''
+    err.value = ''
+    summary.value = null
+    exportPanelOpen.value = false
+    exportErr.value = ''
+    llmExportErr.value = ''
+  }
+})
 
 watch(tab, () => {
   page.value = 1
@@ -248,6 +253,7 @@ watch(
     () => props.job?.id,
     tab,
     page,
+    pageSize,
     commentSkuFilter,
     sortField,
     sortOrder,
@@ -262,26 +268,8 @@ watch(
   },
 )
 
-const totalPages = () => {
-  const t = list.value.total || 0
-  const ps = list.value.page_size || pageSize.value
-  return Math.max(1, Math.ceil(t / ps) || 1)
-}
-
-function prevPage() {
-  if (page.value > 1) page.value -= 1
-}
-
-function nextPage() {
-  if (page.value < totalPages()) page.value += 1
-}
-
-function goToPage() {
-  const tp = totalPages()
-  let n = Math.round(Number(pageJumpDraft.value))
-  if (!Number.isFinite(n)) n = 1
-  page.value = Math.min(Math.max(1, n), tp)
-  pageJumpDraft.value = page.value
+function onPageSizeChange() {
+  page.value = 1
 }
 
 const exportPanelTitle = computed(() => {
@@ -313,6 +301,19 @@ async function runExport(format) {
     exportLoading.value = false
   }
 }
+
+async function runLlmExport() {
+  if (!props.job?.id || props.job.id == null) return
+  llmExportErr.value = ''
+  llmExportLoading.value = true
+  try {
+    await downloadJobSearchLlmXlsx(props.job.id)
+  } catch (e) {
+    llmExportErr.value = String(e?.message || e)
+  } finally {
+    llmExportLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -330,238 +331,232 @@ async function runExport(format) {
       >
         <header class="head">
           <div>
-            <h3>库内数据 · 任务 #{{ job.id }} · {{ job.keyword }}</h3>
+            <h3>库内数据 · 任务 {{ job.id }} · {{ job.keyword }}</h3>
             <p v-if="summary" class="sub">
               搜索 {{ summary.search_rows }} 行 · 商详 {{ summary.detail_rows }} 行 · 评价
               {{ summary.comment_rows }} 条 · 整合 {{ summary.merged_rows ?? 0 }} 行 ·
               仅展示全表至少有一格有值的列（与导出一致）
             </p>
           </div>
-          <button
+          <el-button
             v-if="!embedded"
-            type="button"
-            class="close"
+            type="info"
+            text
+            class="head-close-ep"
             aria-label="关闭"
             @click="emit('close')"
           >
             ×
-          </button>
+          </el-button>
         </header>
 
         <div class="toolbar">
-          <div class="tabs">
-            <button type="button" :class="{ on: tab === 'search' }" @click="tab = 'search'">搜索结果</button>
-            <button type="button" :class="{ on: tab === 'detail' }" @click="tab = 'detail'">商详结果</button>
-            <button type="button" :class="{ on: tab === 'comments' }" @click="tab = 'comments'">评论结果</button>
-            <button type="button" :class="{ on: tab === 'merged' }" @click="tab = 'merged'">整合宽表</button>
-          </div>
+          <el-radio-group v-model="tab" class="dataset-tab-rg">
+            <el-radio-button value="search">搜索结果</el-radio-button>
+            <el-radio-button value="detail">商详结果</el-radio-button>
+            <el-radio-button value="comments">评论结果</el-radio-button>
+            <el-radio-button value="merged">整合宽表</el-radio-button>
+          </el-radio-group>
           <div class="exports">
-            <button
-              type="button"
-              class="exp-btn"
-              :class="{ on: exportPanelOpen }"
-              :disabled="exportLoading"
+            <el-button
+              v-if="tab === 'search'"
+              type="success"
+              plain
+              :disabled="llmExportLoading || exportLoading || !(summary?.search_rows > 0)"
+              :title="'调用大模型补充品牌、规格，耗时随行数增加，请耐心等待'"
+              @click="runLlmExport"
+            >
+              {{ llmExportLoading ? '整理表生成中…' : '导出整理表' }}
+            </el-button>
+            <el-button
+              :type="exportPanelOpen ? 'primary' : 'default'"
+              plain
+              :disabled="exportLoading || llmExportLoading"
               @click="toggleExportPanel"
             >
               导出当前表
-            </button>
+            </el-button>
           </div>
         </div>
+
+        <div v-if="llmExportErr" class="toolbar-msg err">{{ llmExportErr }}</div>
 
         <div v-if="exportPanelOpen" class="export-panel">
           <p class="export-panel-title">
             {{ exportPanelTitle }} — 选择导出类型
           </p>
           <div class="export-formats">
-            <button
-              type="button"
-              class="ma-btn ma-btn-secondary exp-fmt"
-              :disabled="exportLoading"
-              @click="runExport('json')"
-            >
-              JSON
-            </button>
-            <button
-              type="button"
-              class="ma-btn ma-btn-secondary exp-fmt"
-              :disabled="exportLoading"
-              @click="runExport('csv')"
-            >
-              CSV
-            </button>
-            <button
-              type="button"
-              class="ma-btn ma-btn-secondary exp-fmt"
-              :disabled="exportLoading"
-              @click="runExport('xlsx')"
-            >
-              Excel
-            </button>
-            <button type="button" class="ma-btn ma-btn-secondary exp-cancel" :disabled="exportLoading" @click="cancelExport">
-              取消
-            </button>
+            <el-button :disabled="exportLoading" @click="runExport('json')">JSON</el-button>
+            <el-button :disabled="exportLoading" @click="runExport('csv')">CSV</el-button>
+            <el-button :disabled="exportLoading" @click="runExport('xlsx')">Excel</el-button>
+            <el-button plain :disabled="exportLoading" @click="cancelExport">取消</el-button>
           </div>
           <p v-if="exportLoading" class="export-status">正在生成文件…</p>
           <p v-if="exportErr" class="export-err">{{ exportErr }}</p>
         </div>
 
         <div class="toolbar2">
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
+          <el-button
             title="重新拉取摘要与当前页（仅刷新界面数据）"
             :disabled="loading || exportLoading"
             @click="refreshList"
           >
             {{ loading ? '刷新中…' : '刷新' }}
-          </button>
+          </el-button>
           <template v-if="tab === 'comments'">
-            <label class="sku-filter">
-              按 SKU 筛选
-              <input v-model="commentSkuFilter" type="text" placeholder="可选" class="sku-input" />
-            </label>
+            <div class="sku-filter">
+              <span class="filter-label">按 SKU 筛选</span>
+              <el-input
+                v-model="commentSkuFilter"
+                clearable
+                size="small"
+                class="filter-ep-sku"
+                placeholder="可选"
+              />
+            </div>
           </template>
         </div>
 
-        <div v-if="tab !== 'comments'" class="toolbar-filters">
-          <label class="filter-item">
-            排序
-            <select v-model="sortField" class="filter-select">
-              <option v-for="o in sortOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-            </select>
-          </label>
-          <label class="filter-item">
-            顺序
-            <select v-model="sortOrder" class="filter-select">
-              <option value="asc">升序</option>
-              <option value="desc">降序</option>
-            </select>
-          </label>
-          <label class="filter-item">
-            类目
-            <select v-model="reportGroup" class="filter-select wide">
-              <option value="">全部</option>
-              <option v-for="g in categoryOptions" :key="g" :value="g">{{ g }}</option>
-            </select>
-          </label>
-          <label class="filter-item">
-            店铺
-            <select v-model="selectedShop" class="filter-select wide">
-              <option value="">全部</option>
-              <option v-for="s in shopOptions" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </label>
-          <template v-if="tab === 'detail' || tab === 'merged'">
-            <label class="filter-item">
-              类目路径包含
-              <input
-                v-model="detailCategoryQ"
-                type="search"
-                class="filter-input wide"
-                placeholder="模糊匹配商详类目路径"
-                list="detail-cat-dl"
+        <div v-if="tab !== 'comments'" class="toolbar-filters toolbar-filters-ep">
+          <div class="filter-item">
+            <span class="filter-label">排序</span>
+            <el-select v-model="sortField" filterable size="small" class="filter-ep-select">
+              <el-option v-for="o in sortOptions" :key="o.value" :label="o.label" :value="o.value" />
+            </el-select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">顺序</span>
+            <el-select v-model="sortOrder" size="small" class="filter-ep-select order-select">
+              <el-option label="升序" value="asc" />
+              <el-option label="降序" value="desc" />
+            </el-select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">类目</span>
+            <el-select
+              v-model="reportGroup"
+              filterable
+              clearable
+              placeholder="全部"
+              size="small"
+              class="filter-ep-select wide"
+            >
+              <el-option v-for="g in categoryOptions" :key="g" :label="g" :value="g" />
+            </el-select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">店铺</span>
+            <el-select
+              v-model="selectedShop"
+              filterable
+              clearable
+              placeholder="全部"
+              size="small"
+              class="filter-ep-select wide"
+            >
+              <el-option v-for="s in shopOptions" :key="s" :label="s" :value="s" />
+            </el-select>
+          </div>
+          <div v-if="tab === 'detail' || tab === 'merged'" class="filter-item">
+            <span class="filter-label">类目路径包含</span>
+            <el-input
+              v-model="detailCategoryQ"
+              type="search"
+              clearable
+              size="small"
+              class="filter-ep-wide"
+              placeholder="模糊匹配商详类目路径"
+              list="detail-cat-dl"
+            />
+            <datalist id="detail-cat-dl">
+              <option
+                v-for="p in summary?.detail_category_path_options || []"
+                :key="p"
+                :value="p"
               />
-              <datalist id="detail-cat-dl">
-                <option
-                  v-for="p in summary?.detail_category_path_options || []"
-                  :key="p"
-                  :value="p"
-                />
-              </datalist>
-            </label>
-          </template>
-          <label class="filter-item">
-            价格 ≥
-            <input v-model="priceMin" type="number" step="any" class="filter-input narrow" placeholder="最低" />
-          </label>
-          <label class="filter-item">
-            价格 ≤
-            <input v-model="priceMax" type="number" step="any" class="filter-input narrow" placeholder="最高" />
-          </label>
+            </datalist>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">价格 ≥</span>
+            <el-input v-model="priceMin" type="number" class="filter-ep-narrow" size="small" placeholder="最低" />
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">价格 ≤</span>
+            <el-input v-model="priceMax" type="number" class="filter-ep-narrow" size="small" placeholder="最高" />
+          </div>
         </div>
 
         <div class="table-block">
           <div v-if="loading" class="state state-fill">加载中…</div>
           <p v-else-if="err" class="state err state-fill">{{ err }}</p>
-          <div v-else class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th class="col-narrow">id</th>
-                  <th class="col-narrow">row</th>
-                  <th v-for="col in displayColumns" :key="col.key" class="col-dyn" :title="col.label">
-                    {{ col.label }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in list.results" :key="row.id">
-                  <td class="num col-narrow">{{ row.id }}</td>
-                  <td class="num col-narrow">{{ row.row_index }}</td>
-                  <td
-                    v-for="col in displayColumns"
-                    :key="col.key"
-                    class="cell-dyn"
-                    :class="{ 'cell-dyn-media': cellImageUrls(row, col.key).length > 0 }"
+          <div v-else class="table-wrap table-wrap-ep">
+            <el-table
+              v-if="(list.results || []).length"
+              :data="list.results"
+              row-key="id"
+              border
+              stripe
+              size="small"
+              class="job-dataset-ep-table"
+              :max-height="500"
+            >
+              <el-table-column prop="id" label="id" width="70" align="right" fixed />
+              <el-table-column prop="row_index" label="row" width="76" align="right" />
+              <el-table-column
+                v-for="col in displayColumns"
+                :key="col.key"
+                :label="col.label"
+                :min-width="120"
+                show-overflow-tooltip
+              >
+                <template #default="{ row }">
+                  <div
+                    v-if="cellImageUrls(row, col.key).length"
+                    class="cell-media"
                   >
-                    <div v-if="cellImageUrls(row, col.key).length" class="cell-media">
-                      <a
-                        v-for="(u, i) in cellImageUrls(row, col.key)"
-                        :key="i"
-                        :href="u"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="cell-thumb-link"
-                        :title="u"
-                      >
-                        <img
-                          :src="u"
-                          class="cell-thumb"
-                          loading="lazy"
-                          referrerpolicy="no-referrer"
-                          alt=""
-                          @error="onThumbError"
-                        />
-                      </a>
-                    </div>
-                    <template v-else>{{ cellText(row, col.key) }}</template>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-if="!list.results?.length" class="ma-muted empty">本页无数据（可点「刷新」或切换分页 / 表）</p>
+                    <a
+                      v-for="(u, i) in cellImageUrls(row, col.key)"
+                      :key="i"
+                      :href="u"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="cell-thumb-link"
+                      :title="u"
+                    >
+                      <img
+                        :src="u"
+                        class="cell-thumb"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        alt=""
+                        @error="onThumbError"
+                      />
+                    </a>
+                  </div>
+                  <span v-else class="cell-text">{{ cellText(row, col.key) }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-empty
+              v-else
+              class="table-empty-ep"
+              :image-size="64"
+              description="本页无数据（可点「刷新」或切换分页 / 表）"
+            />
           </div>
         </div>
 
-        <footer class="pager">
-          <span class="ma-muted"
-            >第 {{ list.page || page }} / {{ totalPages() }} 页 · 共 {{ list.total ?? 0 }} 条</span
-          >
-          <span class="pager-jump">
-            <label class="jump-label"
-              >跳转
-              <input
-                v-model.number="pageJumpDraft"
-                type="number"
-                :min="1"
-                :max="totalPages()"
-                class="jump-input"
-              />
-              页</label
-            >
-            <button type="button" class="ma-btn ma-btn-secondary" @click="goToPage">确定</button>
-          </span>
-          <button type="button" class="ma-btn ma-btn-secondary" :disabled="page <= 1" @click="prevPage">
-            上一页
-          </button>
-          <button
-            type="button"
-            class="ma-btn ma-btn-secondary"
-            :disabled="page >= totalPages()"
-            @click="nextPage"
-          >
-            下一页
-          </button>
+        <footer class="pager pager-ep">
+            <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 30, 50, 100]"
+            :total="list.total ?? 0"
+            :disabled="loading"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @size-change="onPageSizeChange"
+          />
         </footer>
       </div>
     </div>
@@ -610,17 +605,14 @@ async function runExport(format) {
   font-size: 0.78rem;
   color: #64748b;
 }
-.close {
-  border: none;
-  background: #f3f4f6;
-  width: 2rem;
+.head-close-ep {
+  flex-shrink: 0;
+  min-width: 2rem;
   height: 2rem;
-  border-radius: 8px;
+  padding: 0;
   font-size: 1.35rem;
   line-height: 1;
-  cursor: pointer;
-  color: #374151;
-  flex-shrink: 0;
+  border-radius: 8px;
 }
 .toolbar {
   display: flex;
@@ -632,24 +624,10 @@ async function runExport(format) {
   border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
 }
-.tabs {
-  display: flex;
-  gap: 0.35rem;
+.dataset-tab-rg {
+  flex: 1 1 auto;
+  min-width: 0;
   flex-wrap: wrap;
-}
-.tabs button {
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  color: #4b5563;
-}
-.tabs button.on {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
 }
 .exports {
   display: flex;
@@ -657,27 +635,15 @@ async function runExport(format) {
   align-items: center;
   gap: 0.5rem;
 }
-.exp-btn {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: #334155;
+.toolbar-msg {
+  padding: 0.35rem 1rem 0;
+  font-size: 0.78rem;
+  color: #b91c1c;
+  white-space: pre-wrap;
 }
-.exp-btn:hover:not(:disabled) {
-  border-color: #2563eb;
-  color: #1d4ed8;
-}
-.exp-btn.on {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-.exp-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.toolbar-msg.err {
+  border-bottom: 1px solid #fecaca;
+  background: #fef2f2;
 }
 .export-panel {
   padding: 0.65rem 1rem 0.85rem;
@@ -696,13 +662,6 @@ async function runExport(format) {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.45rem;
-}
-.exp-fmt {
-  font-size: 0.8rem;
-}
-.exp-cancel {
-  font-size: 0.8rem;
-  margin-left: 0.25rem;
 }
 .export-status {
   margin: 0.5rem 0 0;
@@ -733,15 +692,12 @@ async function runExport(format) {
   font-size: 0.8rem;
   color: #475569;
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  gap: 0.2rem;
 }
-.sku-input {
-  padding: 0.35rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  width: 160px;
-  font: inherit;
+.filter-ep-sku {
+  width: 10rem;
+  max-width: 100%;
 }
 .toolbar-filters {
   display: flex;
@@ -759,23 +715,27 @@ async function runExport(format) {
   gap: 0.2rem;
   font-size: 0.72rem;
   color: #475569;
-}
-.filter-select,
-.filter-input {
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   min-width: 0;
 }
-.filter-select.wide,
-.filter-input.wide {
+.filter-label {
+  line-height: 1.2;
+}
+.toolbar-filters-ep :deep(.filter-ep-select) {
+  min-width: 0;
+}
+.toolbar-filters-ep :deep(.filter-ep-select.wide) {
   min-width: 12rem;
   max-width: 22rem;
 }
-.filter-input.narrow {
+.toolbar-filters-ep :deep(.order-select) {
   width: 5.5rem;
+}
+.toolbar-filters-ep :deep(.filter-ep-wide) {
+  min-width: 12rem;
+  max-width: 22rem;
+}
+.toolbar-filters-ep :deep(.filter-ep-narrow) {
+  width: 5.75rem;
 }
 /* 高度封顶：数据再长也在表格内滚动，不把整块卡片无限撑高 */
 .table-block {
@@ -812,57 +772,31 @@ async function runExport(format) {
   padding: 0.5rem 1rem;
   -webkit-overflow-scrolling: touch;
 }
-.data-table {
+.table-wrap-ep {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.table-empty-ep {
+  padding: 1.5rem 0.5rem;
+  flex: 0 0 auto;
+}
+.job-dataset-ep-table {
   width: max-content;
-  border-collapse: collapse;
+  min-width: 100%;
   font-size: 0.7rem;
-  table-layout: auto;
 }
-.data-table th,
-.data-table td {
-  border: 1px solid #e5e7eb;
-  padding: 0.3rem 0.4rem;
+.table-wrap-ep :deep(.job-dataset-ep-table .el-table__cell) {
   vertical-align: top;
-  text-align: left;
+  line-height: 1.4;
 }
-.data-table th {
-  background: #f8fafc;
-  font-weight: 600;
-  color: #334155;
-}
-.data-table th.col-narrow {
-  width: 3rem;
-  max-width: 3.25rem;
-  min-width: 2.5rem;
-  left: auto;
-}
-.data-table th.col-dyn {
-  max-width: 9.5rem;
-  min-width: 3.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.col-narrow {
-  width: 3rem;
-  max-width: 3.25rem;
-  min-width: 2.5rem;
-  box-sizing: border-box;
-}
-.col-dyn {
-  min-width: 3.5rem;
-  max-width: 9.5rem;
-}
-.cell-dyn {
+.cell-text {
+  display: block;
   font-family: ui-monospace, monospace;
-  max-width: 9.5rem;
   overflow-wrap: anywhere;
   word-break: break-word;
   color: #1e293b;
-}
-.cell-dyn-media {
-  max-width: 11rem;
-  vertical-align: middle;
+  max-width: 14rem;
 }
 .cell-media {
   display: flex;
@@ -885,44 +819,20 @@ async function runExport(format) {
   height: 4.5rem;
   object-fit: contain;
 }
-.num {
-  white-space: nowrap;
-  color: #64748b;
-}
-.empty {
-  margin: 1rem 0;
-  text-align: center;
-}
-.pager {
+.pager-ep {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  padding: 0.65rem 1rem;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
-.pager-jump {
-  display: inline-flex;
+.pager-ep :deep(.el-pagination) {
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-}
-.jump-label {
-  font-size: 0.78rem;
-  color: #475569;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-.jump-input {
-  width: 3.5rem;
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.35rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  justify-content: center;
+  row-gap: 0.35rem;
 }
 .ma-muted {
   color: #64748b;

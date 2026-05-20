@@ -1,0 +1,278 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://h5speed.m.jd.com/event/getRule?version=1.2.3&aid=2a4144b23a15469402ba70fc7ed8810c",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": "0",
+    "msg": "ok",
+    "data": {
+      "aid": "2a4144b23a15469402ba70fc7ed8810c",
+      "er": {
+        "enable": false,
+        "mode": "session",
+        "rate": 1,
+        "rules": [
+          {
+            "enable": true,
+            "type": "pv",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance_timing",
+            "rate": 0.1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "performance_longtask",
+            "rate": 0.1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "action",
+            "rate": 0.1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "resource",
+            "rate": 0.01,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "resource_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "api",
+            "rate": 0.2,
+            "sendType": 0,
+            "whitelist": [
+              "8b428834-d21c-4208-8ce6-5fe5bd57c2ff"
+            ]
+          },
+          {
+            "enable": true,
+            "type": "api_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "js_error",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "blank",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "custom",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "custom_log",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": false,
+            "type": "fps_stuck",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "main_search_api_success",
+            "rate": 1,
+            "sendType": 0,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "main_search_api",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "main_search_realtime_count",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "business_logic",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          },
+          {
+            "enable": true,
+            "type": "main_search",
+            "rate": 1,
+            "sendType": 1,
+            "whitelist": []
+          }
+        ],
+        "whitelist": []
+      },
+      "pr": [
+        {
+          "name": "js_error",
+          "enable": true,
+          "options": {
+            "captureGlobalAsync": false,
+            "dedupe": true,
+            "ignores": [],
+            "onerror": true,
+            "onunhandledrejection": true
+          }
+        },
+        {
+          "name": "blank",
+          "enable": true,
+          "options": {
+            "delay": 6000,
+            "detectSelectors": [
+              {
+                "exist": true,
+                "selector": "#main_search_conter"
+              }
+            ],
+            "mask": false,
+            "quality": 0.1,
+            "rootSelector": "body",
+            "screenshot": false
+          }
+        },
+        {
+          "name": "api",
+          "enable": true,
+          "options": {
+            "collectBodyOnError": false,
+            "concreteApis": [
+              {
+                "allBizField": [
+                  "@/data.resultCount",
+                  "@/data.pageCount"
+                ],
+                "host": "jd.com",
+                "path": "api.m.jd.com/api",
+                "respCode": [
+                  "0"
+                ],
+                "respCodePath": "code",
+                "respCodeType": "success",
+                "respMsgPath": ""
+              }
+            ],
+            "ignores": [
+              "uranus.jd.com",
+              "h5speed.m.jd.com",
+              "sgm-w.jd.com",
+              "storage.360buyimg.com"
+            ],
+            "slowThreshold": 4000,
+            "wrapFetch": true,
+            "wrapXhr": true
+          }
+        },
+        {
+          "name": "pv",
+          "enable": true,
+          "options": {}
+        },
+        {
+          "name": "resource_error",
+          "enable": true,
+          "options": {
+            "dedupe": false,
+            "ignores": [],
+            "includes": []
+          }
+        },
+        {
+          "name": "console",
+          "enable": true,
+          "options": {
+            "levels": [
+              "warn",
+              "error"
+            ]
+          }
+        },
+        {
+          "name": "resource",
+          "enable": true,
+          "options": {
+            "ignoreTypes": [
+              "beacon",
+              "fetch",
+              "xmlhttprequest"
+            ],
+            "ignores": [],
+            "includes": [],
+            "slowThreshold": 4000
+          }
+        },
+        {
+          "name": "performance",
+          "enable": true,
+          "options": {
+            "cls": true,
+            "fcp": true,
+            "fid": true,
+            "fp": true,
+            "lcp": true,
+            "longtask": true,
+            "timing": true,
+            "ttfb": true
+          }
+        }
+      ],
+      "cr": {
+        "delay": 3000
+      }
+    },
+    "id": "f130e92d9455f8c8da10814b5f972624",
+    "ts": 1778490367135
+  }
+}

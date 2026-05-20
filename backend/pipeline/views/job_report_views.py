@@ -31,6 +31,7 @@ from ..reporting.brief_strategy_scope import (
 )
 from ..reporting.marketing_pack_persist import persist_marketing_detail_pack_v1
 from ..reporting.md_document_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
+from ..reporting.product_manual import merged_our_product_profile_for_strategy
 from ..reporting.report_matrix_group_evidence import (
     load_report_matrix_group_evidence_markdown,
 )
@@ -141,6 +142,10 @@ class JobStrategyDraftView(APIView):
         ser.is_valid(raise_exception=True)
         vd = ser.validated_data
         notes = (vd.get("business_notes") or "").strip()
+        our_profile = merged_our_product_profile_for_strategy(
+            user_text=(vd.get("our_product_profile") or "").strip(),
+            strategy_keyword=(job.keyword or "").strip(),
+        )
         strategy_decisions = build_strategy_decisions_dict(vd)
         try:
             brief = build_competitor_brief_for_job(
@@ -206,6 +211,7 @@ class JobStrategyDraftView(APIView):
                     keyword=job.keyword,
                     brief=brief,
                     business_notes=notes,
+                    our_product_profile=our_profile,
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
                     report_strategy_excerpt=report_excerpt,
@@ -224,6 +230,7 @@ class JobStrategyDraftView(APIView):
                     keyword=job.keyword,
                     brief=brief,
                     business_notes=notes,
+                    our_product_profile=our_profile,
                     generated_at_iso=gen_at,
                     strategy_decisions=strategy_decisions,
                     report_config=rc_job,

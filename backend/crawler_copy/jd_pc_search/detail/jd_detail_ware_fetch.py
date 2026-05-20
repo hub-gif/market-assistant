@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import random
 import re
 import sys
 import time
@@ -470,14 +471,14 @@ def fetch_ware_business(
     timeout_ms: int = 30_000,
     cookie_override: str = "",
     max_attempts: int = 1,
-    retry_delay_sec: float = 2.0,
+    retry_delay_range: tuple[float, float] = (3.0, 8.0),
     cancel_check: Callable[[], bool] | None = None,
     output_sku_and_body_images_only: bool = False,
     runtime: WareFetchRuntime | None = None,
 ) -> tuple[int, str, dict[str, Any]]:
     """
     打开商品页并拦截 ``pc_detailpage_wareBusiness``。
-    ``max_attempts``>1 时，在结果为空或失败时按 ``retry_delay_sec`` 间隔重试。
+    ``max_attempts``>1 时，在结果为空或失败时于 ``retry_delay_range`` 内均匀随机等待后重试。
     """
     rt = runtime or WareFetchRuntime()
     sid = str(sku_id).strip()
@@ -487,8 +488,15 @@ def fetch_ware_business(
         if cancel_check is not None and cancel_check():
             return last
         if i > 0:
-            delay = max(0.0, float(retry_delay_sec))
-            if delay > 0:
+            lo, hi = retry_delay_range
+            if not (lo <= 0.0 and hi <= 0.0):
+                if lo > hi:
+                    lo, hi = hi, lo
+                delay = random.uniform(lo, hi)
+                print(
+                    f"[京东] sku={sid} 详情重试间隔 sleep {delay:.1f}s（区间 {lo:g}–{hi:g}）",
+                    file=sys.stderr,
+                )
                 time.sleep(delay)
         if cancel_check is not None and cancel_check():
             return last

@@ -159,6 +159,8 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "checkpoint",
             "run_dir",
             "error_message",
+            "source_type",
+            "semiauto_phase",
             "analysis_artifacts",
             "created_at",
             "updated_at",
@@ -173,6 +175,8 @@ class PipelineJobSerializer(serializers.ModelSerializer):
             "resume_from_checkpoint",
             "run_dir",
             "error_message",
+            "source_type",
+            "semiauto_phase",
             "created_at",
             "updated_at",
             "report_config",
@@ -405,6 +409,13 @@ class StrategyDraftRequestSerializer(serializers.Serializer):
         allow_blank=True,
         default="",
         max_length=20_000,
+        trim_whitespace=False,
+    )
+    our_product_profile = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=500_000,
         trim_whitespace=False,
     )
     product_role = serializers.CharField(

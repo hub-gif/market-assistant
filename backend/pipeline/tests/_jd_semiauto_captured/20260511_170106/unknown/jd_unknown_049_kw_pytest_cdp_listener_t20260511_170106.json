@@ -1,0 +1,24 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://cactus.jd.com/behavior_report",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "status": 200,
+    "message": "",
+    "data": {
+      "ts": 1778490110595,
+      "rFlag": {
+        "Fu": {
+          "t": 1778490110595,
+          "e": 3600,
+          "v": "Fu"
+        }
+      },
+      "cFlag": "|%J7%=|%s%=600?3>76672>3+%b%=4177+%q%=%J7%+%uts%=%hio+Fio%+%b6%=%pnichp%z+%J6%=|%s%=600?3>76672>3+%b%=4177+%q%=%J6%+%uts%=%_JKOsswUbvrbts+wuhshs~wb+hwbi+hun`Hwbi)fwwk~%+%b6%=%wuhshs~wb%z+%J5%=|%s%=600?3>76672>3+%b%=4177+%q%=%J5%+%uts%=%Lp4+Np4%+%b6%=%pnichp%z+%J4%=|%s%=600?3>76672>3+%b%=4177+%q%=%J4%+%uts%=%cr5+Qr5%+%b6%=%pnichp%z+%J3%=|%s%=600?3>76672>3+%b%=4177+%q%=%J3%+%uts%=%fCV+_CV%+%b6%=%pnichp%z+%J2%=|%s%=600?3>76672>3+%b%=4177+%q%=%J2%+%uts%=%eVL+RVL%+%b6%=%pnichp%z+%J1%=|%s%=600?3>76672>3+%b%=4177+%q%=%J1%+%uts%=%f0T+]0T%+%b6%=%pnichp%z+%J0%=|%s%=600?3>76672>3+%b%=4177+%q%=%J0%+%uts%=%XXMCXOHHLXUBFC^XX%+%b6%=%pnichp%z+%J?%=|%s%=600?3>76672>3+%b%=4177+%q%=%J?%+%uts%=%Qio+fio%+%b6%=%pnichp%z+%J>%=|%s%=600?3>76672>3+%b%=4177+%q%=%J>%+%uts%=%_JKOsswUbvrbts+wuhshs~wb+tbic+pfubErtnibtt%+%b6%=%wuhshs~wb%z+%JF%=|%s%=600?3>76672>3+%b%=4177+%q%=%JF%+%uts%=%~ritobimnf)dhj%+%b6%=%ehc~%z+%JE%=|%s%=600?3>76672>3+%b%=4177+%q%=%JE%+%uts%=%crhsr)wuh%+%b6%=%ehc~%z+%JD%=|%s%=600?3>76672>3+%b%=4177+%q%=%JD%+%uts%=%mh~m)dhj%+%b6%=%ehc~%z+%JC%=|%s%=600?3>76672>3+%b%=4177+%q%=%JC%+%uts%=%enmnf`h)dhj%+%b6%=%ehc~%z+%JB%=|%s%=600?3>76672>3+%b%=4177+%q%=%JB%+%uts%=%en~nen654)dhj%+%b6%=%ehc~%z+%JA%=|%s%=600?3>76672>3+%b%=4177+%q%=%JA%+%uts%=%dhkkXwf`bXdhisbis+wuhdbttXtohp%+%b6%=%ehc~%z+%J@%=|%s%=600?3>76672>3+%b%=4177+%q%=%J@%+%uts%=%wcbjlbhlelocefdaoili`anldhkkfino%+%b6%=%ehc~%z+%JO%=|%s%=600?3>76672>3+%b%=4177+%q%=%JO%+%uts%=%`pcfi`)dhj%+%b6%=%ehc~%z+%JN%=|%s%=600?3>76672>3+%b%=4177+%q%=%JN%+%uts%=%713?dc1d76>26e4f654f%+%b6%=%ehc~%z+%JM%=|%s%=600?3>76672>3+%b%=4177+%q%=%JM%+%uts%=%kfiubienmnf)dhj%+%b6%=%ehc~%z+%JL%=|%s%=600?3>76672>3+%b%=4177+%q%=%JL%+%uts%=%nfhpfi`tobi)dhj%+%b6%=%ehc~%z+%JK%=|%s%=600?3>76672>3+%b%=4177+%q%=%JK%+%uts%=%cnfishrton)dhj%+%b6%=%ehc~%z+%JJ%=|%s%=600?3>76672>3+%b%=4177+%q%=%JJ%+%uts%=%cnfitofi`mnXsfenc%+%b6%=%ehc~%z+%JI%=|%s%=600?3>76672>3+%b%=4177+%q%=%JI%+%uts%=%`cw*tn`i*qfk+cw*tn`i*esi%+%b6%=%ehc~%z+%JH%=|%s%=600?3>76672>3+%b%=4177+%q%=%JH%+%uts%=%j~dsukwfiibk+j~dsukesit`%+%b6%=%ehc~%z+%JW%=|%s%=600?3>76672>3+%b%=4177+%q%=%JW%+%uts%=%jfulbs*jfsb*ahu*61??%+%b6%=%bkbjbis%z+%JV%=|%s%=600?3>76672>3+%b%=4177+%q%=%JV%+%uts%=%kf~rn*niknib%+%b6%=%ehc~%z+%JT%=|%s%=600?3>76672>3+%b%=4177+%q%=%JT%+%uts%=%Xmni`dofi`Cfsf%+%b6%=%pnichp%z+%Jf%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jf%+%uts%=%]p4+kp4%+%b6%=%pnichp%z+%Je%=|%s%=600?3>76672>3+%b%=4177+%q%=%Je%+%uts%=%pfubErtnibtt+XXjfsdo%+%b6%=%qfkrb%z+%Jd%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jd%+%uts%=%FQa+fQa%+%b6%=%pnichp%z+%Jc%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jc%+%uts%=%]17+k17%+%b6%=%pnichp%z+%Jb%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jb%+%uts%=%_JKOsswUbvrbts+wuhshs~wb+hwbi+Xruk':'ruk%+%b6%=%wuhshs~wb%z+%Ja%=|%s%=600?3>76672>3+%b%=4177+%q%=%Ja%+%uts%=%muV+JuV%+%b6%=%pnichp%z+%J`%=|%s%=600?3>76672>3+%b%=4177+%q%=%J`%+%uts%=%pfubErtnibtt+tbic%+%b6%=%qfkrb%z+%Jo%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jo%+%uts%=%Xhun`nifk_OUTbic%+%b6%=%pnichp%z+%Jn%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jn%+%uts%=%4+?%+%b6%=%lb~%z+%Jm%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jm%+%uts%=%ponsbEfuNiah+wkfiNiaht%+%b6%=%jt`%z+%Jk%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jk%+%uts%=%[%cfsf[%=+[%ruk[%=602?%+%b6%=%jt`%z+%Jw%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jw%+%uts%=%ossw=((650)7)7)6=23432(mt(cf~Snjb}hib)mt%+%b6%=%ossw%z+%Jv%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jv%+%uts%=%BsKhfcAuhj+Bs1wwiXohts%+%b6%=%pnichp%z+%Ju%=|%s%=600?3>76672>3+%b%=4177+%q%=%Ju%+%uts%=%mc*twncbu*akhfsni`*pnichp%+%b6%=%ehc~%z+%Jt%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jt%+%uts%=%XXMCXFKKFWNXOHHLXNITSFKKBCXX%+%b6%=%pnichp%z+%Js%=|%s%=600?3>76672>3+%b%=4177+%q%=%Js%+%uts%=%XXMCXMTHIWXOHHLBCXX%+%b6%=%pnichp%z+%Jr%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jr%+%uts%=%jwadaiwhin`eanomabjalkemcljdiwem%+%b6%=%ehc~%z+%Jq%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jq%+%uts%=%sh``kbKh`Esi+tsfusTshwEsi%+%b6%=%ehc~%z+%Jp%=|%s%=600?3>76672>3+%b%=4177+%q%=%Jp%+%uts%=%mni`srnsrn)dhj%+%b6%=%ehc~%z+%J%=|%s%=600?3>76672>3+%b%=4177+%q%=%J%+%uts%=%b}t)di%+%b6%=%ehc~%z+%J~%=|%s%=600?3>76672>3+%b%=4177+%q%=%J~%+%uts%=%喲喲抟%+%b6%=%ehc~%z+%J}%=|%s%=600?3>76672>3+%b%=4177+%q%=%J}%+%uts%=%mme)nj%+%b6%=%ehc~%zz"
+    }
+  }
+}

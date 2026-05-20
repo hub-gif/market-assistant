@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "brandNameConfig": "1",
+      "defaultBagImgs": [
+        {
+          "bagBack": "https://img12.360buyimg.com/babel/jfs/t20281202/359189/31/18115/1769/693006ccF85991063/ed39b969e5c4905d.png",
+          "bagFront": "https://img14.360buyimg.com/babel/jfs/t20281202/365959/37/7267/3228/693006d2F0ea1af7f/7385b8010317d164.png",
+          "bagHandle": "https://img12.360buyimg.com/babel/jfs/t20281202/353409/15/23041/1146/693006daF6d8c8390/787335858b473cd5.png",
+          "bagShadow": "https://img11.360buyimg.com/babel/jfs/t20281202/368458/8/9972/10101/693006e8F2bdf99aa/6d5eb2fb754fc1a6.png",
+          "ppms_itemName": "0",
+          "ppmsItemId": "MDhDLFw5"
+        }
+      ],
+      "defaultBrandLogo": "https://img14.360buyimg.com/babel/jfs/t20290104/380704/31/22683/6521/695b6b9aF18911e97/094e08a08aff49be.png",
+      "defaultBrandNameTxt": "品牌团",
+      "ppms_itemName": "电梯组件默认配置",
+      "ppmsItemId": "LxvaFYZt"
+    }
+  ]
+}

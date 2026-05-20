@@ -1,5 +1,6 @@
 {
   "generator": "llm",
+  "our_product_profile": "",
   "business_notes": "（与 fixture 联调：业务备注；可与「仅 strategy_decisions」文件对照。）",
   "strategy_matrix_group": "",
   "strategy_matrix_group_index": null,

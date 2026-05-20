@@ -1,0 +1,40 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://storage.360buyimg.com/miniprogram-platform/configure-lowcode-platform-node/prod/json/prod/aTbRGBzpaoSI4Op8.json",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "data": [
+      {
+        "liyidian_1": {
+          "content": "享千万商品95折",
+          "icon_url": "https://img13.360buyimg.com/img/jfs/t1/388233/29/920/4470/696483bdF9a292513/0276070070006527.png",
+          "ppms_itemName": "利益点1",
+          "ppmsItemId": "fYogSKAy",
+          "title": "开通PLUS企业会员"
+        },
+        "liyidian_2": {
+          "content": "海量商品低至5折",
+          "icon_url": "https://img14.360buyimg.com/img/jfs/t1/383510/21/21181/8638/696483eaFe93c2043/02760700703b269b.png",
+          "ppms_itemName": "利益点 2",
+          "ppmsItemId": "AORQftU4",
+          "title": "企业专享价"
+        },
+        "liyidian_3": {
+          "content": "首充至高返200  ",
+          "icon_url": "https://img30.360buyimg.com/img/jfs/t1/387450/3/4329/9362/69648414F065530dc/02760700707c0323.png",
+          "ppms_itemName": "利益点 3",
+          "ppmsItemId": "7l0UarG2",
+          "title": "余额充值"
+        },
+        "ppms_itemName": "标题",
+        "ppmsItemId": "nlPsbsV4",
+        "tips": "",
+        "title": "登录享企业专属权益 "
+      }
+    ]
+  }
+}

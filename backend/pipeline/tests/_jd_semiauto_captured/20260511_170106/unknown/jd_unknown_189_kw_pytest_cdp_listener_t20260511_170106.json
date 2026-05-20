@@ -1,0 +1,178 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "pcCart_jc_getCartNum",
+  "url": "https://api.m.jd.com/api?functionId=pcCart_jc_getCartNum&appid=www-jd-com&loginType=3&x-api-eid-token=jdd03NJ7ZHXFFLMNKUXHQ7T75363YYEJWCAR7HU3GD5YC7YYVLSMKBFQNC5YUDEVAIIF5WGTE2UHHGJANX3CGNOCFDOJCTAAAAAM6CZD2CPAAAAAACPWEAUBA574VYUX&h5st=20260511170605316;eije17vniip22j28;fb5df;tk03w7bf31b4818ngN09G0TTdMgcZHO3rU5ACgykDbRPhMkMOHKvHaHgDd4q-wQjKgE2_2G00ljdUW6RIVVcjtsLEASb;574feb0b7c39c0c7c1d775e6b628a6d0;5.3;1778490360316;q3EpJLIfBiIf7GVR9S0e6XFRCWFjLDIj7SFjLrJp-rIfLDIj9e1TJrpjh7Jj7fYS4fIf7nYS6f4eFiVT2jod3nlSGmFS6bFfHS4fHSFjLDIj7SnQEiVS0ipjLDrgJf4TIWoSyXFS4bISzXVS2bVd4nIeFOYf6jlS2TVSHO4TJrJdJfUT1yVTIipjLDrgJnYgJrJdJbYOJipjLDrgJfIg4zZe1uWS-GFSMWoRJrJdJTEjLrJp-jZe4qWZ5e1fi_lPaipjxjZQ8aFQKiEjLrJp-jJf4zVRUipjxjJS7ipjLDrguqpjhjZOlipjxj5f6XETJrpjLrJp-fojxjZf6XETJrpjLrJp-bYfLDIj7nYOJipjLrpjh7pd_rJdJjYf2iFjLrpjLDrgJbmSRSld_PIT4X2e-uHjLDIj_ulS9mFPJrpjLrJp-rojxjpd2iFjLrpjLDrg7rJdJPYOJipjLrpjh75e5rJdJTYOJipjLrpjh7pfLDIj2XETJrpjLrJp-rojxjpe2iFjLrpjLDrg1bojxj5f2iFjLrpjLDrgJbIg6zpfJrJdJnYOJipjLrpjh7pfLDIjAOEjLrpjLDrg2rJdJfkQJrpjLrJp-rojxjpQJrpjLrJp-rojxjpS0ipjLrpjh-kjxjpS9WlOzWFjLrJp-3kjLDLjlm0b16Fa3W1Z0O3PMaFRJrJdJjoPJrpjLrJpwqJdJrkPJrpjh7Jj3ToNL-oe1zVRUq5d7zpf6rpWdq5P0ulS9G1WJrJdJnVO4ipjLD7N;e10910c904786ab94aea5518047b7afa;qbkgHGHQ8GlOIyVOF6JQ8G1P5WFW3yVSC61T-bEQGGlQI6ZNHuFT-bVR7qUT&t=1778490360315&client=pc&clientVersion=1.0.0&body=%7B%22serInfo%22:%7B%22area%22:%2216_1315_0_0%22,%22user-key%22:%22%22%7D,%22cartExt%22:%7B%22specialId%22:1%7D%7D",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "success": true,
+    "code": 0,
+    "message": null,
+    "resultData": {
+      "cartNum": 0,
+      "unusableSkuNum": 0,
+      "usableSkuNum": 0,
+      "expireMin": 30
+    },
+    "abData": {
+      "abDetail": {
+        "gb_price": {
+          "success": true,
+          "label": "look3",
+          "keyParamMap": {
+            "hit": 1,
+            "wl": 1
+          },
+          "abBuriedTag": null,
+          "business": "gb_price",
+          "online": false
+        },
+        "redesign": {
+          "success": true,
+          "label": "Pre2",
+          "keyParamMap": null,
+          "abBuriedTag": null,
+          "business": "redesign",
+          "online": false
+        },
+        "out_stock_recommend": {
+          "success": true,
+          "label": "new",
+          "keyParamMap": {},
+          "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNzAyMHxuZXc|tsabtest",
+          "business": "out_stock_recommend",
+          "online": true
+        },
+        "enterprise_theme": {
+          "success": true,
+          "label": "pre",
+          "keyParamMap": {},
+          "abBuriedTag": "tsabtest|base64|UGNBQlRlc3RfNzg3NTl8cHJlOlBjQUJUZXN0Xzc4NzU4fHByZQ|tsabtest",
+          "business": "enterprise_theme",
+          "online": true
+        },
+        "gb": {
+          "success": true,
+          "label": "look",
+          "keyParamMap": {
+            "hit": 1,
+            "PC_CART_EXCLUDE_TAGS": " "
+          },
+          "abBuriedTag": null,
+          "business": "gb",
+          "online": false
+        },
+        "acquiring_new": {
+          "success": true,
+          "label": "bplus_5",
+          "keyParamMap": {
+            "save": 5
+          },
+          "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNjQ5MXxicGx1c181|tsabtest",
+          "business": "acquiring_new",
+          "online": true
+        }
+      },
+      "gb_price": {
+        "success": true,
+        "label": "look3",
+        "keyParamMap": {
+          "hit": 1,
+          "wl": 1
+        },
+        "abBuriedTag": null,
+        "business": "gb_price",
+        "online": false
+      },
+      "redesign": {
+        "success": true,
+        "label": "Pre2",
+        "keyParamMap": null,
+        "abBuriedTag": null,
+        "business": "redesign",
+        "online": false
+      },
+      "out_stock_recommend": {
+        "success": true,
+        "label": "new",
+        "keyParamMap": {},
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNzAyMHxuZXc|tsabtest",
+        "business": "out_stock_recommend",
+        "online": true
+      },
+      "tagsPool": [
+        "tsabtest|base64|UENUZXN0XzExNzAyMHxuZXc|tsabtest",
+        "tsabtest|base64|UGNBQlRlc3RfNzg3NTl8cHJlOlBjQUJUZXN0Xzc4NzU4fHByZQ|tsabtest",
+        "tsabtest|base64|UENUZXN0XzExNjQ5MXxicGx1c181|tsabtest"
+      ],
+      "enterprise_theme": {
+        "success": true,
+        "label": "pre",
+        "keyParamMap": {},
+        "abBuriedTag": "tsabtest|base64|UGNBQlRlc3RfNzg3NTl8cHJlOlBjQUJUZXN0Xzc4NzU4fHByZQ|tsabtest",
+        "business": "enterprise_theme",
+        "online": true
+      },
+      "gb": {
+        "success": true,
+        "label": "look",
+        "keyParamMap": {
+          "hit": 1,
+          "PC_CART_EXCLUDE_TAGS": " "
+        },
+        "abBuriedTag": null,
+        "business": "gb",
+        "online": false
+      },
+      "acquiring_new": {
+        "success": true,
+        "label": "bplus_5",
+        "keyParamMap": {
+          "save": 5
+        },
+        "abBuriedTag": "tsabtest|base64|UENUZXN0XzExNjQ5MXxicGx1c181|tsabtest",
+        "business": "acquiring_new",
+        "online": true
+      }
+    },
+    "url": null,
+    "switchMap": {
+      "limit_trade": 50,
+      "just_bought_recently": true,
+      "color_size": true,
+      "ikea_home_service_fee": "整单另收¥49上门费",
+      "cart_num": true,
+      "enterprise_procurement_list_css": "//storage.360buyimg.com/bjd-utils-sdk/bjdcommon/purchaselist/1.0.4/bjd.css",
+      "overseas_address_switch": false,
+      "plus_new_users_url_prod": "https://storage.360buyimg.com/bjd-utils-sdk/bjdcommon/bplusReferralPC/1.0.1/index.js",
+      "ai_match_thirdcid_blacklist": [
+        0
+      ],
+      "overseas_address_tip": "下载APP查看，解锁官方海运/空运直邮体验，享受海外包邮福利",
+      "plus_new_users_url_pre": "https://storage.360buyimg.com/b-plus-admin/bjdcommon/bplusReferralPC/1.0.1.js",
+      "function": "getCartNum",
+      "daily_sales_switch": true,
+      "gb_qualifications": "//pro.jd.com/mall/active/wUEbTVFKwN7pFrCgSCNHxh7PJEG/index.html",
+      "just_watched": true,
+      "just_collected": true,
+      "DLF_url_pre": "https://storage.360buyimg.com/b-plus-admin/bjdcommon/amountreturn/1.0.0/index-beta.js",
+      "four_in_one_shild_gate": true,
+      "trade_tip": false,
+      "plus_new_users_url_test": "https://storage.360buyimg.com/b-plus-admin/bjdcommon/bplusReferralPC/1.0.0-test.js",
+      "enterprise_procurement_list_js": "//storage.360buyimg.com/bjd-utils-sdk/bjdcommon/purchaselist/1.0.4/bjd.js",
+      "DLF_url_prod": "https://storage.360buyimg.com/bjd-utils-sdk/bjdcommon/amountreturn/1.0.0/index.js",
+      "fashion_project_tip": "需开通店铺会员后才可购买",
+      "limit_plus_new_users": 50,
+      "popup_anomaly_text": "呜呜~系统出了点问题，请您稍后再试",
+      "ai_match_param_text": "我买了${itemName}，型号是${propertyTagsAB}，帮我推荐一套互补的商品进行搭配组合",
+      "homeCartNumExpireMin": 30,
+      "DLF_url_test": "https://storage.360buyimg.com/b-plus-admin/bjdcommon/amountreturn/1.0.0/index-test.js",
+      "optimal_promption": true,
+      "DLF_downgrade_switch": true,
+      "fashion_project": true,
+      "jingdou_shield": "购物赠京豆,优2惠卷"
+    }
+  }
+}

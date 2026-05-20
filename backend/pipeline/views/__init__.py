@@ -6,6 +6,7 @@ from .dataset_views import (
     JobDatasetDetailView,
     JobDatasetExportView,
     JobDatasetMergedView,
+    JobDatasetSearchLlmXlsxView,
     JobDatasetSearchView,
     JobDatasetSummaryView,
 )
@@ -47,6 +48,7 @@ __all__ = [
     "JobDatasetDetailView",
     "JobDatasetExportView",
     "JobDatasetMergedView",
+    "JobDatasetSearchLlmXlsxView",
     "JobDatasetSearchView",
     "JobDatasetSummaryView",
     "JobImportMergedView",

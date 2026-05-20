@@ -17,8 +17,7 @@ const selectedJob = computed(() =>
 )
 
 function optionLabel(j) {
-  const tail = j.run_dir ? j.run_dir.split(/[/\\]/).pop() : ''
-  return `#${j.id} · ${j.keyword} · ${j.status}${tail ? ` · ${tail}` : ''}`
+  return `${j.id} · ${j.keyword} · ${j.status}`
 }
 
 async function load() {
@@ -69,28 +68,36 @@ watch(selectedId, () => {
   <div class="dataset-page">
     <section class="ma-card top-bar">
       <div class="top-row">
-        <h2 class="title">库内数据浏览</h2>
-        <button type="button" class="ma-btn ma-btn-secondary btn-refresh" @click="load">刷新任务列表</button>
+        <h2 class="title">数据浏览</h2>
+        <el-button @click="load">刷新</el-button>
       </div>
-      <p class="lead">
-        选择任务后可查看本批已入库的<strong>搜索列表</strong>、<strong>商品详情</strong>、<strong>评价</strong>与<strong>整合同步表</strong>（一行对应一个商品在报告里用到的主要字段）。
-        各标签下可**导出**为表格或数据文件。完整文字报告请在「报告查看」阅读，或在「报告生成」中重新出稿。
-      </p>
+      <p class="lead">选任务后按标签查看表数据，可导出。长文见「报告预览」或「报告生成」。</p>
       <p v-if="loadError" class="ma-err">{{ loadError }}</p>
 
       <div v-if="jobOptions.length" class="picker">
         <label class="sel-label">任务</label>
-        <select v-model="selectedId" class="job-select">
-          <option v-for="j in jobOptions" :key="j.id" :value="String(j.id)">
-            {{ optionLabel(j) }}
-          </option>
-        </select>
+        <div class="picker-el-wrap">
+          <el-select
+            v-model="selectedId"
+            class="jd-toolbar-el-select"
+            placeholder="请选择任务"
+            filterable
+            placement="bottom-start"
+          >
+            <el-option
+              v-for="j in jobOptions"
+              :key="j.id"
+              :label="optionLabel(j)"
+              :value="String(j.id)"
+            />
+          </el-select>
+        </div>
       </div>
-      <p v-else class="ma-muted">暂无任务，请先在「搜索采集」提交。</p>
+      <p v-else class="ma-muted">暂无任务，请先在「采集」提交。</p>
     </section>
 
     <section v-if="selectedJob" class="ma-card panel-card">
-      <h3 class="panel-title">入库数据</h3>
+      <h3 class="panel-title">数据表</h3>
       <JobDatasetModal :job="selectedJob" embedded :open="true" />
     </section>
   </div>
@@ -122,9 +129,6 @@ watch(selectedId, () => {
   font-size: 1.05rem;
   font-weight: 600;
 }
-.btn-refresh {
-  font-size: 0.82rem;
-}
 .lead {
   margin: 0.5rem 0 0;
   font-size: 0.82rem;
@@ -137,25 +141,10 @@ watch(selectedId, () => {
   padding: 0.05rem 0.3rem;
   border-radius: 4px;
 }
-.picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem;
-  margin-top: 0.65rem;
-}
-.sel-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-}
-.job-select {
-  flex: 1;
-  min-width: 260px;
-  padding: 0.45rem 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  font: inherit;
+.picker-el-wrap {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  max-width: 20rem;
 }
 .panel-card {
   margin-top: 0;

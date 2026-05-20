@@ -2,6 +2,8 @@
  * 将营销内容 API 返回的 JSON 转为可导出 Word/PDF 的 Markdown（中文小标题）。
  */
 
+import { formatApiDateTime, formatSourceLabel } from './formatApiDateTime'
+
 const CORE_LABELS = {
   what_we_sell: '卖的是什么（本品）',
   one_liner_value: '一句话价值主张',
@@ -138,11 +140,13 @@ export function marketingPackResultToMarkdown(result) {
   const lines = []
   const jobId = result.job_id ?? ''
   const kw = result.keyword ?? ''
-  const genAt = result.generated_at ?? ''
-  const src = result.source ?? ''
+  const gen = formatApiDateTime(result.generated_at)
+  const genAt = gen.text
+  const src = formatSourceLabel(result.source) || (result.source ?? '')
   lines.push('# 营销内容')
   lines.push('')
-  lines.push(`> 任务 #${jobId} · 关键词：${kw} · ${genAt}${src ? ` · ${src}` : ''}`)
+  const srcPart = src ? ` · ${src}` : ''
+  lines.push(`> 任务 ${jobId} · 关键词：${kw} · ${genAt}${srcPart}`)
   lines.push('')
   lines.push('## 核心信息卡')
   lines.push('')

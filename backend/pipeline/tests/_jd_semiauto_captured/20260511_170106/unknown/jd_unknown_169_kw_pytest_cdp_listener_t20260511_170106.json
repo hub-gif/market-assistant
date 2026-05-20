@@ -1,0 +1,15 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://api.m.jd.com/api",
+  "mime_type": "application/json",
+  "parse_error": null,
+  "parsed": {
+    "code": 0,
+    "data": "",
+    "message": "Success",
+    "class": "com.jd.disposal.api.entity.ResponseDTO"
+  }
+}

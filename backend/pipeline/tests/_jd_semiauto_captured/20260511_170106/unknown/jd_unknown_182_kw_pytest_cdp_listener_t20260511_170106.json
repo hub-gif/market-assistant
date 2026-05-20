@@ -1,0 +1,10 @@
+{
+  "keyword": "pytest_cdp_listener",
+  "capture_kind": "unknown",
+  "resolved_sku": "",
+  "function_id": "",
+  "url": "https://passport.jd.com/new/helloService.ashx?pin=jd_sGwKetFlvCqF&uuid=17784900693481949486110&callback=jsonpHelloService&_=1778490360291",
+  "mime_type": "text/json",
+  "parse_error": "Expecting value: line 1 column 1 (char 0)",
+  "parsed": null
+}

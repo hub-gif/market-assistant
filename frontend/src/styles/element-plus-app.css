@@ -1,0 +1,172 @@
+/* 品牌主色 #0084ff：与「渲染/原文」分段选中色一致，主/次按钮同一蓝底白字，仅 hover 略深 */
+:root {
+  --el-color-primary: #0084ff;
+  --el-color-primary-light-3: #40a3ff;
+  --el-color-primary-light-5: #66b5ff;
+  --el-color-primary-light-7: #99ceff;
+  --el-color-primary-light-8: #b3d9ff;
+  --el-color-primary-light-9: #e8f4ff;
+  --el-color-primary-dark-2: #0066cc;
+  /* 与渲染选中同色；悬停/按下用 primary-dark-2 等，与 el-radio-button 选态体系一致 */
+  --ma-btn-secondary-bg: #0084ff;
+  --ma-btn-secondary-bg-hover: #0066cc;
+  --ma-btn-secondary-bg-active: #004a99;
+}
+
+/* Element Plus 与现有 ma-card / 工具行布局衔接 */
+section.ma-card fieldset.fieldset .fld .el-input,
+section.ma-card fieldset.fieldset .fld .el-select {
+  width: 100%;
+}
+.jd-toolbar-el-select {
+  width: 100%;
+}
+.jd-matrix-el-select {
+  width: 100%;
+  max-width: 20rem;
+}
+.jd-ep-block {
+  width: 100%;
+}
+.rc-ep {
+  width: 100%;
+}
+.rc-ep--td :deep(.el-input__wrapper) {
+  padding: 0 8px;
+}
+.sc-ep {
+  width: 100%;
+}
+.sc-ep--mid {
+  max-width: 320px;
+}
+.sc-ep--wide {
+  max-width: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/* 全站按钮：主/次均蓝底白字（无下划线，含 tag=a / is-link） */
+/* ------------------------------------------------------------------ */
+.el-button,
+a.el-button,
+a.el-button:hover,
+a.el-button:focus,
+a.el-button:focus-visible,
+a.el-button:active {
+  text-decoration: none !important;
+  box-sizing: border-box;
+}
+.el-button.is-link,
+.el-button.is-text {
+  text-decoration: none !important;
+}
+
+.el-button {
+  min-height: 2rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+.el-button.is-text,
+.el-button.is-link {
+  min-height: auto;
+  padding: 0.3rem 0.45rem;
+  font-weight: 500;
+}
+
+/* 主按钮：亮 #0084ff 蓝底白字 */
+.el-button--primary {
+  color: #fff !important;
+  box-shadow: 0 1px 2px rgb(0 132 255 / 0.22);
+  border: none;
+}
+.el-button--primary:hover,
+.el-button--primary:focus-visible {
+  color: #fff !important;
+  box-shadow: 0 1px 3px rgb(0 132 255 / 0.32);
+}
+
+/* 次按钮：与主按钮、渲染选中共 #0084ff 蓝底白字 */
+.el-button.el-button--default:not(.is-text):not(.is-link):not(.is-plain) {
+  background: var(--ma-btn-secondary-bg) !important;
+  color: #fff !important;
+  border: 1px solid var(--ma-btn-secondary-bg) !important;
+}
+.el-button.el-button--default:not(.is-text):not(.is-link):not(.is-plain):hover,
+.el-button.el-button--default:not(.is-text):not(.is-link):not(.is-plain):focus-visible {
+  background: var(--ma-btn-secondary-bg-hover) !important;
+  border-color: var(--ma-btn-secondary-bg-hover) !important;
+  color: #fff !important;
+}
+.el-button.el-button--default:not(.is-text):not(.is-link):not(.is-plain):active {
+  background: var(--ma-btn-secondary-bg-active) !important;
+  border-color: var(--ma-btn-secondary-bg-active) !important;
+  color: #fff !important;
+}
+
+/* plain + 默认次：同样蓝底白字（如任务页「刷新」） */
+.el-button.is-plain.el-button--default {
+  background: var(--ma-btn-secondary-bg) !important;
+  color: #fff !important;
+  border: 1px solid var(--ma-btn-secondary-bg) !important;
+}
+.el-button.is-plain.el-button--default:hover:not(.is-disabled),
+.el-button.is-plain.el-button--default:focus-visible:not(.is-disabled) {
+  background: var(--ma-btn-secondary-bg-hover) !important;
+  border-color: var(--ma-btn-secondary-bg-hover) !important;
+  color: #fff !important;
+}
+.el-button.is-plain.el-button--default:active:not(.is-disabled) {
+  background: var(--ma-btn-secondary-bg-active) !important;
+  border-color: var(--ma-btn-secondary-bg-active) !important;
+  color: #fff !important;
+}
+
+/* plain + primary：亮蓝白字（如「导出」展开态，与主按钮一致） */
+.el-button.is-plain.el-button--primary {
+  background: var(--el-color-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--el-color-primary) !important;
+  box-shadow: 0 1px 2px rgb(0 132 255 / 0.2);
+}
+.el-button.is-plain.el-button--primary:hover:not(.is-disabled),
+.el-button.is-plain.el-button--primary:focus-visible:not(.is-disabled) {
+  background: var(--ma-btn-secondary-bg-hover) !important;
+  border-color: var(--ma-btn-secondary-bg-hover) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px rgb(0 80 150 / 0.3);
+}
+.el-button.is-plain.el-button--primary:active:not(.is-disabled) {
+  background: var(--ma-btn-secondary-bg-active) !important;
+  border-color: var(--ma-btn-secondary-bg-active) !important;
+  color: #fff !important;
+}
+
+/* small */
+.el-button--small {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 5px;
+}
+
+/* 单选/分段 */
+.el-radio-group .el-radio-button__inner {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* 分页 */
+.el-pagination {
+  --el-pagination-font-size: 0.84rem;
+  --el-pagination-button-width: 1.9rem;
+  --el-pagination-button-height: 1.85rem;
+}

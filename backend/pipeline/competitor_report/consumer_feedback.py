@@ -130,7 +130,7 @@ def _consumer_feedback_by_matrix_group(
             by_g.setdefault(g, []).append(row)
             continue
         if sku and sku in merged_by_sku:
-            # 深入样本存在但缺 detail_category_path（或路径无法解析为可读细类）：不参与按细类分析
+            # 合并行存在但无法解析矩阵键（如无 SKU 列）：仍不计入按细类；有 SKU 无类目时已映射为「未分类」
             continue
         by_g.setdefault("未归类（评价 SKU 无对应深入样本）", []).append(row)
 
